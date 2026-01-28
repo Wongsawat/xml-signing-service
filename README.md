@@ -115,7 +115,7 @@ Key environment variables:
 
 - **Retry Logic**: Up to 3 attempts for transient errors
 - **Circuit Breaker**: Protects against CSC service failures (50% failure rate threshold, 60s cooldown)
-- **Manual Acknowledgment**: Failed messages remain in Kafka for retry
+- **Camel DLQ**: Automatic redelivery with exponential backoff (1s → 10s), then routes to Dead Letter Queue
 - **State Tracking**: All failures logged in database with error messages
 
 ## Database Schema
@@ -155,6 +155,7 @@ Actuator endpoints available at:
 - Health: `http://localhost:8086/actuator/health`
 - Metrics: `http://localhost:8086/actuator/metrics`
 - Prometheus: `http://localhost:8086/actuator/prometheus`
+- Camel Routes: `http://localhost:8086/actuator/camelroutes`
 
 ## Troubleshooting
 
@@ -166,7 +167,8 @@ Actuator endpoints available at:
 
 **Kafka consumer not receiving messages**
 - Verify Kafka is running and topic `xml.signing.requested` exists
-- Check consumer group `xml-signing-service` is active
+- Check Camel routes: `curl http://localhost:8086/actuator/camelroutes`
+- Review Camel logs with `org.apache.camel.component.kafka=DEBUG`
 
 **Database connection errors**
 - Ensure PostgreSQL database `xmlsigning_db` exists
@@ -176,6 +178,17 @@ Actuator endpoints available at:
 - Check CSC service logs for signing errors
 - Verify credential ID and client ID are correct
 - Ensure certificate is valid and not expired
+
+## Technology Stack
+
+- Java 21
+- Spring Boot 3.2.5
+- Apache Camel 4.14.4 (Kafka integration)
+- Spring Cloud OpenFeign (CSC API client)
+- PostgreSQL 16
+- Flyway (database migrations)
+- Resilience4j (circuit breaker)
+- Lombok + MapStruct (code generation)
 
 ## Development
 
