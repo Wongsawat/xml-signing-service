@@ -1,44 +1,37 @@
 package com.invoice.xmlsigning.infrastructure.messaging;
 
-import com.invoice.xmlsigning.domain.event.IntegrationEvent;
 import com.invoice.xmlsigning.domain.event.XmlSignedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
+import org.apache.camel.ProducerTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
-
 /**
- * Publisher for integration events
+ * Publisher for integration events using Apache Camel.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class EventPublisher {
 
-    private final KafkaTemplate<String, IntegrationEvent> kafkaTemplate;
-
-    @Value("${app.kafka.topics.xml-signed}")
-    private String xmlSignedTopic;
+    private final ProducerTemplate producerTemplate;
 
     /**
      * Publish XML signed event
      */
     public void publishXmlSigned(XmlSignedEvent event) {
         log.info("Publishing XML signed event for invoice: {}", event.getInvoiceNumber());
-
-        CompletableFuture<SendResult<String, IntegrationEvent>> future =
-            kafkaTemplate.send(xmlSignedTopic, event.getInvoiceId(), event);
-
-        future.whenComplete((result, ex) -> {
-            if (ex == null) {
-                log.info("Successfully published XML signed event for invoice: {}", event.getInvoiceNumber());
-            } else {
-                log.error("Failed to publish XML signed event for invoice: {}", event.getInvoiceNumber(), ex);
-            }
-        });
+        try {
+            producerTemplate.sendBodyAndHeader(
+                "direct:publish-xml-signed",
+                event,
+                "kafka.KEY",
+                event.getInvoiceId()
+            );
+            log.info("Successfully published XML signed event: {}", event.getInvoiceNumber());
+        } catch (Exception e) {
+            log.error("Failed to publish XML signed event: {}", event.getInvoiceNumber(), e);
+            throw e;
+        }
     }
 }

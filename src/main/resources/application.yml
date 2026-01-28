@@ -33,24 +33,11 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: true
 
-  kafka:
-    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
-    consumer:
-      group-id: xml-signing-service
-      auto-offset-reset: earliest
-      enable-auto-commit: false
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: com.invoice.xmlsigning.domain.event
-        spring.json.value.default.type: com.invoice.xmlsigning.domain.event.IntegrationEvent
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      acks: all
-      retries: 3
-      properties:
-        enable.idempotence: true
+# Apache Camel configuration
+camel:
+  springboot:
+    name: xml-signing-camel
+    main-run-controller: true
 
   jackson:
     serialization:
@@ -70,9 +57,11 @@ spring:
 # Application-specific configuration
 app:
   kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     topics:
       xml-signing-requested: xml.signing.requested
       xml-signed: xml.signed
+      dlq: xml.signing.dlq
 
   # CSC API Configuration
   csc:
@@ -107,7 +96,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,camelroutes
   endpoint:
     health:
       show-details: always
@@ -124,7 +113,8 @@ logging:
   level:
     root: INFO
     com.invoice.xmlsigning: DEBUG
-    org.springframework.kafka: INFO
+    org.apache.camel: INFO
+    org.apache.camel.component.kafka: DEBUG
     org.hibernate.SQL: DEBUG
     feign: DEBUG
   pattern:
