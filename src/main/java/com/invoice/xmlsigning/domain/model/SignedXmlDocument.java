@@ -15,6 +15,7 @@ public class SignedXmlDocument {
     private final SignedXmlDocumentId id;
     private final String invoiceId;
     private final String invoiceNumber;
+    private final DocumentType documentType;
 
     // XML Content
     private final String originalXml;
@@ -38,6 +39,7 @@ public class SignedXmlDocument {
         this.id = builder.id != null ? builder.id : SignedXmlDocumentId.create();
         this.invoiceId = Objects.requireNonNull(builder.invoiceId, "Invoice ID is required");
         this.invoiceNumber = Objects.requireNonNull(builder.invoiceNumber, "Invoice number is required");
+        this.documentType = Objects.requireNonNull(builder.documentType, "Document type is required");
         this.originalXml = Objects.requireNonNull(builder.originalXml, "Original XML is required");
         this.signedXml = builder.signedXml;
         this.transactionId = builder.transactionId;
@@ -62,6 +64,10 @@ public class SignedXmlDocument {
 
         if (invoiceNumber.isBlank()) {
             throw new IllegalStateException("Invoice number cannot be blank");
+        }
+
+        if (documentType == null) {
+            throw new IllegalStateException("Document type is required");
         }
 
         if (originalXml.isBlank()) {
@@ -148,6 +154,10 @@ public class SignedXmlDocument {
         return invoiceNumber;
     }
 
+    public DocumentType getDocumentType() {
+        return documentType;
+    }
+
     public String getOriginalXml() {
         return originalXml;
     }
@@ -195,6 +205,7 @@ public class SignedXmlDocument {
         private SignedXmlDocumentId id;
         private String invoiceId;
         private String invoiceNumber;
+        private DocumentType documentType;
         private String originalXml;
         private String signedXml;
         private String transactionId;
@@ -218,6 +229,11 @@ public class SignedXmlDocument {
 
         public Builder invoiceNumber(String invoiceNumber) {
             this.invoiceNumber = invoiceNumber;
+            return this;
+        }
+
+        public Builder documentType(DocumentType documentType) {
+            this.documentType = documentType;
             return this;
         }
 

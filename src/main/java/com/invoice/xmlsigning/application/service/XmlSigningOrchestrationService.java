@@ -2,9 +2,11 @@ package com.invoice.xmlsigning.application.service;
 
 import com.invoice.xmlsigning.domain.event.XmlSignedEvent;
 import com.invoice.xmlsigning.domain.event.XmlSigningRequestedEvent;
+import com.invoice.xmlsigning.domain.model.DocumentType;
 import com.invoice.xmlsigning.domain.model.SignedXmlDocument;
 import com.invoice.xmlsigning.domain.model.SignedXmlDocumentId;
 import com.invoice.xmlsigning.domain.repository.SignedXmlDocumentRepository;
+import com.invoice.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.invoice.xmlsigning.domain.service.XmlSigningService;
 import com.invoice.xmlsigning.infrastructure.messaging.EventPublisher;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class XmlSigningOrchestrationService {
 
     private final SignedXmlDocumentRepository documentRepository;
     private final XmlSigningService signingService;
+    private final DocumentTypeDetectionService documentTypeDetectionService;
     private final EventPublisher eventPublisher;
 
     @Value("${app.signing.max-retries:3}")
@@ -47,11 +50,30 @@ public class XmlSigningOrchestrationService {
                 return;
             }
 
+            // Detect document type from event or XML content
+            final DocumentType documentType;
+            DocumentType detectedType = event.getDocumentType();
+            if (detectedType == null) {
+                // Fallback to detection from XML content
+                detectedType = documentTypeDetectionService.detectFromXmlContent(event.getXmlContent());
+                if (detectedType == null) {
+                    log.error("Could not detect document type for invoice: {}", event.getInvoiceNumber());
+                    throw new IllegalStateException("Document type detection failed");
+                }
+                log.info("Detected document type from XML content: {} for invoice: {}",
+                    detectedType, event.getInvoiceNumber());
+            } else {
+                log.info("Using document type from event: {} for invoice: {}",
+                    detectedType, event.getInvoiceNumber());
+            }
+            documentType = detectedType;
+
             // Create or retrieve document
             SignedXmlDocument document = existing.orElseGet(() ->
                 SignedXmlDocument.builder()
                     .invoiceId(event.getInvoiceId())
                     .invoiceNumber(event.getInvoiceNumber())
+                    .documentType(documentType)
                     .originalXml(event.getXmlContent())
                     .build()
             );
@@ -81,7 +103,7 @@ public class XmlSigningOrchestrationService {
             );
             documentRepository.save(document);
 
-            // Publish signed event
+            // Publish signed event with document type
             XmlSignedEvent signedEvent = new XmlSignedEvent(
                 document.getId().toString(),
                 event.getInvoiceId(),
@@ -91,11 +113,12 @@ public class XmlSigningOrchestrationService {
                 document.getTransactionId(),
                 document.getCertificate(),
                 document.getSignatureLevel(),
-                event.getCorrelationId()
+                event.getCorrelationId(),
+                document.getDocumentType()
             );
             eventPublisher.publishXmlSigned(signedEvent);
 
-            log.info("Successfully signed invoice: {}", event.getInvoiceNumber());
+            log.info("Successfully signed {} invoice: {}", documentType, event.getInvoiceNumber());
 
         } catch (Exception e) {
             log.error("Failed to sign invoice: {}", event.getInvoiceNumber(), e);

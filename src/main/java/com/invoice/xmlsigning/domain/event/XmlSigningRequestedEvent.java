@@ -2,6 +2,7 @@ package com.invoice.xmlsigning.domain.event;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.invoice.xmlsigning.domain.model.DocumentType;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -30,14 +31,18 @@ public class XmlSigningRequestedEvent extends IntegrationEvent {
     @JsonProperty("correlationId")
     private final String correlationId;
 
+    @JsonProperty("documentType")
+    private final DocumentType documentType;
+
     public XmlSigningRequestedEvent(String invoiceId, String invoiceNumber, String xmlContent,
-                                    String invoiceDataJson, String correlationId) {
+                                    String invoiceDataJson, String correlationId, DocumentType documentType) {
         super(EVENT_TYPE);
         this.invoiceId = invoiceId;
         this.invoiceNumber = invoiceNumber;
         this.xmlContent = xmlContent;
         this.invoiceDataJson = invoiceDataJson;
         this.correlationId = correlationId;
+        this.documentType = documentType;
     }
 
     @JsonCreator
@@ -50,7 +55,8 @@ public class XmlSigningRequestedEvent extends IntegrationEvent {
         @JsonProperty("invoiceNumber") String invoiceNumber,
         @JsonProperty("xmlContent") String xmlContent,
         @JsonProperty("invoiceDataJson") String invoiceDataJson,
-        @JsonProperty("correlationId") String correlationId
+        @JsonProperty("correlationId") String correlationId,
+        @JsonProperty("documentType") DocumentType documentType
     ) {
         super(eventId, occurredAt, eventType, version);
         this.invoiceId = invoiceId;
@@ -58,5 +64,6 @@ public class XmlSigningRequestedEvent extends IntegrationEvent {
         this.xmlContent = xmlContent;
         this.invoiceDataJson = invoiceDataJson;
         this.correlationId = correlationId;
+        this.documentType = documentType;
     }
 }

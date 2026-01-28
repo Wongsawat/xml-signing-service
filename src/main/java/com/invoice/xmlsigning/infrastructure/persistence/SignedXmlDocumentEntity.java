@@ -1,5 +1,6 @@
 package com.invoice.xmlsigning.infrastructure.persistence;
 
+import com.invoice.xmlsigning.domain.model.DocumentType;
 import com.invoice.xmlsigning.domain.model.SigningStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,8 @@ import java.util.UUID;
     @Index(name = "idx_signed_xml_invoice_id", columnList = "invoice_id"),
     @Index(name = "idx_signed_xml_invoice_number", columnList = "invoice_number"),
     @Index(name = "idx_signed_xml_status", columnList = "status"),
-    @Index(name = "idx_signed_xml_transaction_id", columnList = "transaction_id")
+    @Index(name = "idx_signed_xml_transaction_id", columnList = "transaction_id"),
+    @Index(name = "idx_signed_xml_document_type", columnList = "document_type")
 })
 @Data
 @Builder
@@ -35,6 +37,10 @@ public class SignedXmlDocumentEntity {
 
     @Column(name = "invoice_number", nullable = false, length = 50)
     private String invoiceNumber;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_type", nullable = false, length = 50)
+    private DocumentType documentType;
 
     @Column(name = "original_xml", nullable = false, columnDefinition = "TEXT")
     private String originalXml;

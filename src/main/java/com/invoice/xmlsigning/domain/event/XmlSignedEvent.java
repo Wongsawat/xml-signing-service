@@ -2,6 +2,7 @@ package com.invoice.xmlsigning.domain.event;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.invoice.xmlsigning.domain.model.DocumentType;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -42,9 +43,13 @@ public class XmlSignedEvent extends IntegrationEvent {
     @JsonProperty("correlationId")
     private final String correlationId;
 
+    @JsonProperty("documentType")
+    private final DocumentType documentType;
+
     public XmlSignedEvent(String documentId, String invoiceId, String invoiceNumber,
                          String signedXmlContent, String invoiceDataJson, String transactionId,
-                         String certificate, String signatureLevel, String correlationId) {
+                         String certificate, String signatureLevel, String correlationId,
+                         DocumentType documentType) {
         super(EVENT_TYPE);
         this.documentId = documentId;
         this.invoiceId = invoiceId;
@@ -55,6 +60,7 @@ public class XmlSignedEvent extends IntegrationEvent {
         this.certificate = certificate;
         this.signatureLevel = signatureLevel;
         this.correlationId = correlationId;
+        this.documentType = documentType;
     }
 
     @JsonCreator
@@ -71,7 +77,8 @@ public class XmlSignedEvent extends IntegrationEvent {
         @JsonProperty("transactionId") String transactionId,
         @JsonProperty("certificate") String certificate,
         @JsonProperty("signatureLevel") String signatureLevel,
-        @JsonProperty("correlationId") String correlationId
+        @JsonProperty("correlationId") String correlationId,
+        @JsonProperty("documentType") DocumentType documentType
     ) {
         super(eventId, occurredAt, eventType, version);
         this.documentId = documentId;
@@ -83,5 +90,6 @@ public class XmlSignedEvent extends IntegrationEvent {
         this.certificate = certificate;
         this.signatureLevel = signatureLevel;
         this.correlationId = correlationId;
+        this.documentType = documentType;
     }
 }
