@@ -12,8 +12,18 @@ This service integrates with the [eidasremotesigning](../../../eidasremotesignin
 ## Position in Pipeline
 
 ```
-Invoice Processing → xml.signing.requested → [XML Signing Service] → xml.signed → PDF Generation
+Invoice Processing ────────┐
+                             ├──→ xml.signing.requested → [XML Signing Service] → xml.signed.* → PDF Generation
+Tax Invoice Processing ────┘
 ```
+
+The service routes signed documents to type-specific Kafka topics based on document type:
+- `xml.signed.tax-invoice` - Tax invoices
+- `xml.signed.receipt` - Receipts
+- `xml.signed.invoice` - Invoices
+- `xml.signed.debit-credit-note` - Debit/credit notes
+- `xml.signed.cancellation-note` - Cancellation notes
+- `xml.signed.abbreviated-tax-invoice` - Abbreviated tax invoices
 
 ## Prerequisites
 
@@ -83,11 +93,12 @@ Key environment variables:
   "invoiceNumber": "INV-001",
   "xmlContent": "<xml>...</xml>",
   "invoiceDataJson": "{...}",
+  "documentType": "TAX_INVOICE",
   "correlationId": "uuid"
 }
 ```
 
-**Produces**: `xml.signed`
+**Produces**: `xml.signed.[document-type]` (type-specific topics)
 ```json
 {
   "documentId": "uuid",
@@ -98,6 +109,7 @@ Key environment variables:
   "transactionId": "TXN-...",
   "certificate": "...",
   "signatureLevel": "XAdES-BASELINE-T",
+  "documentType": "TAX_INVOICE",
   "correlationId": "uuid"
 }
 ```
@@ -109,7 +121,25 @@ Key environment variables:
 3. **Calculate Digest** - SHA-256 hash of XML
 4. **Sign** - Call CSC API (`/csc/v2/signatures/signDocument`) with XAdES attributes
 5. **Decode** - Base64 decode signed XML
-6. **Publish** - Send `xml.signed` event to Kafka
+6. **Publish** - Send `xml.signed.[document-type]` event to appropriate type-specific topic
+
+### Document Type Detection
+
+The service supports 6 Thai e-Tax document types and routes to appropriate Kafka topics:
+
+| Document Type | Namespace URI | Kafka Topic |
+|---------------|---------------|-------------|
+| TAX_INVOICE | `urn:etda:uncefact:data:standard:TaxInvoice_CrossIndustryInvoice:2` | `xml.signed.tax-invoice` |
+| RECEIPT | `urn:etda:uncefact:data:standard:Receipt_CrossIndustryInvoice:2` | `xml.signed.receipt` |
+| INVOICE | `urn:etda:uncefact:data:standard:Invoice_CrossIndustryInvoice:2` | `xml.signed.invoice` |
+| DEBIT_CREDIT_NOTE | `urn:etda:uncefact:data:standard:DebitCreditNote_CrossIndustryInvoice:2` | `xml.signed.debit-credit-note` |
+| CANCELLATION_NOTE | `urn:etda:uncefact:data:standard:CancellationNote_CrossIndustryInvoice:2` | `xml.signed.cancellation-note` |
+| ABBREVIATED_TAX_INVOICE | `urn:etda:uncefact:data:standard:AbbreviatedTaxInvoice_CrossIndustryInvoice:2` | `xml.signed.abbreviated-tax-invoice` |
+
+**Detection strategies** (in order of precedence):
+1. From `documentType` field in the incoming event (preferred)
+2. From XML namespace URI (automatic detection)
+3. From XML root element name (fallback)
 
 ### Error Handling
 
@@ -125,6 +155,7 @@ signed_xml_documents (
   id UUID PRIMARY KEY,
   invoice_id VARCHAR(100) UNIQUE,
   invoice_number VARCHAR(50),
+  document_type VARCHAR(50),
   original_xml TEXT,
   signed_xml TEXT,
   transaction_id VARCHAR(100),
