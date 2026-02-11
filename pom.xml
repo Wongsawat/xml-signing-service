@@ -26,6 +26,7 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <flyway.version>10.10.0</flyway.version>
         <resilience4j.version>2.2.0</resilience4j.version>
+        <saga.commons.version>1.0.0-SNAPSHOT</saga.commons.version>
     </properties>
 
     <dependencyManagement>
@@ -184,6 +185,13 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Saga Commons for integration events -->
+        <dependency>
+            <groupId>com.wpanther</groupId>
+            <artifactId>saga-commons</artifactId>
+            <version>${saga.commons.version}</version>
         </dependency>
 
         <!-- Test Dependencies -->

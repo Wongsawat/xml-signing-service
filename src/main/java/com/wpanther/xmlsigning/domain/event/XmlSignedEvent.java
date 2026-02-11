@@ -2,6 +2,7 @@ package com.wpanther.xmlsigning.domain.event;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.wpanther.saga.domain.model.IntegrationEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import lombok.Getter;
 
@@ -50,7 +51,7 @@ public class XmlSignedEvent extends IntegrationEvent {
                          String signedXmlContent, String invoiceDataJson, String transactionId,
                          String certificate, String signatureLevel, String correlationId,
                          DocumentType documentType) {
-        super(EVENT_TYPE);
+        super();
         this.documentId = documentId;
         this.invoiceId = invoiceId;
         this.invoiceNumber = invoiceNumber;
