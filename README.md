@@ -32,6 +32,7 @@ The service routes signed documents to type-specific Kafka topics based on docum
 - PostgreSQL 16+ with database `xmlsigning_db`
 - Kafka running on `localhost:9092`
 - eidasremotesigning service running on port 9000
+- saga-commons library installed: `cd ../../saga-commons && mvn clean install`
 - Eureka service registry (optional)
 
 ## Build and Run
@@ -83,6 +84,11 @@ Key environment variables:
 **SignedXmlDocument** (Aggregate Root)
 - State machine: `PENDING → SIGNING → COMPLETED/FAILED`
 - Tracks signing status, retry count, and error messages
+
+**Integration Events**
+- Domain events extend `saga-commons IntegrationEvent` base class
+- Provides standard event metadata: `eventId`, `occurredAt`, `eventType`, `version`
+- Supports consistent event handling across microservices
 
 ### Event Flow
 
@@ -216,6 +222,7 @@ Actuator endpoints available at:
 - Spring Boot 3.2.5
 - Apache Camel 4.14.4 (Kafka integration)
 - Spring Cloud OpenFeign (CSC API client)
+- saga-commons (integration events)
 - PostgreSQL 16
 - Flyway (database migrations)
 - Resilience4j (circuit breaker)
