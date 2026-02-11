@@ -60,13 +60,6 @@ app:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     topics:
       xml-signing-requested: xml.signing.requested
-      # Type-specific output topics for signed XML documents
-      xml-signed-tax-invoice: xml.signed.tax-invoice
-      xml-signed-receipt: xml.signed.receipt
-      xml-signed-invoice: xml.signed.invoice
-      xml-signed-debit-credit-note: xml.signed.debit-credit-note
-      xml-signed-cancellation: xml.signed.cancellation
-      xml-signed-abbreviated: xml.signed.abbreviated
       dlq: xml.signing.dlq
 
   # CSC API Configuration
