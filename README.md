@@ -216,6 +216,12 @@ Actuator endpoints available at:
 - Verify credential ID and client ID are correct
 - Ensure certificate is valid and not expired
 
+**Camel Jackson fails to deserialize `java.time.Instant`**
+- Events extending `IntegrationEvent` have `occurredAt` (Instant type)
+- Camel's `.unmarshal().json(JsonLibrary.Jackson, ...)` creates its own ObjectMapper without `JavaTimeModule`
+- Symptoms: `InvalidDefinitionException: Java 8 date/time type java.time.Instant not supported by default`
+- Fix: Set `camel.dataformat.jackson.auto-discover-object-mapper: true` in `application.yml`
+
 ## Technology Stack
 
 - Java 21
@@ -228,11 +234,68 @@ Actuator endpoints available at:
 - Resilience4j (circuit breaker)
 - Lombok + MapStruct (code generation)
 
+## Database Schema
+
+The service uses two main tables:
+
+### signed_xml_documents
+
+```sql
+signed_xml_documents (
+  id UUID PRIMARY KEY,
+  invoice_id VARCHAR(100) UNIQUE,
+  invoice_number VARCHAR(50),
+  document_type VARCHAR(50),
+  original_xml TEXT,
+  signed_xml TEXT,
+  transaction_id VARCHAR(100),
+  certificate TEXT,
+  signature_level VARCHAR(50),
+  status VARCHAR(20),  -- PENDING, SIGNING, COMPLETED, FAILED
+  error_message TEXT,
+  retry_count INTEGER,
+  created_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  updated_at TIMESTAMP
+)
+```
+
+### outbox_events
+
+```sql
+outbox_events (
+  id UUID PRIMARY KEY,
+  aggregate_type VARCHAR(100),
+  aggregate_id VARCHAR(100),
+  event_type VARCHAR(200),
+  payload TEXT,
+  topic VARCHAR(200),
+  partition_key VARCHAR(200),
+  headers TEXT,
+  status VARCHAR(20),  -- PENDING, PUBLISHED, FAILED
+  retry_count INTEGER,
+  created_at TIMESTAMP
+)
+```
+
+**Outbox Pattern**: Events are written to `outbox_events` within the same transaction as the domain change. Debezium CDC reads the table via PostgreSQL logical replication and publishes to Kafka, ensuring exactly-once delivery.
+
 ## Development
 
-Run tests with coverage:
+### Running Tests
+
 ```bash
+# Unit tests (H2 in-memory database)
+mvn test
+
+# Tests with coverage verification
 mvn verify
+
+# Integration tests (requires external containers)
+cd ../..
+./scripts/test-containers-start.sh --with-debezium --auto-deploy-connectors
+cd services/xml-signing-service
+mvn test -Pintegration
 ```
 
 JaCoCo coverage reports: `target/site/jacoco/index.html`
