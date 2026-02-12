@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.integration;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -131,6 +132,23 @@ public abstract class AbstractCdcIntegrationTest {
     }
 
     /**
+     * Parse a Debezium CDC message value, handling double-encoded payloads.
+     * <p>
+     * Debezium delivers TEXT column values as JSON-quoted strings. When the outbox
+     * payload column is TEXT (not JSONB), the value arrives double-encoded:
+     * e.g. {@code "{\"invoiceId\":\"...\"}"} instead of {@code {"invoiceId":"..."}}.
+     * This method detects and unwraps that encoding.
+     */
+    protected JsonNode parseDebeziumPayload(String rawValue) throws Exception {
+        JsonNode node = objectMapper.readTree(rawValue);
+        // If Debezium wrapped the TEXT payload as a JSON string, unwrap it
+        if (node.isTextual()) {
+            return objectMapper.readTree(node.asText());
+        }
+        return node;
+    }
+
+    /**
      * Poll Kafka for messages on subscribed topics, waiting up to the given timeout.
      */
     protected List<ConsumerRecord<String, String>> pollForMessages(Duration timeout) {
@@ -151,17 +169,18 @@ public abstract class AbstractCdcIntegrationTest {
     }
 
     /**
-     * Poll Kafka for messages on a specific topic.
+     * Poll Kafka for messages on a specific topic that contain the expected content.
+     * Filters out stale messages from previous test runs.
      */
     protected List<ConsumerRecord<String, String>> pollForMessagesOnTopic(
-            String targetTopic, Duration timeout) {
+            String targetTopic, String expectedContent, Duration timeout) {
         List<ConsumerRecord<String, String>> matching = new ArrayList<>();
         long deadline = System.currentTimeMillis() + timeout.toMillis();
 
         while (System.currentTimeMillis() < deadline) {
             ConsumerRecords<String, String> records = testKafkaConsumer.poll(Duration.ofSeconds(2));
             for (ConsumerRecord<String, String> record : records) {
-                if (record.topic().equals(targetTopic)) {
+                if (record.topic().equals(targetTopic) && record.value().contains(expectedContent)) {
                     matching.add(record);
                 }
             }
@@ -171,6 +190,14 @@ public abstract class AbstractCdcIntegrationTest {
         }
 
         return matching;
+    }
+
+    /**
+     * Poll Kafka for messages on a specific topic (without content filtering).
+     */
+    protected List<ConsumerRecord<String, String>> pollForMessagesOnTopic(
+            String targetTopic, Duration timeout) {
+        return pollForMessagesOnTopic(targetTopic, "", timeout);
     }
 
     protected List<Map<String, Object>> getOutboxEvents() {

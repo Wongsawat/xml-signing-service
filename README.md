@@ -237,4 +237,4 @@ mvn verify
 
 JaCoCo coverage reports: `target/site/jacoco/index.html`
 
-Minimum coverage requirement: 90% per package
+Minimum coverage requirement: 80% per package

@@ -51,15 +51,15 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
             // Then - Debezium CDC should publish to xml.signed.tax-invoice
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed.tax-invoice", Duration.ofSeconds(30));
+                pollForMessagesOnTopic("xml.signed.tax-invoice", invoiceId, Duration.ofSeconds(30));
 
             assertThat(records)
                 .as("Should receive at least one message on xml.signed.tax-invoice")
                 .isNotEmpty();
 
-            // Verify the message payload
+            // Verify the message payload (Debezium may double-encode TEXT payloads)
             ConsumerRecord<String, String> record = records.get(0);
-            JsonNode message = objectMapper.readTree(record.value());
+            JsonNode message = parseDebeziumPayload(record.value());
             assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
         }
 
@@ -84,14 +84,14 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
             // Then
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed.invoice", Duration.ofSeconds(30));
+                pollForMessagesOnTopic("xml.signed.invoice", invoiceId, Duration.ofSeconds(30));
 
             assertThat(records)
                 .as("Should receive at least one message on xml.signed.invoice")
                 .isNotEmpty();
 
             ConsumerRecord<String, String> record = records.get(0);
-            JsonNode message = objectMapper.readTree(record.value());
+            JsonNode message = parseDebeziumPayload(record.value());
             assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
         }
 
@@ -119,14 +119,14 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
             // Then
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic(targetTopic, Duration.ofSeconds(30));
+                pollForMessagesOnTopic(targetTopic, invoiceId, Duration.ofSeconds(30));
 
             assertThat(records)
                 .as("Should receive message on topic: " + targetTopic)
                 .isNotEmpty();
 
             ConsumerRecord<String, String> record = records.get(0);
-            JsonNode message = objectMapper.readTree(record.value());
+            JsonNode message = parseDebeziumPayload(record.value());
             assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
             assertThat(message.get("documentType").asText()).isEqualTo(documentType.name());
         }
@@ -158,12 +158,13 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
             // Then
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed.tax-invoice", Duration.ofSeconds(30));
+                pollForMessagesOnTopic("xml.signed.tax-invoice", invoiceId, Duration.ofSeconds(30));
 
             assertThat(records).isNotEmpty();
-            // Debezium EventRouter should use the partition_key column as the Kafka message key
+            // Verify the payload contains our invoiceId (Debezium may double-encode)
             ConsumerRecord<String, String> record = records.get(0);
-            assertThat(record.value()).contains(invoiceId);
+            JsonNode message = parseDebeziumPayload(record.value());
+            assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
         }
     }
 

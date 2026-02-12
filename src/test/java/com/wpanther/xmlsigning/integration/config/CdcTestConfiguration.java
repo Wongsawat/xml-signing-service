@@ -8,6 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
@@ -15,8 +16,12 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * <p>
  * Excludes Camel and Kafka auto-configuration (no consumer route needed).
  * Enables JPA + outbox persistence for writing outbox events that Debezium CDC reads.
+ * <p>
+ * Must be profile-gated to prevent the @EnableAutoConfiguration exclusions
+ * from affecting other test contexts (e.g. consumer tests that need Camel).
  */
 @Configuration
+@Profile("cdc-test")
 @EnableAutoConfiguration(exclude = {
     CamelAutoConfiguration.class,
     KafkaAutoConfiguration.class
