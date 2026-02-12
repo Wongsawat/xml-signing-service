@@ -1,0 +1,68 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: xml-signing-service-test
+
+  main:
+    allow-bean-definition-overriding: true
+
+  # H2 in-memory database
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # JPA with H2 dialect
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+      show-sql: false
+      properties:
+        hibernate:
+          format_sql: false
+
+  # Disable Flyway (use DDL auto-create)
+  flyway:
+    enabled: false
+
+# Apache Camel
+camel:
+  springboot:
+    name: xml-signing-camel-test
+    main-run-controller: false
+
+# Disable Eureka for tests
+eureka:
+  client:
+    enabled: false
+
+# Kafka configuration (test values)
+app:
+  kafka:
+    bootstrap-servers: localhost:9093
+    topics:
+      xml-signing-requested: xml.signing.requested.test
+      dlq: xml.signing.dlq.test
+  csc:
+    service-url: http://localhost:19000
+    client-id: test-client
+    credential-id: test-credential
+    hash-algorithm: SHA256
+    signature-level: XAdES-BASELINE-T
+    digest-algorithm: SHA256
+  signing:
+    max-retries: 3
+
+# Actuator (minimal for tests)
+management:
+  endpoints:
+    enabled-by-default: false
+
+logging:
+  level:
+    root: WARN
+    com.wpanther.xmlsigning: DEBUG

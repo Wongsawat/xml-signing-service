@@ -1,0 +1,143 @@
+package com.wpanther.xmlsigning.infrastructure.persistence;
+
+import com.wpanther.xmlsigning.domain.model.DocumentType;
+import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
+import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
+import com.wpanther.xmlsigning.domain.model.SigningStatus;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Integration tests for {@link SignedXmlDocumentMapper}.
+ * Uses Spring context to get the actual MapStruct generated implementation.
+ */
+@SpringBootTest(classes = {
+        SignedXmlDocumentMapperImpl.class
+})
+@ActiveProfiles("test")
+@DisplayName("SignedXmlDocumentMapper")
+class SignedXmlDocumentMapperTest {
+
+    @Autowired
+    private SignedXmlDocumentMapper mapper;
+
+    private SignedXmlDocument createDomain() {
+        return SignedXmlDocument.builder()
+                .id(SignedXmlDocumentId.create())
+                .invoiceId("inv-001")
+                .invoiceNumber("T001")
+                .documentType(DocumentType.TAX_INVOICE)
+                .originalXml("<xml>test</xml>")
+                .signedXml("<signed>xml</signed>")
+                .transactionId("txn-1")
+                .certificate("cert-data")
+                .signatureLevel("XAdES-BASELINE-T")
+                .status(SigningStatus.COMPLETED)
+                .errorMessage(null)
+                .retryCount(2)
+                .createdAt(LocalDateTime.now())
+                .completedAt(LocalDateTime.now())
+                .build();
+    }
+
+    private SignedXmlDocumentEntity createEntity() {
+        SignedXmlDocumentEntity entity = new SignedXmlDocumentEntity();
+        entity.setId(UUID.randomUUID());
+        entity.setInvoiceId("inv-001");
+        entity.setInvoiceNumber("T001");
+        entity.setDocumentType(DocumentType.TAX_INVOICE);
+        entity.setOriginalXml("<xml>test</xml>");
+        entity.setSignedXml("<signed>xml</signed>");
+        entity.setTransactionId("txn-1");
+        entity.setCertificate("cert-data");
+        entity.setSignatureLevel("XAdES-BASELINE-T");
+        entity.setStatus(SigningStatus.COMPLETED);
+        entity.setRetryCount(2);
+        entity.setCreatedAt(LocalDateTime.now());
+        entity.setCompletedAt(LocalDateTime.now());
+        return entity;
+    }
+
+    @Nested
+    @DisplayName("toDomain() Method")
+    class ToDomainMethod {
+
+        @Test
+        @DisplayName("Maps entity to domain")
+        void testToDomain() {
+            SignedXmlDocumentEntity entity = createEntity();
+
+            SignedXmlDocument domain = mapper.toDomain(entity);
+
+            assertThat(domain).isNotNull();
+            assertThat(domain.getId().value()).isEqualTo(entity.getId());
+            assertThat(domain.getInvoiceId()).isEqualTo(entity.getInvoiceId());
+            assertThat(domain.getInvoiceNumber()).isEqualTo(entity.getInvoiceNumber());
+            assertThat(domain.getDocumentType()).isEqualTo(entity.getDocumentType());
+            assertThat(domain.getOriginalXml()).isEqualTo(entity.getOriginalXml());
+            assertThat(domain.getSignedXml()).isEqualTo(entity.getSignedXml());
+            assertThat(domain.getTransactionId()).isEqualTo(entity.getTransactionId());
+            assertThat(domain.getCertificate()).isEqualTo(entity.getCertificate());
+            assertThat(domain.getSignatureLevel()).isEqualTo(entity.getSignatureLevel());
+            assertThat(domain.getStatus()).isEqualTo(entity.getStatus());
+            assertThat(domain.getRetryCount()).isEqualTo(entity.getRetryCount());
+        }
+    }
+
+    @Nested
+    @DisplayName("toEntity() Method")
+    class ToEntityMethod {
+
+        @Test
+        @DisplayName("Maps domain to entity")
+        void testToEntity() {
+            SignedXmlDocument domain = createDomain();
+
+            SignedXmlDocumentEntity entity = mapper.toEntity(domain);
+
+            assertThat(entity).isNotNull();
+            assertThat(entity.getId()).isEqualTo(domain.getId().value());
+            assertThat(entity.getInvoiceId()).isEqualTo(domain.getInvoiceId());
+            assertThat(entity.getInvoiceNumber()).isEqualTo(domain.getInvoiceNumber());
+            assertThat(entity.getDocumentType()).isEqualTo(domain.getDocumentType());
+            assertThat(entity.getOriginalXml()).isEqualTo(domain.getOriginalXml());
+            assertThat(entity.getSignedXml()).isEqualTo(domain.getSignedXml());
+            assertThat(entity.getTransactionId()).isEqualTo(domain.getTransactionId());
+            assertThat(entity.getCertificate()).isEqualTo(domain.getCertificate());
+            assertThat(entity.getSignatureLevel()).isEqualTo(domain.getSignatureLevel());
+            assertThat(entity.getStatus()).isEqualTo(domain.getStatus());
+            assertThat(entity.getRetryCount()).isEqualTo(domain.getRetryCount());
+        }
+    }
+
+    @Nested
+    @DisplayName("Round Trip")
+    class RoundTrip {
+
+        @Test
+        @DisplayName("Entity to domain and back preserves values")
+        void testRoundTripEntityToDomain() {
+            SignedXmlDocumentEntity original = createEntity();
+
+            SignedXmlDocument domain = mapper.toDomain(original);
+            SignedXmlDocumentEntity result = mapper.toEntity(domain);
+
+            assertThat(result.getInvoiceId()).isEqualTo(original.getInvoiceId());
+            assertThat(result.getInvoiceNumber()).isEqualTo(original.getInvoiceNumber());
+            assertThat(result.getDocumentType()).isEqualTo(original.getDocumentType());
+            assertThat(result.getOriginalXml()).isEqualTo(original.getOriginalXml());
+            assertThat(result.getSignedXml()).isEqualTo(original.getSignedXml());
+            assertThat(result.getStatus()).isEqualTo(original.getStatus());
+            assertThat(result.getRetryCount()).isEqualTo(original.getRetryCount());
+        }
+    }
+}
