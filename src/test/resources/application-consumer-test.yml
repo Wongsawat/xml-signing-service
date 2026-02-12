@@ -1,0 +1,89 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: xml-signing-service-consumer-test
+
+  main:
+    allow-bean-definition-overriding: true
+
+  # PostgreSQL (Docker test container on port 5433)
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:xmlsigning_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 5
+
+  # JPA with PostgreSQL dialect
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  # Flyway enabled (runs real migrations)
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Kafka configuration (Docker test container on port 9093)
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9093}
+    consumer:
+      group-id: xml-signing-consumer-test
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+
+# Apache Camel
+camel:
+  springboot:
+    name: xml-signing-camel-consumer-test
+    main-run-controller: false
+  dataformat:
+    jackson:
+      auto-discover-object-mapper: true
+
+# Disable Eureka for tests
+eureka:
+  client:
+    enabled: false
+
+# Application-specific configuration (same topic names as production)
+app:
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9093}
+    topics:
+      xml-signing-requested: xml.signing.requested
+      dlq: xml.signing.dlq
+
+  csc:
+    service-url: http://localhost:19000
+    client-id: test-client
+    credential-id: test-credential
+    hash-algorithm: SHA256
+    signature-level: XAdES-BASELINE-T
+    digest-algorithm: SHA256
+
+  signing:
+    max-retries: 3
+
+# Actuator (minimal for tests)
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: health
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.wpanther.xmlsigning: DEBUG
+    org.apache.camel: INFO
+    org.apache.camel.component.kafka: DEBUG
+    org.springframework.kafka: INFO

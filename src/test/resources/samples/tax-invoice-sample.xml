@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rsm:TaxInvoice_CrossIndustryInvoice
+    xmlns:rsm="urn:etda:uncefact:data:standard:TaxInvoice_CrossIndustryInvoice:2"
+    xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100">
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:etda:uncefact:data:standard:TaxInvoice:2</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument>
+    <ram:ID>TINV-TEST-001</ram:ID>
+    <ram:Name>Tax Invoice</ram:Name>
+    <ram:TypeCode>388</ram:TypeCode>
+  </rsm:ExchangedDocument>
+</rsm:TaxInvoice_CrossIndustryInvoice>

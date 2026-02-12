@@ -38,6 +38,9 @@ camel:
   springboot:
     name: xml-signing-camel
     main-run-controller: true
+  dataformat:
+    jackson:
+      auto-discover-object-mapper: true
 
   jackson:
     serialization:
