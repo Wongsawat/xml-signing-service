@@ -141,4 +141,13 @@ public abstract class AbstractKafkaConsumerTest {
             .getResource("samples/" + filename).getPath());
         return Files.readString(path);
     }
+
+    /**
+     * Configure mock CSC API to fail signing with the given error message.
+     * Call this in a test method BEFORE sending the event to override the default mock.
+     */
+    protected void setupSigningFailure(String errorMessage) {
+        when(apiClient.signDocument(any()))
+            .thenThrow(new RuntimeException(errorMessage));
+    }
 }
