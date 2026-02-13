@@ -3,12 +3,14 @@ package com.wpanther.xmlsigning.application.service;
 import com.wpanther.saga.domain.enums.ReplyStatus;
 import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
 import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
+import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ public class SagaCommandHandler {
     private final XmlSigningService signingService;
     private final DocumentTypeDetectionService documentTypeDetectionService;
     private final SagaReplyPublisher sagaReplyPublisher;
+    private final EventPublisher eventPublisher;
 
     @Value("${app.signing.max-retries:3}")
     private int maxRetries;
@@ -131,6 +134,15 @@ public class SagaCommandHandler {
                     "XAdES-BASELINE-T"
             );
             documentRepository.save(document);
+
+            // Publish notification event
+            XmlSignedEvent xmlSignedEvent = new XmlSignedEvent(
+                    command.getDocumentId(),
+                    command.getInvoiceNumber(),
+                    documentType.name(),
+                    command.getCorrelationId()
+            );
+            eventPublisher.publishXmlSigned(xmlSignedEvent);
 
             // Send SUCCESS reply
             sagaReplyPublisher.publishSuccess(

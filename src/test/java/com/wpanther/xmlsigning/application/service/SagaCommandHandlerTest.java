@@ -8,6 +8,7 @@ import com.wpanther.xmlsigning.domain.model.SigningStatus;
 import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
+import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class SagaCommandHandlerTest {
     @Mock
     private SagaReplyPublisher sagaReplyPublisher;
 
+    @Mock
+    private EventPublisher eventPublisher;
+
     @InjectMocks
     private SagaCommandHandler handler;
 
@@ -67,6 +71,7 @@ class SagaCommandHandlerTest {
 
         verify(sagaReplyPublisher).publishSuccess("saga-1", "sign-xml", "corr-1");
         verify(sagaReplyPublisher, never()).publishFailure(any(), any(), any(), any());
+        verify(eventPublisher).publishXmlSigned(any());
     }
 
     @Test
@@ -85,6 +90,7 @@ class SagaCommandHandlerTest {
 
         verify(sagaReplyPublisher).publishFailure("saga-1", "sign-xml", "corr-1", "Document type detection failed");
         verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any());
+        verify(eventPublisher, never()).publishXmlSigned(any());
     }
 
     @Test
@@ -113,6 +119,7 @@ class SagaCommandHandlerTest {
 
         verify(sagaReplyPublisher).publishSuccess("saga-1", "sign-xml", "corr-1");
         verify(signingService, never()).signXml(any(), any());
+        verify(eventPublisher, never()).publishXmlSigned(any());
     }
 
     @Test
@@ -141,6 +148,7 @@ class SagaCommandHandlerTest {
 
         verify(sagaReplyPublisher).publishFailure("saga-1", "sign-xml", "corr-1", "Maximum retry attempts exceeded");
         verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any());
+        verify(eventPublisher, never()).publishXmlSigned(any());
     }
 
     @Test
@@ -160,6 +168,7 @@ class SagaCommandHandlerTest {
 
         verify(sagaReplyPublisher).publishFailure(eq("saga-1"), eq("sign-xml"), eq("corr-1"), contains("CSC API error"));
         verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any());
+        verify(eventPublisher, never()).publishXmlSigned(any());
     }
 
     @Test
@@ -183,6 +192,7 @@ class SagaCommandHandlerTest {
         verify(documentRepository).deleteById(document.getId());
         verify(sagaReplyPublisher).publishCompensated("saga-1", "COMPENSATE_sign-xml", "corr-1");
         verify(sagaReplyPublisher, never()).publishFailure(any(), any(), any(), any());
+        verify(eventPublisher, never()).publishXmlSigned(any());
     }
 
     @Test
