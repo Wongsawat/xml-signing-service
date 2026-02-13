@@ -34,4 +34,9 @@ public interface SignedXmlDocumentRepository {
      * Check if document exists by invoice ID
      */
     boolean existsByInvoiceId(String invoiceId);
+
+    /**
+     * Delete a signed XML document by ID (for compensation)
+     */
+    void deleteById(SignedXmlDocumentId id);
 }

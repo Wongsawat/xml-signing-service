@@ -229,4 +229,19 @@ class SignedXmlDocumentRepositoryAdapterTest {
             assertThat(result).isFalse();
         }
     }
+
+    @Nested
+    @DisplayName("deleteById() Method")
+    class DeleteByIdMethod {
+
+        @Test
+        @DisplayName("Deletes document by ID")
+        void testDeleteById() {
+            SignedXmlDocumentId id = SignedXmlDocumentId.create();
+
+            adapter.deleteById(id);
+
+            verify(jpaRepository).deleteById(id.value());
+        }
+    }
 }

@@ -47,4 +47,9 @@ public class SignedXmlDocumentRepositoryAdapter implements SignedXmlDocumentRepo
     public boolean existsByInvoiceId(String invoiceId) {
         return jpaRepository.existsByInvoiceId(invoiceId);
     }
+
+    @Override
+    public void deleteById(SignedXmlDocumentId id) {
+        jpaRepository.deleteById(id.value());
+    }
 }

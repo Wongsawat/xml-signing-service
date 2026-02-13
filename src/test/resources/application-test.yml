@@ -34,6 +34,9 @@ camel:
   springboot:
     name: xml-signing-camel-test
     main-run-controller: false
+  dataformat:
+    jackson:
+      auto-discover-object-mapper: true
 
 # Disable Eureka for tests
 eureka:
@@ -45,7 +48,9 @@ app:
   kafka:
     bootstrap-servers: localhost:9093
     topics:
-      xml-signing-requested: xml.signing.requested.test
+      saga-command-xml-signing: saga.command.xml-signing.test
+      saga-compensation-xml-signing: saga.compensation.xml-signing.test
+      saga-reply-xml-signing: saga.reply.xml-signing.test
       dlq: xml.signing.dlq.test
   csc:
     service-url: http://localhost:19000

@@ -62,7 +62,10 @@ app:
   kafka:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     topics:
-      xml-signing-requested: xml.signing.requested
+      # Saga topics
+      saga-command-xml-signing: saga.command.xml-signing
+      saga-compensation-xml-signing: saga.compensation.xml-signing
+      saga-reply-xml-signing: saga.reply.xml-signing
       dlq: xml.signing.dlq
 
   # CSC API Configuration
