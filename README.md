@@ -15,14 +15,17 @@ This service integrates with the [eidasremotesigning](../../../eidasremotesignin
 
 ```
 Saga Orchestrator ──→ saga.command.xml-signing → [XML Signing] → saga.reply.xml-signing ──→ Orchestrator
-                              ↓                                                            ↓
-                    saga.compensation.xml-signing (rollback)                      → PDF Generation / ebMS Sending
+                              ↓                         │                                    ↓
+                    saga.compensation.xml-signing        │                          → PDF Generation / ebMS Sending
+                         (rollback)                      │
+                                                        └──→ xml.signed ──→ Notification Service
 ```
 
 The service follows the **Saga Orchestration Pattern**:
 - Consumes commands from orchestrator via `saga.command.xml-signing`
 - Consumes compensation commands from orchestrator via `saga.compensation.xml-signing`
 - Publishes replies to orchestrator via `saga.reply.xml-signing` (Transactional Outbox Pattern with Debezium CDC)
+- Publishes `XmlSignedEvent` to `xml.signed` topic for notification-service (via Transactional Outbox)
 
 ## Prerequisites
 
@@ -137,6 +140,16 @@ Key environment variables:
 }
 ```
 
+**Produces**: `xml.signed` (via Transactional Outbox Pattern — consumed by notification-service)
+```json
+{
+  "invoiceId": "uuid",
+  "invoiceNumber": "INV-001",
+  "documentType": "TAX_INVOICE",
+  "correlationId": "uuid"
+}
+```
+
 ### Signing Process
 
 1. **Authorize** - Request SAD token from CSC API (`/csc/v2/credentials/authorize`)
@@ -145,7 +158,8 @@ Key environment variables:
 4. **Sign** - Call CSC API (`/csc/v2/signatures/signDocument`) with XAdES attributes
 5. **Decode** - Base64 decode signed XML
 6. **Persist** - Save signed document to database within same transaction
-7. **Publish Reply** - Write `saga.reply.xml-signing` event to outbox table (Debezium CDC delivers to Kafka)
+7. **Notify** - Write `XmlSignedEvent` to outbox with topic `xml.signed` (for notification-service)
+8. **Publish Reply** - Write `saga.reply.xml-signing` event to outbox table (Debezium CDC delivers to Kafka)
 
 ### Document Type Detection
 
@@ -338,7 +352,7 @@ domain/
 ├── model/       # Aggregate roots, value objects, enums
 ├── repository/    # Domain repository interfaces
 ├── service/      # Domain service interfaces
-└── event/        # Saga commands, replies
+└── event/        # Saga commands, replies, XmlSignedEvent
 
 application/
 └── service/      # Saga command handler
@@ -346,7 +360,7 @@ application/
 infrastructure/
 ├── persistence/   # JPA entities, repositories, mappers, outbox
 ├── client/        # CSC API implementation
-├── messaging/     # Saga reply publisher
+├── messaging/     # Saga reply publisher, event publisher (XmlSignedEvent)
 └── config/        # Camel routes, Feign, Outbox configuration
 ```
 
