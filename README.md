@@ -80,8 +80,9 @@ Key environment variables:
 | `CSC_SERVICE_URL` | http://localhost:9000 | eIDAS signing service URL |
 | `CSC_CLIENT_ID` | etax-invoice-service | CSC client identifier |
 | `CSC_CREDENTIAL_ID` | default-credential | CSC credential identifier |
-| `CSC_HASH_ALGORITHM` | SHA256 | Hash algorithm for digest |
-| `CSC_DIGEST_ALGORITHM` | SHA256 | Digest algorithm |
+| `CSC_PIN` | 1234 | CSC PIN for signHash endpoint authentication |
+| `CSC_HASH_ALGORITHM` | SHA-256withRSA | Hash algorithm for signing |
+| `CSC_DIGEST_ALGORITHM` | SHA256 | Digest algorithm for local hash computation |
 | `CSC_SIGNATURE_LEVEL` | XAdES-BASELINE-T | XAdES signature level |
 | `SIGNING_MAX_RETRIES` | 3 | Maximum signing retry attempts |
 | `SIGNING_TIMEOUT_SECONDS` | 30 | Signing operation timeout |
@@ -150,14 +151,14 @@ Key environment variables:
 }
 ```
 
-### Signing Process
+### Signing Process (signHash Pattern)
 
-1. **Authorize** - Request SAD token from CSC API (`/csc/v2/credentials/authorize`)
-2. **Encode** - Base64 encode XML content
-3. **Calculate Digest** - SHA-256 hash of XML
-4. **Sign** - Call CSC API (`/csc/v2/signatures/signDocument`) with XAdES attributes
-5. **Decode** - Base64 decode signed XML
-6. **Persist** - Save signed document to database within same transaction
+1. **Compute Digest** - Calculate SHA-256 hash of XML locally
+2. **Sign Hash** - Call CSC API (`/csc/v2/signatures/signHash`) with digest and PIN (no SAD token needed)
+3. **Sign Hash** - Call CSC API (`/csc/v2/signatures/signHash`) with digest only
+4. **Embed Signature** - Use `XadesSignatureEmbedder` to embed signature into XML as XAdES-BASELINE-T with actual digest value
+5. **Embed Signature** - Use `XadesSignatureEmbedder` to embed signature into XML as XAdES-BASELINE-T
+6. **Notify** - Write `XmlSignedEvent` to outbox with topic `xml.signed` (for notification-service)
 7. **Notify** - Write `XmlSignedEvent` to outbox with topic `xml.signed` (for notification-service)
 8. **Publish Reply** - Write `saga.reply.xml-signing` event to outbox table (Debezium CDC delivers to Kafka)
 
@@ -310,6 +311,7 @@ Key metrics:
 - Spring Boot 3.2.5
 - Spring Cloud 2023.0.1
 - Apache Camel 4.14.4 (Kafka integration)
+- Apache Santuario 4.0.2 (XML DSig/XAdES signatures)
 - Spring Cloud OpenFeign (CSC API client)
 - saga-commons (integration events, outbox pattern)
 - PostgreSQL 16
@@ -359,7 +361,8 @@ application/
 
 infrastructure/
 ├── persistence/   # JPA entities, repositories, mappers, outbox
-├── client/        # CSC API implementation
+├── client/        # CSC API implementation (signHash endpoint)
+├── embedder/      # XAdES-BASELINE-T signature embedding
 ├── messaging/     # Saga reply publisher, event publisher (XmlSignedEvent)
 └── config/        # Camel routes, Feign, Outbox configuration
 ```
@@ -370,5 +373,6 @@ infrastructure/
 - **Saga commands**: Extend `IntegrationEvent`, use `@JsonCreator` with two constructors (all-args for deserialization, convenience for testing)
 - **Saga replies**: Extend `SagaReply`, use factory methods (`success()`, `failure()`, `compensated()`)
 - **CSC API changes**: Update DTOs in `infrastructure/client/csc/dto/` and `XmlSigningServiceImpl`
+- **Signature embedding**: `XadesSignatureEmbedder` handles XAdES-BASELINE-T signature embedding
 - **New document types**: Add to `DocumentType` enum with namespace URI
 - **Compensation**: Implement delete logic in `SagaCommandHandler.handleCompensation()`, ensure idempotency

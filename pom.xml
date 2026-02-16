@@ -194,6 +194,13 @@
             <version>${saga.commons.version}</version>
         </dependency>
 
+        <!-- Apache Santuario for XML DSig/XAdES signatures -->
+        <dependency>
+            <groupId>org.apache.santuario</groupId>
+            <artifactId>xmlsec</artifactId>
+            <version>4.0.4</version>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

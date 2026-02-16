@@ -56,6 +56,7 @@ app:
     service-url: http://localhost:19000
     client-id: test-client
     credential-id: test-credential
+    pin: test-pin-1234
     hash-algorithm: SHA256
     signature-level: XAdES-BASELINE-T
     digest-algorithm: SHA256

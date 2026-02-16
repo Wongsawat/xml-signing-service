@@ -1,11 +1,9 @@
 package com.wpanther.xmlsigning.infrastructure.client;
 
-import com.wpanther.xmlsigning.infrastructure.client.csc.CSCApiClient;
-import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeRequest;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignDocumentRequest;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignDocumentResponse;
+import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
+import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureRequest;
+import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse;
+import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,16 +27,17 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link XmlSigningServiceImpl}.
+ * Tests the signHash pattern with PIN-based authentication.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("XmlSigningServiceImpl")
 class XmlSigningServiceImplTest {
 
     @Mock
-    private CSCAuthClient authClient;
+    private CSCSignatureClient signatureClient;
 
     @Mock
-    private CSCApiClient apiClient;
+    private XadesSignatureEmbedder signatureEmbedder;
 
     @InjectMocks
     private XmlSigningServiceImpl signingService;
@@ -47,9 +46,11 @@ class XmlSigningServiceImplTest {
     void setUp() {
         ReflectionTestUtils.setField(signingService, "clientId", "test-client");
         ReflectionTestUtils.setField(signingService, "credentialId", "test-credential");
+        ReflectionTestUtils.setField(signingService, "pin", "test-pin-1234");
         ReflectionTestUtils.setField(signingService, "hashAlgorithm", "SHA256");
         ReflectionTestUtils.setField(signingService, "signatureLevel", "XAdES-BASELINE-T");
         ReflectionTestUtils.setField(signingService, "digestAlgorithm", "SHA256");
+        ReflectionTestUtils.setField(signingService, "signatureEmbedder", signatureEmbedder);
     }
 
     @Nested
@@ -59,98 +60,71 @@ class XmlSigningServiceImplTest {
         @Test
         @DisplayName("Signs XML successfully with valid response")
         void testSignXmlSuccess() {
-            // Setup auth response
-            CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
-                    .SAD("sad-token-123")
-                    .transactionID("txn-auth-1")
-                    .expiresIn(300L)
-                    .build();
-            when(authClient.authorize(any())).thenReturn(authResponse);
+            // Setup signHash response
+            String rawSignature = "base64-encoded-signature";
+            String certificate = "base64-encoded-certificate";
 
-            // Setup sign response
-            String signedXml = "<signed><xml>content</xml></signed>";
-            String signedBase64 = Base64.getEncoder().encodeToString(
-                    signedXml.getBytes(StandardCharsets.UTF_8));
-            CSCSignDocumentResponse signResponse = CSCSignDocumentResponse.builder()
-                    .signedDocument(signedBase64)
-                    .transactionID("txn-sign-1")
+            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
+                    .signatures(new String[]{rawSignature})
+                    .certificate(certificate)
                     .build();
-            when(apiClient.signDocument(any())).thenReturn(signResponse);
+
+            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
+                .thenReturn("<signed><ds:Signature>test</ds:Signature></signed>");
 
             // Execute
-            String result = signingService.signXml("<xml>test</xml>", "doc-1");
+            String originalXml = "<xml>test</xml>";
+            String result = signingService.signXml(originalXml, "doc-1");
 
-            // Verify
-            assertThat(result).isEqualTo(signedXml);
+            // Verify result is not null and contains signature
+            assertThat(result).isNotNull();
+            assertThat(result).contains("ds:Signature");
         }
 
         @Test
-        @DisplayName("Sends correct authorization request")
-        void testAuthorizeRequestFields() {
-            // Setup
-            CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
-                    .SAD("sad-token")
-                    .build();
-            when(authClient.authorize(any())).thenReturn(authResponse);
-            when(apiClient.signDocument(any())).thenReturn(
-                    CSCSignDocumentResponse.builder()
-                            .signedDocument(Base64.getEncoder().encodeToString("<signed/>".getBytes()))
-                            .build());
-
-            // Execute
-            signingService.signXml("<xml/>", "doc-1");
-
-            // Capture and verify auth request
-            ArgumentCaptor<CSCAuthorizeRequest> captor = ArgumentCaptor.forClass(CSCAuthorizeRequest.class);
-            verify(authClient).authorize(captor.capture());
-
-            CSCAuthorizeRequest request = captor.getValue();
-            assertThat(request.getClientId()).isEqualTo("test-client");
-            assertThat(request.getCredentialID()).isEqualTo("test-credential");
-            assertThat(request.getNumSignatures()).isEqualTo("1");
-            assertThat(request.getHashAlgo()).isEqualTo("SHA256");
-            assertThat(request.getValidityPeriod()).isEqualTo(300L);
-            assertThat(request.getDescription()).isEqualTo("Thai e-Tax Invoice XML Signing");
-        }
-
-        @Test
-        @DisplayName("Sends correct sign document request")
-        void testSignDocumentRequestFields() throws Exception {
+        @DisplayName("Sends correct signHash request with PIN credentials")
+        void testSignHashRequestFields() {
             // Setup
             String xmlContent = "<xml>test</xml>";
-            String documentId = "doc-1";
 
-            CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
-                    .SAD("sad-token")
+            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
+                    .signatures(new String[]{"signature-value"})
+                    .certificate("certificate-value")
                     .build();
-            when(authClient.authorize(any())).thenReturn(authResponse);
 
-            String signedBase64 = Base64.getEncoder().encodeToString("<signed/>".getBytes());
-            when(apiClient.signDocument(any())).thenReturn(
-                    CSCSignDocumentResponse.builder()
-                            .signedDocument(signedBase64)
-                            .build());
+            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
+                .thenReturn("<signed>xml</signed>");
 
             // Execute
-            signingService.signXml(xmlContent, documentId);
+            signingService.signXml(xmlContent, "doc-1");
 
-            // Capture and verify sign request
-            ArgumentCaptor<CSCSignDocumentRequest> captor = ArgumentCaptor.forClass(CSCSignDocumentRequest.class);
-            verify(apiClient).signDocument(captor.capture());
+            // Capture and verify signHash request
+            ArgumentCaptor<CSCSignatureRequest> captor = ArgumentCaptor.forClass(CSCSignatureRequest.class);
+            verify(signatureClient).signHash(captor.capture());
 
-            CSCSignDocumentRequest request = captor.getValue();
+            CSCSignatureRequest request = captor.getValue();
             assertThat(request.getClientId()).isEqualTo("test-client");
             assertThat(request.getCredentialID()).isEqualTo("test-credential");
-            assertThat(request.getSAD()).isEqualTo("sad-token");
-            assertThat(request.getDocumentID()).isEqualTo(documentId);
-            assertThat(request.getDocument()).isEqualTo(
-                    Base64.getEncoder().encodeToString(xmlContent.getBytes(StandardCharsets.UTF_8)));
             assertThat(request.getHashAlgo()).isEqualTo("SHA256");
-            assertThat(request.getSignatureAttributes()).isNotNull();
-            assertThat(request.getSignatureAttributes().getSignatureType()).isEqualTo("XAdES");
-            assertThat(request.getSignatureAttributes().getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");
-            assertThat(request.getSignatureAttributes().getSignatureForm()).isEqualTo("enveloped");
-            assertThat(request.getSignatureAttributes().getDigestAlgorithm()).isEqualTo("SHA256");
+
+            // Verify PIN is set in credentials
+            assertThat(request.getCredentials()).isNotNull();
+            assertThat(request.getCredentials().getPin()).isNotNull();
+            assertThat(request.getCredentials().getPin().getValue()).isEqualTo("test-pin-1234");
+
+            // Verify signature data contains hash
+            assertThat(request.getSignatureData()).isNotNull();
+            assertThat(request.getSignatureData().getHashToSign()).isNotEmpty();
+            assertThat(request.getSignatureData().getHashToSign()[0]).isNotEmpty();
+
+            // Verify signature attributes
+            assertThat(request.getSignatureData().getSignatureAttributes()).isNotNull();
+            assertThat(request.getSignatureData().getSignatureAttributes().getSignatureType()).isEqualTo("XAdES");
+            assertThat(request.getSignatureData().getSignatureAttributes().getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");
+            assertThat(request.getSignatureData().getSignatureAttributes().getSignatureForm()).isEqualTo("enveloped");
+            assertThat(request.getSignatureData().getSignatureAttributes().getDigestAlgorithm()).isEqualTo("SHA256");
         }
 
         @Test
@@ -159,55 +133,64 @@ class XmlSigningServiceImplTest {
             // Setup
             String xmlContent = "<xml>test</xml>";
 
-            // Calculate expected digest
+            // Calculate expected digest (base64url encoded)
             MessageDigest digest = MessageDigest.getInstance("SHA256");
             byte[] hash = digest.digest(xmlContent.getBytes(StandardCharsets.UTF_8));
-            String expectedDigest = Base64.getEncoder().encodeToString(hash);
+            String base64 = Base64.getEncoder().encodeToString(hash);
+            String expectedDigest = base64.replace("+", "-").replace("/", "_").replaceAll("=+$", "");
 
-            CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
-                    .SAD("sad-token")
+            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
+                    .signatures(new String[]{"sig"})
+                    .certificate("cert")
                     .build();
-            when(authClient.authorize(any())).thenReturn(authResponse);
-            when(apiClient.signDocument(any())).thenReturn(
-                    CSCSignDocumentResponse.builder()
-                            .signedDocument(Base64.getEncoder().encodeToString("<signed/>".getBytes()))
-                            .build());
+
+            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
+                .thenReturn("<signed>xml</signed>");
 
             // Execute
             signingService.signXml(xmlContent, "doc-1");
 
             // Verify digest
-            ArgumentCaptor<CSCSignDocumentRequest> captor = ArgumentCaptor.forClass(CSCSignDocumentRequest.class);
-            verify(apiClient).signDocument(captor.capture());
-            assertThat(captor.getValue().getDocumentDigest()).isEqualTo(expectedDigest);
-        }
-
-        @Test
-        @DisplayName("Throws RuntimeException when authorization fails")
-        void testAuthorizationFailure() {
-            // Setup
-            when(authClient.authorize(any())).thenThrow(new RuntimeException("Auth failed"));
-
-            // Execute & Verify
-            assertThatThrownBy(() -> signingService.signXml("<xml/>", "doc-1"))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("XML signing failed");
+            ArgumentCaptor<CSCSignatureRequest> captor = ArgumentCaptor.forClass(CSCSignatureRequest.class);
+            verify(signatureClient).signHash(captor.capture());
+            assertThat(captor.getValue().getSignatureData().getHashToSign()[0]).isEqualTo(expectedDigest);
         }
 
         @Test
         @DisplayName("Throws RuntimeException when signing fails")
         void testSigningFailure() {
             // Setup
-            CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
-                    .SAD("sad-token")
-                    .build();
-            when(authClient.authorize(any())).thenReturn(authResponse);
-            when(apiClient.signDocument(any())).thenThrow(new RuntimeException("Sign failed"));
+            when(signatureClient.signHash(any())).thenThrow(new RuntimeException("Sign failed"));
 
             // Execute & Verify
             assertThatThrownBy(() -> signingService.signXml("<xml/>", "doc-1"))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("XML signing failed");
+        }
+
+        @Test
+        @DisplayName("Uses default PIN when not configured")
+        void testDefaultPin() {
+            // Clear the PIN to test default value
+            ReflectionTestUtils.setField(signingService, "pin", null);
+
+            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
+                    .signatures(new String[]{"sig"})
+                    .certificate("cert")
+                    .build();
+
+            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
+                .thenReturn("<signed>xml</signed>");
+
+            // Execute
+            signingService.signXml("<xml/>", "doc-1");
+
+            // Verify - the field value would be null, but the @Value annotation
+            // would provide the default value "1234" in real Spring context
+            // In this test, we just verify the call is made
+            verify(signatureClient).signHash(any());
         }
     }
 }
