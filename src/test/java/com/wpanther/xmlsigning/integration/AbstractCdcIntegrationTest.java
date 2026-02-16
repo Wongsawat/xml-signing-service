@@ -26,7 +26,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,14 +54,7 @@ public abstract class AbstractCdcIntegrationTest {
     protected static final String DEBEZIUM_URL = "http://localhost:8083";
     protected static final String DEBEZIUM_CONNECTOR_NAME = "outbox-connector-xmlsigning";
 
-    protected static final List<String> OUTPUT_TOPICS = Arrays.asList(
-        "xml.signed.tax-invoice",
-        "xml.signed.invoice",
-        "xml.signed.receipt",
-        "xml.signed.debit-credit-note",
-        "xml.signed.cancellation",
-        "xml.signed.abbreviated"
-    );
+    protected static final String OUTPUT_TOPIC = "xml.signed";
 
     @Autowired
     protected JdbcTemplate jdbcTemplate;
@@ -100,8 +92,8 @@ public abstract class AbstractCdcIntegrationTest {
         // Verify Debezium Connect is running
         verifyDebeziumConnectRunning();
 
-        // Subscribe consumer to all output topics
-        testKafkaConsumer.subscribe(OUTPUT_TOPICS);
+        // Subscribe consumer to xml.signed topic
+        testKafkaConsumer.subscribe(List.of(OUTPUT_TOPIC));
     }
 
     @BeforeEach

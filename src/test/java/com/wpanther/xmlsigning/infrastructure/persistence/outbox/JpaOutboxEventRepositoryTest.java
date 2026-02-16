@@ -50,7 +50,7 @@ class JpaOutboxEventRepositoryTest {
                 .createdAt(Instant.now())
                 .status(OutboxStatus.PENDING)
                 .retryCount(0)
-                .topic("xml.signed.tax-invoice")
+                .topic("xml.signed")
                 .build();
     }
 
@@ -64,7 +64,7 @@ class JpaOutboxEventRepositoryTest {
                 .createdAt(Instant.now())
                 .status(OutboxStatus.PENDING)
                 .retryCount(0)
-                .topic("xml.signed.tax-invoice")
+                .topic("xml.signed")
                 .build();
     }
 

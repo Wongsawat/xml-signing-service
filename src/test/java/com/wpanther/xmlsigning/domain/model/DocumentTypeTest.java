@@ -10,51 +10,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link DocumentType} enum.
- * Tests Kafka topic mapping and factory methods (fromName, fromNamespaceUri, fromRootElementName).
+ * Tests factory methods (fromName, fromNamespaceUri, fromRootElementName).
  */
 @DisplayName("DocumentType Enum")
 class DocumentTypeTest {
-
-    @Nested
-    @DisplayName("getKafkaTopic() - Topic Mapping")
-    class GetKafkaTopics {
-
-        @Test
-        @DisplayName("TAX_INVOICE maps to correct topic")
-        void testKafkaTopics() {
-            assertThat(DocumentType.TAX_INVOICE.getKafkaTopic()).isEqualTo("xml.signed.tax-invoice");
-        }
-
-        @Test
-        @DisplayName("RECEIPT maps to correct topic")
-        void testKafkaTopicsReceipt() {
-            assertThat(DocumentType.RECEIPT.getKafkaTopic()).isEqualTo("xml.signed.receipt");
-        }
-
-        @Test
-        @DisplayName("INVOICE maps to correct topic")
-        void testKafkaTopicsInvoice() {
-            assertThat(DocumentType.INVOICE.getKafkaTopic()).isEqualTo("xml.signed.invoice");
-        }
-
-        @Test
-        @DisplayName("DEBIT_CREDIT_NOTE maps to correct topic")
-        void testKafkaTopicsDebitCreditNote() {
-            assertThat(DocumentType.DEBIT_CREDIT_NOTE.getKafkaTopic()).isEqualTo("xml.signed.debit-credit-note");
-        }
-
-        @Test
-        @DisplayName("CANCELLATION_NOTE maps to correct topic")
-        void testKafkaTopicsCancellationNote() {
-            assertThat(DocumentType.CANCELLATION_NOTE.getKafkaTopic()).isEqualTo("xml.signed.cancellation");
-        }
-
-        @Test
-        @DisplayName("ABBREVIATED_TAX_INVOICE maps to correct topic")
-        void testKafkaTopicsAbbreviatedTaxInvoice() {
-            assertThat(DocumentType.ABBREVIATED_TAX_INVOICE.getKafkaTopic()).isEqualTo("xml.signed.abbreviated");
-        }
-    }
 
     @Nested
     @DisplayName("fromName() Factory Method")

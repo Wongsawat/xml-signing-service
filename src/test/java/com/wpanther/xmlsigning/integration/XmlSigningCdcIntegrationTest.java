@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * CDC integration tests verifying the Transactional Outbox Pattern with Debezium.
  * <p>
  * Tests that outbox events written to the database are picked up by Debezium CDC
- * and published to the correct type-specific Kafka topic.
+ * and published to the xml.signed Kafka topic.
  * <p>
  * Requires: PostgreSQL:5433, Kafka:9093, Debezium:8083
  * Start with: ./scripts/test-containers-start.sh --with-debezium --auto-deploy-connectors
@@ -31,41 +31,8 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
     class DebeziumCdcEventRouting {
 
         @Test
-        @DisplayName("Should route tax invoice outbox event to xml.signed.tax-invoice topic")
-        void shouldRouteTaxInvoiceToCorrectTopic() throws Exception {
-            // Given
-            String invoiceId = UUID.randomUUID().toString();
-            String payload = createXmlSignedEventPayload(invoiceId, "TINV-CDC-001",
-                DocumentType.TAX_INVOICE, UUID.randomUUID().toString());
-
-            // When - insert outbox event directly (simulates what EventPublisher does)
-            insertOutboxEvent(
-                "SignedXmlDocument",
-                invoiceId,
-                "XmlSignedEvent",
-                payload,
-                "xml.signed.tax-invoice",
-                invoiceId,
-                null
-            );
-
-            // Then - Debezium CDC should publish to xml.signed.tax-invoice
-            List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed.tax-invoice", invoiceId, Duration.ofSeconds(30));
-
-            assertThat(records)
-                .as("Should receive at least one message on xml.signed.tax-invoice")
-                .isNotEmpty();
-
-            // Verify the message payload (Debezium may double-encode TEXT payloads)
-            ConsumerRecord<String, String> record = records.get(0);
-            JsonNode message = parseDebeziumPayload(record.value());
-            assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
-        }
-
-        @Test
-        @DisplayName("Should route invoice outbox event to xml.signed.invoice topic")
-        void shouldRouteInvoiceToCorrectTopic() throws Exception {
+        @DisplayName("Should route outbox event to xml.signed topic")
+        void shouldRouteToXmlSignedTopic() throws Exception {
             // Given
             String invoiceId = UUID.randomUUID().toString();
             String payload = createXmlSignedEventPayload(invoiceId, "INV-CDC-001",
@@ -77,58 +44,22 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
                 invoiceId,
                 "XmlSignedEvent",
                 payload,
-                "xml.signed.invoice",
+                "xml.signed",
                 invoiceId,
                 null
             );
 
             // Then
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed.invoice", invoiceId, Duration.ofSeconds(30));
+                pollForMessagesOnTopic("xml.signed", invoiceId, Duration.ofSeconds(30));
 
             assertThat(records)
-                .as("Should receive at least one message on xml.signed.invoice")
+                .as("Should receive at least one message on xml.signed")
                 .isNotEmpty();
 
             ConsumerRecord<String, String> record = records.get(0);
             JsonNode message = parseDebeziumPayload(record.value());
             assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
-        }
-
-        @ParameterizedTest(name = "{0} → {0}")
-        @EnumSource(DocumentType.class)
-        @DisplayName("Should route all document types to their correct Kafka topic")
-        void shouldRouteAllDocumentTypesToCorrectTopics(DocumentType documentType) throws Exception {
-            // Given
-            String invoiceId = UUID.randomUUID().toString();
-            String targetTopic = documentType.getKafkaTopic();
-            String payload = createXmlSignedEventPayload(invoiceId,
-                documentType.name() + "-CDC-" + invoiceId.substring(0, 8),
-                documentType, UUID.randomUUID().toString());
-
-            // When
-            insertOutboxEvent(
-                "SignedXmlDocument",
-                invoiceId,
-                "XmlSignedEvent",
-                payload,
-                targetTopic,
-                invoiceId,
-                null
-            );
-
-            // Then
-            List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic(targetTopic, invoiceId, Duration.ofSeconds(30));
-
-            assertThat(records)
-                .as("Should receive message on topic: " + targetTopic)
-                .isNotEmpty();
-
-            ConsumerRecord<String, String> record = records.get(0);
-            JsonNode message = parseDebeziumPayload(record.value());
-            assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
-            assertThat(message.get("documentType").asText()).isEqualTo(documentType.name());
         }
     }
 
@@ -151,14 +82,14 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
                 invoiceId,
                 "XmlSignedEvent",
                 payload,
-                "xml.signed.tax-invoice",
+                "xml.signed",
                 correlationId,
                 "{\"correlationId\":\"" + correlationId + "\",\"documentType\":\"TAX_INVOICE\"}"
             );
 
             // Then
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed.tax-invoice", invoiceId, Duration.ofSeconds(30));
+                pollForMessagesOnTopic("xml.signed", invoiceId, Duration.ofSeconds(30));
 
             assertThat(records).isNotEmpty();
             // Verify the payload contains our invoiceId (Debezium may double-encode)

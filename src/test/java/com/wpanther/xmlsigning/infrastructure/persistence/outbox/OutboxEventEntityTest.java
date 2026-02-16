@@ -28,7 +28,7 @@ class OutboxEventEntityTest {
                 .publishedAt(null)
                 .status(OutboxStatus.PENDING)
                 .retryCount(0)
-                .topic("xml.signed.tax-invoice")
+                .topic("xml.signed")
                 .partitionKey("corr-1")
                 .headers("{\"k\":\"v\"}")
                 .build();
@@ -55,7 +55,7 @@ class OutboxEventEntityTest {
                     .status(OutboxStatus.PUBLISHED)
                     .retryCount(1)
                     .errorMessage(null)
-                    .topic("xml.signed.tax-invoice")
+                    .topic("xml.signed")
                     .partitionKey("key-1")
                     .headers("{}")
                     .build();
@@ -70,7 +70,7 @@ class OutboxEventEntityTest {
             assertThat(entity.getStatus()).isEqualTo(OutboxStatus.PUBLISHED);
             assertThat(entity.getRetryCount()).isEqualTo(1);
             assertThat(entity.getErrorMessage()).isNull();
-            assertThat(entity.getTopic()).isEqualTo("xml.signed.tax-invoice");
+            assertThat(entity.getTopic()).isEqualTo("xml.signed");
             assertThat(entity.getPartitionKey()).isEqualTo("key-1");
             assertThat(entity.getHeaders()).isEqualTo("{}");
         }
@@ -121,7 +121,7 @@ class OutboxEventEntityTest {
                     .createdAt(now)
                     .status(OutboxStatus.PENDING)
                     .retryCount(0)
-                    .topic("xml.signed.invoice")
+                    .topic("xml.signed")
                     .partitionKey("pk-1")
                     .headers("{\"h\":\"v\"}")
                     .build();
@@ -136,7 +136,7 @@ class OutboxEventEntityTest {
             assertThat(domain.getCreatedAt()).isEqualTo(now);
             assertThat(domain.getStatus()).isEqualTo(OutboxStatus.PENDING);
             assertThat(domain.getRetryCount()).isEqualTo(0);
-            assertThat(domain.getTopic()).isEqualTo("xml.signed.invoice");
+            assertThat(domain.getTopic()).isEqualTo("xml.signed");
             assertThat(domain.getPartitionKey()).isEqualTo("pk-1");
             assertThat(domain.getHeaders()).isEqualTo("{\"h\":\"v\"}");
         }

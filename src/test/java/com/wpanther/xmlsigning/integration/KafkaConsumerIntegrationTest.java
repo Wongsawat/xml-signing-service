@@ -47,7 +47,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             assertThat(outboxEvents).isNotEmpty();
 
             Map<String, Object> outboxEvent = outboxEvents.get(0);
-            assertThat(outboxEvent.get("topic")).isEqualTo("xml.signed.tax-invoice");
+            assertThat(outboxEvent.get("topic")).isEqualTo("xml.signed");
             assertThat(outboxEvent.get("event_type")).isEqualTo("XmlSignedEvent");
             assertThat(outboxEvent.get("aggregate_type")).isEqualTo("SignedXmlDocument");
 
@@ -62,7 +62,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
         }
 
         @Test
-        @DisplayName("Should sign invoice and route to xml.signed.invoice topic")
+        @DisplayName("Should sign invoice and write to outbox")
         void shouldSignInvoiceAndWriteToOutbox() throws Exception {
             // Given
             String invoiceId = UUID.randomUUID().toString();
@@ -82,7 +82,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
 
             List<Map<String, Object>> outboxEvents = getOutboxEventsByAggregateId(invoiceId);
             assertThat(outboxEvents).isNotEmpty();
-            assertThat(outboxEvents.get(0).get("topic")).isEqualTo("xml.signed.invoice");
+            assertThat(outboxEvents.get(0).get("topic")).isEqualTo("xml.signed");
         }
 
         @Test
@@ -191,7 +191,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             assertThat(outboxEvent.get("aggregate_type")).isEqualTo("SignedXmlDocument");
             assertThat(outboxEvent.get("aggregate_id")).isEqualTo(invoiceId);
             assertThat(outboxEvent.get("event_type")).isEqualTo("XmlSignedEvent");
-            assertThat(outboxEvent.get("topic")).isEqualTo("xml.signed.tax-invoice");
+            assertThat(outboxEvent.get("topic")).isEqualTo("xml.signed");
             assertThat(outboxEvent.get("partition_key")).isEqualTo(correlationId);
 
             // Verify outbox payload JSON

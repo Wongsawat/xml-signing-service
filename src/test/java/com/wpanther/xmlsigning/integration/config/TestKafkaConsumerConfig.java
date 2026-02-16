@@ -15,7 +15,7 @@ import java.util.Properties;
 
 /**
  * Kafka consumer configuration for CDC integration tests.
- * Provides a raw KafkaConsumer to poll type-specific xml.signed.* topics
+ * Provides a raw KafkaConsumer to poll the xml.signed topic
  * that Debezium CDC publishes to.
  */
 @Configuration
@@ -45,21 +45,14 @@ public class TestKafkaConsumerConfig {
     }
 
     /**
-     * Create the type-specific output topics that Debezium CDC routes to.
+     * Create the xml.signed topic that Debezium CDC routes to.
      */
     public void createTopics() {
         try (AdminClient adminClient = AdminClient.create(kafkaAdminProperties())) {
-            List<NewTopic> topics = List.of(
-                new NewTopic("xml.signed.tax-invoice", 1, (short) 1),
-                new NewTopic("xml.signed.invoice", 1, (short) 1),
-                new NewTopic("xml.signed.receipt", 1, (short) 1),
-                new NewTopic("xml.signed.debit-credit-note", 1, (short) 1),
-                new NewTopic("xml.signed.cancellation", 1, (short) 1),
-                new NewTopic("xml.signed.abbreviated", 1, (short) 1)
-            );
-            adminClient.createTopics(topics).all().get();
+            NewTopic topic = new NewTopic("xml.signed", 1, (short) 1);
+            adminClient.createTopics(List.of(topic)).all().get();
         } catch (Exception e) {
-            // Topics may already exist from previous runs
+            // Topic may already exist from previous runs
         }
     }
 }

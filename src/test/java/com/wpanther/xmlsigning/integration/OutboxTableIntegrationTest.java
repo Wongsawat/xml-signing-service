@@ -78,7 +78,7 @@ class OutboxTableIntegrationTest extends AbstractCdcIntegrationTest {
             String aggregateId = UUID.randomUUID().toString();
             String eventType = "XmlSignedEvent";
             String payload = "{\"invoiceId\":\"" + aggregateId + "\",\"documentType\":\"TAX_INVOICE\"}";
-            String topic = "xml.signed.tax-invoice";
+            String topic = "xml.signed";
             String partitionKey = UUID.randomUUID().toString();
             String headers = "{\"correlationId\":\"" + partitionKey + "\",\"documentType\":\"TAX_INVOICE\"}";
 
@@ -118,16 +118,16 @@ class OutboxTableIntegrationTest extends AbstractCdcIntegrationTest {
 
             // Insert two events for same aggregate
             insertOutboxEvent("SignedXmlDocument", aggregateId, "XmlSignedEvent",
-                "{\"test\":\"event1\"}", "xml.signed.tax-invoice", aggregateId, null);
+                "{\"test\":\"event1\"}", "xml.signed", aggregateId, null);
             insertOutboxEvent("SignedXmlDocument", aggregateId, "XmlSignedEvent",
-                "{\"test\":\"event2\"}", "xml.signed.tax-invoice", aggregateId, null);
+                "{\"test\":\"event2\"}", "xml.signed", aggregateId, null);
 
             // Insert one event for different aggregate
             insertOutboxEvent("SignedXmlDocument", UUID.randomUUID().toString(), "XmlSignedEvent",
-                "{\"test\":\"other\"}", "xml.signed.invoice", "other-key", null);
+                "{\"test\":\"other\"}", "xml.signed", "other-key", null);
 
             // When
-            List<Map<String, Object>> events = getOutboxEventsByTopic("xml.signed.tax-invoice");
+            List<Map<String, Object>> events = getOutboxEventsByTopic("xml.signed");
 
             // Then - should find at least the 2 events for our aggregate
             List<Map<String, Object>> matching = events.stream()

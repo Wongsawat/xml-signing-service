@@ -2,34 +2,18 @@ package com.wpanther.xmlsigning.domain.model;
 
 /**
  * Enum representing the 6 Thai e-Tax document types for XML signing routing.
- * Each document type maps to a type-specific Kafka topic for signed XML events.
  *
  * <p>This is a simplified version of document-intake-service's DocumentType,
- * containing only the Kafka topic mapping needed for routing signed documents.
+ * used for document type detection from XML namespace URIs and root element names.
  */
 public enum DocumentType {
 
-    TAX_INVOICE("xml.signed.tax-invoice"),
-    RECEIPT("xml.signed.receipt"),
-    INVOICE("xml.signed.invoice"),
-    DEBIT_CREDIT_NOTE("xml.signed.debit-credit-note"),
-    CANCELLATION_NOTE("xml.signed.cancellation"),
-    ABBREVIATED_TAX_INVOICE("xml.signed.abbreviated");
-
-    private final String kafkaTopic;
-
-    DocumentType(String kafkaTopic) {
-        this.kafkaTopic = kafkaTopic;
-    }
-
-    /**
-     * Get the Kafka topic for this document type.
-     *
-     * @return the Kafka topic name
-     */
-    public String getKafkaTopic() {
-        return kafkaTopic;
-    }
+    TAX_INVOICE,
+    RECEIPT,
+    INVOICE,
+    DEBIT_CREDIT_NOTE,
+    CANCELLATION_NOTE,
+    ABBREVIATED_TAX_INVOICE;
 
     /**
      * Find document type by name (case-insensitive).
