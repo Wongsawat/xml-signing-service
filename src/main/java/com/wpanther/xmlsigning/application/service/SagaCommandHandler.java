@@ -4,6 +4,7 @@ import com.wpanther.saga.domain.enums.ReplyStatus;
 import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
+import com.wpanther.xmlsigning.domain.event.XmlStorageRequestedEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
@@ -12,6 +13,7 @@ import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
+import com.wpanther.xmlsigning.infrastructure.messaging.XmlStoragePublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +36,7 @@ public class SagaCommandHandler {
     private final DocumentTypeDetectionService documentTypeDetectionService;
     private final SagaReplyPublisher sagaReplyPublisher;
     private final EventPublisher eventPublisher;
+    private final XmlStoragePublisher xmlStoragePublisher;
 
     @Value("${app.signing.max-retries:3}")
     private int maxRetries;
@@ -143,6 +146,16 @@ public class SagaCommandHandler {
                     command.getCorrelationId()
             );
             eventPublisher.publishXmlSigned(xmlSignedEvent);
+
+            // Publish storage request for document-storage-service
+            XmlStorageRequestedEvent storageRequest = new XmlStorageRequestedEvent(
+                    command.getDocumentId(),
+                    signedXml,
+                    documentType.name(),
+                    command.getInvoiceNumber(),
+                    command.getCorrelationId()
+            );
+            xmlStoragePublisher.publishStorageRequest(storageRequest, document.getId().value().toString());
 
             // Send SUCCESS reply
             sagaReplyPublisher.publishSuccess(
