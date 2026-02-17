@@ -1,6 +1,7 @@
 package com.wpanther.xmlsigning.infrastructure.client;
 
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
+import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.*;
 import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
@@ -18,12 +19,13 @@ import java.util.Base64;
  * <p>
  * Following the reference architecture pattern:
  * 1. Hash is computed locally
- * 2. Hash is sent to CSC via signHash (not full document)
- * 3. Raw signature is returned from CSC HSM
- * 4. Signature is embedded locally into XML using Apache Santuario
+ * 2. SAD token is obtained via /credentials/authorize endpoint
+ * 3. Hash is sent to CSC via signHash with SAD token (not PIN)
+ * 4. Raw signature is returned from CSC HSM
+ * 5. Signature is embedded locally into XML using Apache Santuario
  * <p>
- * The signHash endpoint uses PIN-based authentication via credentials.pin.value field,
- * NOT SAD tokens (SAD tokens are only for signDocument endpoint).
+ * The signHash endpoint uses SAD token-based authentication for security,
+ * following CSC API v2.0 best practices. SAD tokens are short-lived (typically 15 min).
  */
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ import java.util.Base64;
 public class XmlSigningServiceImpl implements XmlSigningService {
 
     private final CSCSignatureClient signatureClient;
+    private final CSCAuthClient authClient;
     private final XadesSignatureEmbedder signatureEmbedder;
 
     @Value("${app.csc.client-id}")
@@ -38,9 +41,6 @@ public class XmlSigningServiceImpl implements XmlSigningService {
 
     @Value("${app.csc.credential-id}")
     private String credentialId;
-
-    @Value("${app.csc.pin:1234}")
-    private String pin;
 
     @Value("${app.csc.hash-algorithm:SHA-256withRSA}")
     private String hashAlgorithm;
@@ -60,7 +60,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             String documentDigest = calculateDigest(xmlContent);
             log.debug("Computed digest for document: {}", documentId);
 
-            // Step 2: Call CSC signHash endpoint with digest and PIN
+            // Step 2: Call CSC signHash endpoint with digest and SAD token
             CSCSignatureResponse signatureResponse = signHash(documentDigest);
             log.info("Document signed successfully: {}", documentId);
 
@@ -80,12 +80,12 @@ public class XmlSigningServiceImpl implements XmlSigningService {
     }
 
     /**
-     * Sign the hash using CSC signHash endpoint with PIN-based authentication.
+     * Sign the hash using CSC signHash endpoint with SAD token authentication.
      * <p>
      * Only the digest is sent to CSC, not the full document.
-     * The signHash endpoint uses credentials.pin.value for authentication, NOT SAD tokens.
+     * SAD token is obtained via /credentials/authorize endpoint for each signing operation.
      *
-     * @param documentDigest The base64-encoded SHA-256 digest
+     * @param documentDigest The base64url-encoded SHA-256 digest
      * @return The signature response with raw signature and certificate
      */
     private CSCSignatureResponse signHash(String documentDigest) {
@@ -104,20 +104,31 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             .signatureAttributes(signatureAttributes)
             .build();
 
-        // Build signHash request with PIN-based credentials
-        CSCSignatureRequest.Credentials credentials = CSCSignatureRequest.Credentials.builder()
-            .pin(CSCSignatureRequest.Pin.builder().value(pin).build())
+        // Step 1: Authorize to get SAD token
+        log.debug("Authorizing signing operation with CSC API");
+        CSCAuthorizeRequest authRequest = CSCAuthorizeRequest.builder()
+            .clientId(clientId)
+            .credentialID(credentialId)
+            .numSignatures("1")
+            .hashAlgo(digestAlgorithm)
+            .hash(new String[]{documentDigest})
+            .description("Thai e-Tax Invoice XML Signing")
             .build();
 
+        CSCAuthorizeResponse authResponse = authClient.authorize(authRequest);
+        String sadToken = authResponse.getSAD();
+        log.debug("Received SAD token from CSC API");
+
+        // Step 2: Build signHash request with SAD (no credentials/PIN)
         CSCSignatureRequest signRequest = CSCSignatureRequest.builder()
             .clientId(clientId)
-            .credentials(credentials)
             .credentialID(credentialId)
+            .SAD(sadToken)
             .hashAlgo(hashAlgorithm)
             .signatureData(signatureData)
             .build();
 
-        // Call signHash endpoint
+        // Step 3: Call signHash endpoint
         return signatureClient.signHash(signRequest);
     }
 

@@ -22,7 +22,14 @@ public class CSCSignatureRequest {
     @NotBlank(message = "clientId is required")
     private String clientId;
 
-    private Credentials credentials;
+    private Credentials credentials;  // Optional: for PIN-based auth (deprecated, use SAD instead)
+
+    /**
+     * SAD (Signature Activation Data) token for authorization.
+     * Obtained from CSC /credentials/authorize endpoint.
+     * Preferred over PIN-based credentials.pin authentication.
+     */
+    private String SAD;
 
     @NotBlank(message = "credentialID is required")
     private String credentialID;

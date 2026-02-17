@@ -24,6 +24,7 @@ class CSCDtoTest {
                     .credentialID("cred-1")
                     .numSignatures("1")
                     .hashAlgo("SHA256")
+                    .hash(new String[]{"abc123", "def456"})
                     .validityPeriod(300L)
                     .description("Test signing")
                     .build();
@@ -32,8 +33,30 @@ class CSCDtoTest {
             assertThat(request.getCredentialID()).isEqualTo("cred-1");
             assertThat(request.getNumSignatures()).isEqualTo("1");
             assertThat(request.getHashAlgo()).isEqualTo("SHA256");
+            assertThat(request.getHash()).isNotNull();
+            assertThat(request.getHash()).hasSize(2);
+            assertThat(request.getHash()[0]).isEqualTo("abc123");
+            assertThat(request.getHash()[1]).isEqualTo("def456");
             assertThat(request.getValidityPeriod()).isEqualTo(300L);
             assertThat(request.getDescription()).isEqualTo("Test signing");
+        }
+
+        @Test
+        @DisplayName("Builder without optional fields")
+        void testBuilderWithoutOptionalFields() {
+            CSCAuthorizeRequest request = CSCAuthorizeRequest.builder()
+                    .clientId("client-1")
+                    .credentialID("cred-1")
+                    .numSignatures("1")
+                    .build();
+
+            assertThat(request.getClientId()).isEqualTo("client-1");
+            assertThat(request.getCredentialID()).isEqualTo("cred-1");
+            assertThat(request.getNumSignatures()).isEqualTo("1");
+            assertThat(request.getHash()).isNull();
+            assertThat(request.getHashAlgo()).isNull();
+            assertThat(request.getValidityPeriod()).isNull();
+            assertThat(request.getDescription()).isNull();
         }
 
         @Test
@@ -189,6 +212,128 @@ class CSCDtoTest {
 
             assertThat(attrs.getSignatureType()).isEqualTo("PAdES");
             assertThat(attrs.getSignatureLevel()).isEqualTo("PAdES-BASELINE-T");
+        }
+    }
+
+    @Nested
+    @DisplayName("CSCSignatureRequest")
+    class CSCSignatureRequestTests {
+
+        @Test
+        @DisplayName("Builder with SAD token (new authentication)")
+        void testBuilderWithSAD() {
+            SignatureAttributes attrs = SignatureAttributes.builder()
+                    .signatureType("XAdES")
+                    .build();
+
+            SignatureData sigData = SignatureData.builder()
+                    .hashToSign(new String[]{"abc123"})
+                    .signatureAttributes(attrs)
+                    .build();
+
+            CSCSignatureRequest request = CSCSignatureRequest.builder()
+                    .clientId("client-1")
+                    .credentialID("cred-1")
+                    .SAD("sad-token-xyz")
+                    .hashAlgo("SHA256")
+                    .signatureData(sigData)
+                    .build();
+
+            assertThat(request.getClientId()).isEqualTo("client-1");
+            assertThat(request.getCredentialID()).isEqualTo("cred-1");
+            assertThat(request.getSAD()).isEqualTo("sad-token-xyz");
+            assertThat(request.getCredentials()).isNull(); // No PIN when using SAD
+            assertThat(request.getHashAlgo()).isEqualTo("SHA256");
+            assertThat(request.getSignatureData()).isEqualTo(sigData);
+        }
+
+        @Test
+        @DisplayName("Builder with credentials.pin (deprecated authentication)")
+        void testBuilderWithCredentials() {
+            SignatureData sigData = SignatureData.builder()
+                    .hashToSign(new String[]{"abc123"})
+                    .build();
+
+            CSCSignatureRequest.Credentials credentials = CSCSignatureRequest.Credentials.builder()
+                    .pin(CSCSignatureRequest.Pin.builder().value("1234").build())
+                    .build();
+
+            CSCSignatureRequest request = CSCSignatureRequest.builder()
+                    .clientId("client-1")
+                    .credentialID("cred-1")
+                    .credentials(credentials)
+                    .hashAlgo("SHA256")
+                    .signatureData(sigData)
+                    .build();
+
+            assertThat(request.getClientId()).isEqualTo("client-1");
+            assertThat(request.getCredentialID()).isEqualTo("cred-1");
+            assertThat(request.getSAD()).isNull();
+            assertThat(request.getCredentials()).isNotNull();
+            assertThat(request.getCredentials().getPin().getValue()).isEqualTo("1234");
+        }
+
+        @Test
+        @DisplayName("No-args constructor and setters")
+        void testNoArgsConstructor() {
+            CSCSignatureRequest request = new CSCSignatureRequest();
+            request.setClientId("client-2");
+            request.setCredentialID("cred-2");
+            request.setSAD("sad-token-2");
+
+            assertThat(request.getClientId()).isEqualTo("client-2");
+            assertThat(request.getCredentialID()).isEqualTo("cred-2");
+            assertThat(request.getSAD()).isEqualTo("sad-token-2");
+        }
+
+        @Test
+        @DisplayName("Credentials nested class builder")
+        void testCredentialsBuilder() {
+            CSCSignatureRequest.Pin pin = CSCSignatureRequest.Pin.builder()
+                    .value("9999")
+                    .build();
+
+            assertThat(pin.getValue()).isEqualTo("9999");
+
+            CSCSignatureRequest.Credentials credentials = CSCSignatureRequest.Credentials.builder()
+                    .pin(pin)
+                    .build();
+
+            assertThat(credentials.getPin()).isEqualTo(pin);
+        }
+    }
+
+    @Nested
+    @DisplayName("SignatureData")
+    class SignatureDataTests {
+
+        @Test
+        @DisplayName("Builder with all fields")
+        void testBuilderWithAllFields() {
+            SignatureAttributes attrs = SignatureAttributes.builder()
+                    .signatureType("XAdES")
+                    .build();
+
+            SignatureData sigData = SignatureData.builder()
+                    .hashToSign(new String[]{"hash1", "hash2"})
+                    .signatureAttributes(attrs)
+                    .build();
+
+            assertThat(sigData.getHashToSign()).isNotNull();
+            assertThat(sigData.getHashToSign()).hasSize(2);
+            assertThat(sigData.getHashToSign()[0]).isEqualTo("hash1");
+            assertThat(sigData.getHashToSign()[1]).isEqualTo("hash2");
+            assertThat(sigData.getSignatureAttributes()).isEqualTo(attrs);
+        }
+
+        @Test
+        @DisplayName("No-args constructor and setters")
+        void testNoArgsConstructor() {
+            SignatureData sigData = new SignatureData();
+            sigData.setHashToSign(new String[]{"hash1"});
+
+            assertThat(sigData.getHashToSign()).isNotNull();
+            assertThat(sigData.getHashToSign()[0]).isEqualTo("hash1");
         }
     }
 }

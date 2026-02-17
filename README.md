@@ -80,7 +80,6 @@ Key environment variables:
 | `CSC_SERVICE_URL` | http://localhost:9000 | eIDAS signing service URL |
 | `CSC_CLIENT_ID` | etax-invoice-service | CSC client identifier |
 | `CSC_CREDENTIAL_ID` | default-credential | CSC credential identifier |
-| `CSC_PIN` | 1234 | CSC PIN for signHash endpoint authentication |
 | `CSC_HASH_ALGORITHM` | SHA-256withRSA | Hash algorithm for signing |
 | `CSC_DIGEST_ALGORITHM` | SHA256 | Digest algorithm for local hash computation |
 | `CSC_SIGNATURE_LEVEL` | XAdES-BASELINE-T | XAdES signature level |
@@ -154,13 +153,11 @@ Key environment variables:
 ### Signing Process (signHash Pattern)
 
 1. **Compute Digest** - Calculate SHA-256 hash of XML locally
-2. **Sign Hash** - Call CSC API (`/csc/v2/signatures/signHash`) with digest and PIN (no SAD token needed)
-3. **Sign Hash** - Call CSC API (`/csc/v2/signatures/signHash`) with digest only
-4. **Embed Signature** - Use `XadesSignatureEmbedder` to embed signature into XML as XAdES-BASELINE-T with actual digest value
-5. **Embed Signature** - Use `XadesSignatureEmbedder` to embed signature into XML as XAdES-BASELINE-T
-6. **Notify** - Write `XmlSignedEvent` to outbox with topic `xml.signed` (for notification-service)
-7. **Notify** - Write `XmlSignedEvent` to outbox with topic `xml.signed` (for notification-service)
-8. **Publish Reply** - Write `saga.reply.xml-signing` event to outbox table (Debezium CDC delivers to Kafka)
+2. **Authorize** - Call CSC API (`/csc/v2/credentials/authorize`) to obtain SAD token (short-lived, ~15 min)
+3. **Sign Hash** - Call CSC API (`/csc/v2/signatures/signHash`) with digest and SAD token
+4. **Embed Signature** - Use `XadesSignatureEmbedder` to embed signature into XML as XAdES-BASELINE-T
+5. **Notify** - Write `XmlSignedEvent` to outbox with topic `xml.signed` (for notification-service)
+6. **Publish Reply** - Write `saga.reply.xml-signing` event to outbox table (Debezium CDC delivers to Kafka)
 
 ### Document Type Detection
 
@@ -373,6 +370,7 @@ infrastructure/
 - **Saga commands**: Extend `IntegrationEvent`, use `@JsonCreator` with two constructors (all-args for deserialization, convenience for testing)
 - **Saga replies**: Extend `SagaReply`, use factory methods (`success()`, `failure()`, `compensated()`)
 - **CSC API changes**: Update DTOs in `infrastructure/client/csc/dto/` and `XmlSigningServiceImpl`
+  - Uses SAD token authentication: `CSCAuthClient.authorize()` → `CSCSignatureClient.signHash(SAD)`
 - **Signature embedding**: `XadesSignatureEmbedder` handles XAdES-BASELINE-T signature embedding
 - **New document types**: Add to `DocumentType` enum with namespace URI
 - **Compensation**: Implement delete logic in `SagaCommandHandler.handleCompensation()`, ensure idempotency
