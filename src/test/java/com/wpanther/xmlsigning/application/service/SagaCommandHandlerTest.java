@@ -10,7 +10,6 @@ import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
-import com.wpanther.xmlsigning.infrastructure.messaging.XmlStoragePublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,9 +43,6 @@ class SagaCommandHandlerTest {
     @Mock
     private EventPublisher eventPublisher;
 
-    @Mock
-    private XmlStoragePublisher xmlStoragePublisher;
-
     @InjectMocks
     private SagaCommandHandler handler;
 
@@ -76,7 +72,6 @@ class SagaCommandHandlerTest {
         verify(sagaReplyPublisher).publishSuccess("saga-1", "sign-xml", "corr-1");
         verify(sagaReplyPublisher, never()).publishFailure(any(), any(), any(), any());
         verify(eventPublisher).publishXmlSigned(any());
-        verify(xmlStoragePublisher).publishStorageRequest(any(), any());
     }
 
     @Test

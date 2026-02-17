@@ -155,7 +155,7 @@ Key environment variables:
 1. **Compute Digest** - Calculate SHA-256 hash of XML locally
 2. **Authorize** - Call CSC API (`/csc/v2/credentials/authorize`) to obtain SAD token (short-lived, ~15 min)
 3. **Sign Hash** - Call CSC API (`/csc/v2/signatures/signHash`) with digest and SAD token
-4. **Embed Signature** - Use `XadesSignatureEmbedder` to embed signature into XML as XAdES-BASELINE-T
+4. **Embed Signature** - Use `XadesSignatureEmbedder` to embed signature into XML as XAdES-BASELINE-T (Apache Santuario 4.0.4)
 5. **Notify** - Write `XmlSignedEvent` to outbox with topic `xml.signed` (for notification-service)
 6. **Publish Reply** - Write `saga.reply.xml-signing` event to outbox table (Debezium CDC delivers to Kafka)
 
@@ -308,7 +308,7 @@ Key metrics:
 - Spring Boot 3.2.5
 - Spring Cloud 2023.0.1
 - Apache Camel 4.14.4 (Kafka integration)
-- Apache Santuario 4.0.2 (XML DSig/XAdES signatures)
+- Apache Santuario 4.0.4 (XML DSig/XAdES signatures)
 - Spring Cloud OpenFeign (CSC API client)
 - saga-commons (integration events, outbox pattern)
 - PostgreSQL 16
