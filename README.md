@@ -14,11 +14,26 @@ This service integrates with the [eidasremotesigning](../../../eidasremotesignin
 ## Position in Pipeline
 
 ```
-Saga Orchestrator ──→ saga.command.xml-signing → [XML Signing] → saga.reply.xml-signing ──→ Orchestrator
-                              ↓                         │                                    ↓
-                    saga.compensation.xml-signing        │                          → PDF Generation / ebMS Sending
-                         (rollback)                      │
-                                                        └──→ xml.signed ──→ Notification Service
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                         COMPLETE SAGA ORCHESTRATION FLOW (Tax Invoice)                                    │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+... PROCESS_TAX_INVOICE ──→ SIGN_XML ──→
+
+[Orchestrator] → saga.command.xml-signing → [XML Signing:8086]
+                                                ↓
+                          saga.reply.xml-signing → [Orchestrator]
+                                                ↓
+                          saga.command.signedxml-storage → [Document Storage:8084]
+                                                                  ↓
+                          saga.reply.signedxml-storage → [Orchestrator]
+                                                ↓
+                          saga.command.tax-invoice-pdf → [Tax Invoice PDF Generation:8089]
+                                                                  ↓
+                                                          → PDF Signing → Document Storage → ebMS Sending
+
+In parallel with saga reply, XML Signing also publishes:
+  xml.signed → Notification Service (for user notifications)
 ```
 
 The service follows the **Saga Orchestration Pattern**:
