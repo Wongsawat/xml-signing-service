@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Feign client configuration with circuit breaker and retry logic
@@ -28,8 +29,9 @@ public class FeignConfig {
     @Bean
     public Request.Options options() {
         return new Request.Options(
-            10000,  // connect timeout in milliseconds
-            30000   // read timeout in milliseconds
+            10000, TimeUnit.MILLISECONDS,  // connect timeout
+            30000, TimeUnit.MILLISECONDS,  // read timeout
+            true                            // follow redirects
         );
     }
 
