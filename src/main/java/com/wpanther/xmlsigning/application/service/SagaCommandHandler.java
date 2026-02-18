@@ -47,6 +47,8 @@ public class SagaCommandHandler {
         log.info("Handling ProcessXmlSigningCommand for saga {} document {}",
                 command.getSagaId(), command.getDocumentId());
 
+        SignedXmlDocument document = null;
+
         try {
             // Detect document type from command or XML content
             final DocumentType documentType;
@@ -95,7 +97,7 @@ public class SagaCommandHandler {
             }
 
             // Create or retrieve document
-            SignedXmlDocument document = existing.orElseGet(() ->
+            document = existing.orElseGet(() ->
                     SignedXmlDocument.builder()
                             .invoiceId(command.getDocumentId())
                             .invoiceNumber(command.getInvoiceNumber())
@@ -157,6 +159,12 @@ public class SagaCommandHandler {
         } catch (Exception e) {
             log.error("Failed to process XML signing for saga {} document {}: {}",
                             command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
+
+            if (document != null) {
+                document.markFailed(e.getMessage());
+                document.incrementRetryCount();
+                documentRepository.save(document);
+            }
 
             // Send FAILURE reply
             sagaReplyPublisher.publishFailure(
