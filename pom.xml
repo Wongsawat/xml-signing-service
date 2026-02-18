@@ -27,6 +27,7 @@
         <flyway.version>10.10.0</flyway.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <saga.commons.version>1.0.0-SNAPSHOT</saga.commons.version>
+        <aws-sdk.version>2.20.26</aws-sdk.version>
     </properties>
 
     <dependencyManagement>
@@ -49,6 +50,13 @@
                 <groupId>org.apache.camel.springboot</groupId>
                 <artifactId>camel-spring-boot-bom</artifactId>
                 <version>${camel.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws-sdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -194,6 +202,12 @@
             <version>${saga.commons.version}</version>
         </dependency>
 
+        <!-- AWS SDK v2 S3 (MinIO-compatible) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
         <!-- Apache Santuario for XML DSig/XAdES signatures -->
         <dependency>
             <groupId>org.apache.santuario</groupId>
@@ -318,6 +332,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
                 <configuration>
                     <excludes>
                         <exclude>**/integration/**</exclude>

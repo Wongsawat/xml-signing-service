@@ -12,12 +12,14 @@ import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
+import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
@@ -34,6 +36,7 @@ public class SagaCommandHandler {
     private final DocumentTypeDetectionService documentTypeDetectionService;
     private final SagaReplyPublisher sagaReplyPublisher;
     private final EventPublisher eventPublisher;
+    private final MinioStorageService minioStorageService;
 
     @Value("${app.signing.max-retries:3}")
     private int maxRetries;
@@ -88,10 +91,13 @@ public class SagaCommandHandler {
 
             if (existing.isPresent() && existing.get().isSuccessful()) {
                 log.warn("Document {} already signed, sending SUCCESS reply", command.getDocumentId());
+                SignedXmlDocument completedDoc = existing.get();
                 sagaReplyPublisher.publishSuccess(
                         command.getSagaId(),
                         command.getSagaStep(),
-                        command.getCorrelationId()
+                        command.getCorrelationId(),
+                        completedDoc.getSignedXmlUrl(),
+                        completedDoc.getSignedXmlSize()
                 );
                 return;
             }
@@ -128,11 +134,19 @@ public class SagaCommandHandler {
             String documentId = document.getId().toString();
             String signedXml = signingService.signXml(command.getXmlContent(), documentId);
 
+            // Upload signed XML to MinIO
+            String s3Key = minioStorageService.upload(
+                    command.getDocumentId(), documentType.name(), signedXml);
+            String signedXmlUrl = minioStorageService.buildUrl(s3Key);
+            long signedXmlSize = signedXml.getBytes(StandardCharsets.UTF_8).length;
+
             // Mark as completed
             document.markCompleted(
-                    signedXml,
+                    s3Key,
+                    signedXmlUrl,
+                    signedXmlSize,
                     "TXN-" + documentId,     // Transaction ID from CSC response would be better
-                    null,                          // Certificate from CSC response
+                    null,                    // Certificate from CSC response
                     "XAdES-BASELINE-T"
             );
             documentRepository.save(document);
@@ -146,11 +160,13 @@ public class SagaCommandHandler {
             );
             eventPublisher.publishXmlSigned(xmlSignedEvent);
 
-            // Send SUCCESS reply
+            // Send SUCCESS reply (includes MinIO URL for orchestrator to forward to SIGNEDXML_STORAGE step)
             sagaReplyPublisher.publishSuccess(
                     command.getSagaId(),
                     command.getSagaStep(),
-                    command.getCorrelationId()
+                    command.getCorrelationId(),
+                    signedXmlUrl,
+                    signedXmlSize
             );
 
             log.info("Successfully processed XML signing for saga {} document {}",
@@ -190,9 +206,12 @@ public class SagaCommandHandler {
                     documentRepository.findByInvoiceId(command.getDocumentId());
 
             if (existing.isPresent()) {
-                    SignedXmlDocument doc = existing.get();
-                    documentRepository.deleteById(doc.getId());
-                    log.info("Deleted SignedXmlDocument {} for compensation", doc.getId());
+                SignedXmlDocument doc = existing.get();
+                if (doc.getSignedXmlPath() != null) {
+                    minioStorageService.delete(doc.getSignedXmlPath());
+                }
+                documentRepository.deleteById(doc.getId());
+                log.info("Deleted SignedXmlDocument {} for compensation", doc.getId());
             } else {
                 log.info("No SignedXmlDocument found for document {} - already compensated or never processed",
                                 command.getDocumentId());

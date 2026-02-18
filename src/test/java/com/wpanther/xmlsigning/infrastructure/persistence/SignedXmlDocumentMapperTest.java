@@ -30,6 +30,10 @@ class SignedXmlDocumentMapperTest {
     @Autowired
     private SignedXmlDocumentMapper mapper;
 
+    private static final String FAKE_S3_KEY = "2024/01/15/TAX_INVOICE/signed-xml-inv-001-uuid.xml";
+    private static final String FAKE_URL    = "http://localhost:9000/signed-xml-documents/" + FAKE_S3_KEY;
+    private static final long   FAKE_SIZE   = 1234L;
+
     private SignedXmlDocument createDomain() {
         return SignedXmlDocument.builder()
                 .id(SignedXmlDocumentId.create())
@@ -37,7 +41,9 @@ class SignedXmlDocumentMapperTest {
                 .invoiceNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
                 .originalXml("<xml>test</xml>")
-                .signedXml("<signed>xml</signed>")
+                .signedXmlPath(FAKE_S3_KEY)
+                .signedXmlUrl(FAKE_URL)
+                .signedXmlSize(FAKE_SIZE)
                 .transactionId("txn-1")
                 .certificate("cert-data")
                 .signatureLevel("XAdES-BASELINE-T")
@@ -56,7 +62,9 @@ class SignedXmlDocumentMapperTest {
         entity.setInvoiceNumber("T001");
         entity.setDocumentType(DocumentType.TAX_INVOICE);
         entity.setOriginalXml("<xml>test</xml>");
-        entity.setSignedXml("<signed>xml</signed>");
+        entity.setSignedXmlPath(FAKE_S3_KEY);
+        entity.setSignedXmlUrl(FAKE_URL);
+        entity.setSignedXmlSize(FAKE_SIZE);
         entity.setTransactionId("txn-1");
         entity.setCertificate("cert-data");
         entity.setSignatureLevel("XAdES-BASELINE-T");
@@ -84,7 +92,9 @@ class SignedXmlDocumentMapperTest {
             assertThat(domain.getInvoiceNumber()).isEqualTo(entity.getInvoiceNumber());
             assertThat(domain.getDocumentType()).isEqualTo(entity.getDocumentType());
             assertThat(domain.getOriginalXml()).isEqualTo(entity.getOriginalXml());
-            assertThat(domain.getSignedXml()).isEqualTo(entity.getSignedXml());
+            assertThat(domain.getSignedXmlPath()).isEqualTo(entity.getSignedXmlPath());
+            assertThat(domain.getSignedXmlUrl()).isEqualTo(entity.getSignedXmlUrl());
+            assertThat(domain.getSignedXmlSize()).isEqualTo(entity.getSignedXmlSize());
             assertThat(domain.getTransactionId()).isEqualTo(entity.getTransactionId());
             assertThat(domain.getCertificate()).isEqualTo(entity.getCertificate());
             assertThat(domain.getSignatureLevel()).isEqualTo(entity.getSignatureLevel());
@@ -110,7 +120,9 @@ class SignedXmlDocumentMapperTest {
             assertThat(entity.getInvoiceNumber()).isEqualTo(domain.getInvoiceNumber());
             assertThat(entity.getDocumentType()).isEqualTo(domain.getDocumentType());
             assertThat(entity.getOriginalXml()).isEqualTo(domain.getOriginalXml());
-            assertThat(entity.getSignedXml()).isEqualTo(domain.getSignedXml());
+            assertThat(entity.getSignedXmlPath()).isEqualTo(domain.getSignedXmlPath());
+            assertThat(entity.getSignedXmlUrl()).isEqualTo(domain.getSignedXmlUrl());
+            assertThat(entity.getSignedXmlSize()).isEqualTo(domain.getSignedXmlSize());
             assertThat(entity.getTransactionId()).isEqualTo(domain.getTransactionId());
             assertThat(entity.getCertificate()).isEqualTo(domain.getCertificate());
             assertThat(entity.getSignatureLevel()).isEqualTo(domain.getSignatureLevel());
@@ -135,7 +147,9 @@ class SignedXmlDocumentMapperTest {
             assertThat(result.getInvoiceNumber()).isEqualTo(original.getInvoiceNumber());
             assertThat(result.getDocumentType()).isEqualTo(original.getDocumentType());
             assertThat(result.getOriginalXml()).isEqualTo(original.getOriginalXml());
-            assertThat(result.getSignedXml()).isEqualTo(original.getSignedXml());
+            assertThat(result.getSignedXmlPath()).isEqualTo(original.getSignedXmlPath());
+            assertThat(result.getSignedXmlUrl()).isEqualTo(original.getSignedXmlUrl());
+            assertThat(result.getSignedXmlSize()).isEqualTo(original.getSignedXmlSize());
             assertThat(result.getStatus()).isEqualTo(original.getStatus());
             assertThat(result.getRetryCount()).isEqualTo(original.getRetryCount());
         }

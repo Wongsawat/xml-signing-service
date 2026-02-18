@@ -19,7 +19,11 @@ public class SignedXmlDocument {
 
     // XML Content
     private final String originalXml;
-    private String signedXml;
+
+    // Signed XML stored in MinIO
+    private String signedXmlPath;   // S3 key
+    private String signedXmlUrl;    // full URL
+    private long signedXmlSize;     // bytes
 
     // Signing Metadata
     private String transactionId;
@@ -41,7 +45,9 @@ public class SignedXmlDocument {
         this.invoiceNumber = Objects.requireNonNull(builder.invoiceNumber, "Invoice number is required");
         this.documentType = Objects.requireNonNull(builder.documentType, "Document type is required");
         this.originalXml = Objects.requireNonNull(builder.originalXml, "Original XML is required");
-        this.signedXml = builder.signedXml;
+        this.signedXmlPath = builder.signedXmlPath;
+        this.signedXmlUrl = builder.signedXmlUrl;
+        this.signedXmlSize = builder.signedXmlSize;
         this.transactionId = builder.transactionId;
         this.certificate = builder.certificate;
         this.signatureLevel = builder.signatureLevel;
@@ -91,19 +97,23 @@ public class SignedXmlDocument {
     }
 
     /**
-     * Mark signing as completed
+     * Mark signing as completed with MinIO storage details.
      */
-    public void markCompleted(String signedXml, String transactionId, String certificate, String signatureLevel) {
+    public void markCompleted(String signedXmlPath, String signedXmlUrl, long signedXmlSize,
+                              String transactionId, String certificate, String signatureLevel) {
         if (this.status != SigningStatus.SIGNING) {
             throw new IllegalStateException("Can only complete from SIGNING status, current: " + this.status);
         }
 
-        Objects.requireNonNull(signedXml, "Signed XML is required");
-        if (signedXml.isBlank()) {
-            throw new IllegalArgumentException("Signed XML cannot be blank");
+        Objects.requireNonNull(signedXmlPath, "Signed XML path is required");
+        Objects.requireNonNull(signedXmlUrl, "Signed XML URL is required");
+        if (signedXmlSize <= 0) {
+            throw new IllegalArgumentException("Signed XML size must be positive");
         }
 
-        this.signedXml = signedXml;
+        this.signedXmlPath = signedXmlPath;
+        this.signedXmlUrl = signedXmlUrl;
+        this.signedXmlSize = signedXmlSize;
         this.transactionId = transactionId;
         this.certificate = certificate;
         this.signatureLevel = signatureLevel;
@@ -162,8 +172,16 @@ public class SignedXmlDocument {
         return originalXml;
     }
 
-    public String getSignedXml() {
-        return signedXml;
+    public String getSignedXmlPath() {
+        return signedXmlPath;
+    }
+
+    public String getSignedXmlUrl() {
+        return signedXmlUrl;
+    }
+
+    public long getSignedXmlSize() {
+        return signedXmlSize;
     }
 
     public String getTransactionId() {
@@ -207,7 +225,9 @@ public class SignedXmlDocument {
         private String invoiceNumber;
         private DocumentType documentType;
         private String originalXml;
-        private String signedXml;
+        private String signedXmlPath;
+        private String signedXmlUrl;
+        private long signedXmlSize;
         private String transactionId;
         private String certificate;
         private String signatureLevel;
@@ -242,8 +262,18 @@ public class SignedXmlDocument {
             return this;
         }
 
-        public Builder signedXml(String signedXml) {
-            this.signedXml = signedXml;
+        public Builder signedXmlPath(String signedXmlPath) {
+            this.signedXmlPath = signedXmlPath;
+            return this;
+        }
+
+        public Builder signedXmlUrl(String signedXmlUrl) {
+            this.signedXmlUrl = signedXmlUrl;
+            return this;
+        }
+
+        public Builder signedXmlSize(long signedXmlSize) {
+            this.signedXmlSize = signedXmlSize;
             return this;
         }
 

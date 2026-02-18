@@ -11,11 +11,27 @@ public class XmlSigningReplyEvent extends SagaReply {
 
     private static final long serialVersionUID = 1L;
 
+    // Included in SUCCESS replies so the orchestrator can forward the URL to the SIGNEDXML_STORAGE step
+    private String signedXmlUrl;
+    private Long signedXmlSize;
+
     /**
-     * Create a SUCCESS reply.
+     * Create a SUCCESS reply with MinIO URL and byte size.
      */
-    public static XmlSigningReplyEvent success(String sagaId, String sagaStep, String correlationId) {
-        return new XmlSigningReplyEvent(sagaId, sagaStep, correlationId, ReplyStatus.SUCCESS);
+    public static XmlSigningReplyEvent success(String sagaId, String sagaStep, String correlationId,
+                                               String signedXmlUrl, Long signedXmlSize) {
+        XmlSigningReplyEvent reply = new XmlSigningReplyEvent(sagaId, sagaStep, correlationId, ReplyStatus.SUCCESS);
+        reply.signedXmlUrl = signedXmlUrl;
+        reply.signedXmlSize = signedXmlSize;
+        return reply;
+    }
+
+    public String getSignedXmlUrl() {
+        return signedXmlUrl;
+    }
+
+    public Long getSignedXmlSize() {
+        return signedXmlSize;
     }
 
     /**

@@ -28,8 +28,10 @@ public class SagaReplyPublisher {
     private final ObjectMapper objectMapper;
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void publishSuccess(String sagaId, String sagaStep, String correlationId) {
-        XmlSigningReplyEvent reply = XmlSigningReplyEvent.success(sagaId, sagaStep, correlationId);
+    public void publishSuccess(String sagaId, String sagaStep, String correlationId,
+                               String signedXmlUrl, Long signedXmlSize) {
+        XmlSigningReplyEvent reply = XmlSigningReplyEvent.success(sagaId, sagaStep, correlationId,
+                signedXmlUrl, signedXmlSize);
 
         Map<String, String> headers = Map.of(
                 "sagaId", sagaId,
@@ -46,7 +48,8 @@ public class SagaReplyPublisher {
                 toJson(headers)
         );
 
-        log.info("Published SUCCESS saga reply for saga {} step {}", sagaId, sagaStep);
+        log.info("Published SUCCESS saga reply for saga {} step {} with signedXmlUrl={}",
+                sagaId, sagaStep, signedXmlUrl);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

@@ -20,6 +20,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("SignedXmlDocument Aggregate")
 class SignedXmlDocumentTest {
 
+    private static final String FAKE_S3_KEY = "2024/01/15/TAX_INVOICE/signed-xml-inv-001-uuid.xml";
+    private static final String FAKE_URL    = "http://localhost:9000/signed-xml-documents/" + FAKE_S3_KEY;
+    private static final long   FAKE_SIZE   = 1234L;
+
     // ==================== Helper Methods ====================
 
     /**
@@ -88,7 +92,9 @@ class SignedXmlDocumentTest {
             assertThat(doc.getStatus()).isEqualTo(SigningStatus.PENDING);
             assertThat(doc.getRetryCount()).isZero();
             assertThat(doc.getCreatedAt()).isNotNull();
-            assertThat(doc.getSignedXml()).isNull();
+            assertThat(doc.getSignedXmlPath()).isNull();
+            assertThat(doc.getSignedXmlUrl()).isNull();
+            assertThat(doc.getSignedXmlSize()).isZero();
             assertThat(doc.getTransactionId()).isNull();
             assertThat(doc.getCertificate()).isNull();
             assertThat(doc.getSignatureLevel()).isNull();
@@ -136,7 +142,9 @@ class SignedXmlDocumentTest {
                     .invoiceNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXml("<xml>test</xml>")
-                    .signedXml("<signed>xml</signed>")
+                    .signedXmlPath(FAKE_S3_KEY)
+                    .signedXmlUrl(FAKE_URL)
+                    .signedXmlSize(FAKE_SIZE)
                     .transactionId("txn-123")
                     .certificate("cert-data")
                     .signatureLevel("XAdES-BASELINE-T")
@@ -145,7 +153,9 @@ class SignedXmlDocumentTest {
                     .completedAt(now)
                     .build();
 
-            assertThat(doc.getSignedXml()).isEqualTo("<signed>xml</signed>");
+            assertThat(doc.getSignedXmlPath()).isEqualTo(FAKE_S3_KEY);
+            assertThat(doc.getSignedXmlUrl()).isEqualTo(FAKE_URL);
+            assertThat(doc.getSignedXmlSize()).isEqualTo(FAKE_SIZE);
             assertThat(doc.getTransactionId()).isEqualTo("txn-123");
             assertThat(doc.getCertificate()).isEqualTo("cert-data");
             assertThat(doc.getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");
@@ -313,8 +323,8 @@ class SignedXmlDocumentTest {
         @DisplayName("startSigning() from COMPLETED throws IllegalStateException")
         void testStartSigningFromCompletedThrows() {
             SignedXmlDocument doc = buildDefault();
-            doc.startSigning(); // First call succeeds
-            doc.markCompleted("<signed/>", "txn-1", "cert", "XAdES-BASELINE-T"); // Now COMPLETED
+            doc.startSigning();
+            doc.markCompleted(FAKE_S3_KEY, FAKE_URL, FAKE_SIZE, "txn-1", "cert", "XAdES-BASELINE-T");
             assertThatThrownBy(() -> doc.startSigning())
                     .isExactlyInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Can only start signing from PENDING or FAILED");
@@ -326,10 +336,12 @@ class SignedXmlDocumentTest {
             SignedXmlDocument doc = buildDefault();
             doc.startSigning();
 
-            doc.markCompleted("<signed>xml</signed>", "txn-123", "cert-data", "XAdES-BASELINE-T");
+            doc.markCompleted(FAKE_S3_KEY, FAKE_URL, FAKE_SIZE, "txn-123", "cert-data", "XAdES-BASELINE-T");
 
             assertThat(doc.getStatus()).isEqualTo(SigningStatus.COMPLETED);
-            assertThat(doc.getSignedXml()).isEqualTo("<signed>xml</signed>");
+            assertThat(doc.getSignedXmlPath()).isEqualTo(FAKE_S3_KEY);
+            assertThat(doc.getSignedXmlUrl()).isEqualTo(FAKE_URL);
+            assertThat(doc.getSignedXmlSize()).isEqualTo(FAKE_SIZE);
             assertThat(doc.getTransactionId()).isEqualTo("txn-123");
             assertThat(doc.getCertificate()).isEqualTo("cert-data");
             assertThat(doc.getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");
@@ -341,7 +353,7 @@ class SignedXmlDocumentTest {
         void testMarkCompletedFromPendingThrows() {
             SignedXmlDocument doc = buildDefault();
 
-            assertThatThrownBy(() -> doc.markCompleted("<signed/>", "txn-1", "cert", "XAdES-BASELINE-T"))
+            assertThatThrownBy(() -> doc.markCompleted(FAKE_S3_KEY, FAKE_URL, FAKE_SIZE, "txn-1", "cert", "XAdES-BASELINE-T"))
                     .isExactlyInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Can only complete from SIGNING");
         }
@@ -351,31 +363,42 @@ class SignedXmlDocumentTest {
         void testMarkCompletedFromFailedThrows() {
             SignedXmlDocument doc = buildFailed();
 
-            assertThatThrownBy(() -> doc.markCompleted("<signed/>", "txn-1", "cert", "XAdES-BASELINE-T"))
+            assertThatThrownBy(() -> doc.markCompleted(FAKE_S3_KEY, FAKE_URL, FAKE_SIZE, "txn-1", "cert", "XAdES-BASELINE-T"))
                     .isExactlyInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Can only complete from SIGNING");
         }
 
         @Test
-        @DisplayName("markCompleted() with null signedXml throws NullPointerException")
-        void testMarkCompletedNullSignedXml() {
+        @DisplayName("markCompleted() with null signedXmlPath throws NullPointerException")
+        void testMarkCompletedNullSignedXmlPath() {
             SignedXmlDocument doc = buildDefault();
             doc.startSigning();
 
-            assertThatThrownBy(() -> doc.markCompleted(null, "txn-1", "cert", "XAdES-BASELINE-T"))
+            assertThatThrownBy(() -> doc.markCompleted(null, FAKE_URL, FAKE_SIZE, "txn-1", "cert", "XAdES-BASELINE-T"))
                     .isExactlyInstanceOf(NullPointerException.class)
-                    .hasMessageContaining("Signed XML is required");
+                    .hasMessageContaining("Signed XML path is required");
         }
 
         @Test
-        @DisplayName("markCompleted() with blank signedXml throws IllegalArgumentException")
-        void testMarkCompletedBlankSignedXml() {
+        @DisplayName("markCompleted() with null signedXmlUrl throws NullPointerException")
+        void testMarkCompletedNullSignedXmlUrl() {
             SignedXmlDocument doc = buildDefault();
             doc.startSigning();
 
-            assertThatThrownBy(() -> doc.markCompleted("  ", "txn-1", "cert", "XAdES-BASELINE-T"))
+            assertThatThrownBy(() -> doc.markCompleted(FAKE_S3_KEY, null, FAKE_SIZE, "txn-1", "cert", "XAdES-BASELINE-T"))
+                    .isExactlyInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("Signed XML URL is required");
+        }
+
+        @Test
+        @DisplayName("markCompleted() with zero size throws IllegalArgumentException")
+        void testMarkCompletedZeroSize() {
+            SignedXmlDocument doc = buildDefault();
+            doc.startSigning();
+
+            assertThatThrownBy(() -> doc.markCompleted(FAKE_S3_KEY, FAKE_URL, 0L, "txn-1", "cert", "XAdES-BASELINE-T"))
                     .isExactlyInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Signed XML cannot be blank");
+                    .hasMessageContaining("Signed XML size must be positive");
         }
 
         @Test
@@ -461,7 +484,7 @@ class SignedXmlDocumentTest {
         void testIsSuccessfulCompleted() {
             SignedXmlDocument doc = buildDefault();
             doc.startSigning();
-            doc.markCompleted("<signed/>", "txn-1", "cert", "XAdES-BASELINE-T");
+            doc.markCompleted(FAKE_S3_KEY, FAKE_URL, FAKE_SIZE, "txn-1", "cert", "XAdES-BASELINE-T");
 
             assertThat(doc.isSuccessful()).isTrue();
         }
@@ -490,7 +513,9 @@ class SignedXmlDocumentTest {
                         .invoiceNumber("T001")
                         .documentType(DocumentType.TAX_INVOICE)
                         .originalXml("<xml>test</xml>")
-                        .signedXml("<signed>xml</signed>")
+                        .signedXmlPath(FAKE_S3_KEY)
+                        .signedXmlUrl(FAKE_URL)
+                        .signedXmlSize(FAKE_SIZE)
                         .transactionId("txn-1")
                         .certificate("cert-data")
                         .signatureLevel("XAdES-BASELINE-T")
@@ -504,7 +529,9 @@ class SignedXmlDocumentTest {
                 assertThat(doc.getInvoiceNumber()).isEqualTo("T001");
                 assertThat(doc.getDocumentType()).isEqualTo(DocumentType.TAX_INVOICE);
                 assertThat(doc.getOriginalXml()).isEqualTo("<xml>test</xml>");
-                assertThat(doc.getSignedXml()).isEqualTo("<signed>xml</signed>");
+                assertThat(doc.getSignedXmlPath()).isEqualTo(FAKE_S3_KEY);
+                assertThat(doc.getSignedXmlUrl()).isEqualTo(FAKE_URL);
+                assertThat(doc.getSignedXmlSize()).isEqualTo(FAKE_SIZE);
                 assertThat(doc.getTransactionId()).isEqualTo("txn-1");
                 assertThat(doc.getCertificate()).isEqualTo("cert-data");
                 assertThat(doc.getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");

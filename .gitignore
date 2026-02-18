@@ -16,3 +16,10 @@ buildNumber.properties
 
 # Claude Code
 CLAUDE.md
+AGENTS.md
+
+# Eclipse / VSCode Java
+.project
+.classpath
+.factorypath
+.settings/

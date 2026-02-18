@@ -18,6 +18,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("SignedXmlDocumentEntity")
 class SignedXmlDocumentEntityTest {
 
+    private static final String FAKE_S3_KEY = "2024/01/15/TAX_INVOICE/signed-xml-inv-001-uuid.xml";
+    private static final String FAKE_URL    = "http://localhost:9000/signed-xml-documents/" + FAKE_S3_KEY;
+    private static final long   FAKE_SIZE   = 1234L;
+
     @Nested
     @DisplayName("Builder")
     class BuilderTests {
@@ -36,7 +40,9 @@ class SignedXmlDocumentEntityTest {
                     .invoiceNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXml("<xml>original</xml>")
-                    .signedXml("<xml>signed</xml>")
+                    .signedXmlPath(FAKE_S3_KEY)
+                    .signedXmlUrl(FAKE_URL)
+                    .signedXmlSize(FAKE_SIZE)
                     .transactionId("txn-1")
                     .certificate("cert-data")
                     .signatureLevel("XAdES-BASELINE-T")
@@ -53,7 +59,9 @@ class SignedXmlDocumentEntityTest {
             assertThat(entity.getInvoiceNumber()).isEqualTo("T001");
             assertThat(entity.getDocumentType()).isEqualTo(DocumentType.TAX_INVOICE);
             assertThat(entity.getOriginalXml()).isEqualTo("<xml>original</xml>");
-            assertThat(entity.getSignedXml()).isEqualTo("<xml>signed</xml>");
+            assertThat(entity.getSignedXmlPath()).isEqualTo(FAKE_S3_KEY);
+            assertThat(entity.getSignedXmlUrl()).isEqualTo(FAKE_URL);
+            assertThat(entity.getSignedXmlSize()).isEqualTo(FAKE_SIZE);
             assertThat(entity.getTransactionId()).isEqualTo("txn-1");
             assertThat(entity.getCertificate()).isEqualTo("cert-data");
             assertThat(entity.getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");
@@ -96,7 +104,9 @@ class SignedXmlDocumentEntityTest {
             assertThat(entity.getInvoiceNumber()).isNull();
             assertThat(entity.getDocumentType()).isNull();
             assertThat(entity.getOriginalXml()).isNull();
-            assertThat(entity.getSignedXml()).isNull();
+            assertThat(entity.getSignedXmlPath()).isNull();
+            assertThat(entity.getSignedXmlUrl()).isNull();
+            assertThat(entity.getSignedXmlSize()).isNull();
             assertThat(entity.getTransactionId()).isNull();
             assertThat(entity.getCertificate()).isNull();
             assertThat(entity.getSignatureLevel()).isNull();
@@ -120,7 +130,9 @@ class SignedXmlDocumentEntityTest {
             entity.setInvoiceNumber("T002");
             entity.setDocumentType(DocumentType.INVOICE);
             entity.setOriginalXml("<xml>test</xml>");
-            entity.setSignedXml("<xml>signed</xml>");
+            entity.setSignedXmlPath(FAKE_S3_KEY);
+            entity.setSignedXmlUrl(FAKE_URL);
+            entity.setSignedXmlSize(FAKE_SIZE);
             entity.setTransactionId("txn-2");
             entity.setCertificate("cert");
             entity.setSignatureLevel("XAdES-BASELINE-T");
@@ -136,7 +148,9 @@ class SignedXmlDocumentEntityTest {
             assertThat(entity.getInvoiceNumber()).isEqualTo("T002");
             assertThat(entity.getDocumentType()).isEqualTo(DocumentType.INVOICE);
             assertThat(entity.getOriginalXml()).isEqualTo("<xml>test</xml>");
-            assertThat(entity.getSignedXml()).isEqualTo("<xml>signed</xml>");
+            assertThat(entity.getSignedXmlPath()).isEqualTo(FAKE_S3_KEY);
+            assertThat(entity.getSignedXmlUrl()).isEqualTo(FAKE_URL);
+            assertThat(entity.getSignedXmlSize()).isEqualTo(FAKE_SIZE);
             assertThat(entity.getTransactionId()).isEqualTo("txn-2");
             assertThat(entity.getCertificate()).isEqualTo("cert");
             assertThat(entity.getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");

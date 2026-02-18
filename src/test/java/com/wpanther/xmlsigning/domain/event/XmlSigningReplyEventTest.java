@@ -21,13 +21,19 @@ class XmlSigningReplyEventTest {
             String sagaStep = "SIGN_XML";
             String correlationId = "corr-456";
 
-            XmlSigningReplyEvent reply = XmlSigningReplyEvent.success(sagaId, sagaStep, correlationId);
+            String signedXmlUrl = "http://localhost:9000/signed-xml-documents/2024/01/15/INVOICE/signed.xml";
+            Long signedXmlSize = 1234L;
+
+            XmlSigningReplyEvent reply = XmlSigningReplyEvent.success(sagaId, sagaStep, correlationId,
+                    signedXmlUrl, signedXmlSize);
 
             assertThat(reply.getSagaId()).isEqualTo(sagaId);
             assertThat(reply.getSagaStep()).isEqualTo(sagaStep);
             assertThat(reply.getCorrelationId()).isEqualTo(correlationId);
             assertThat(reply.getStatus()).isEqualTo(ReplyStatus.SUCCESS);
             assertThat(reply.getErrorMessage()).isNull();
+            assertThat(reply.getSignedXmlUrl()).isEqualTo(signedXmlUrl);
+            assertThat(reply.getSignedXmlSize()).isEqualTo(signedXmlSize);
         }
     }
 

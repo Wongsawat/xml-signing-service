@@ -45,8 +45,14 @@ public class SignedXmlDocumentEntity {
     @Column(name = "original_xml", nullable = false, columnDefinition = "TEXT")
     private String originalXml;
 
-    @Column(name = "signed_xml", columnDefinition = "TEXT")
-    private String signedXml;
+    @Column(name = "signed_xml_path", length = 500)
+    private String signedXmlPath;
+
+    @Column(name = "signed_xml_url", length = 1000)
+    private String signedXmlUrl;
+
+    @Column(name = "signed_xml_size_bytes")
+    private Long signedXmlSize;
 
     @Column(name = "transaction_id", length = 100)
     private String transactionId;
