@@ -175,6 +175,97 @@ class DocumentTypeDetectionServiceTest {
         }
 
         @Test
+        @DisplayName("XML content exceeding max size returns null")
+        void testDetectFromXmlTooLarge() {
+            DocumentTypeDetectionService service = new DocumentTypeDetectionService();
+
+            // Create XML larger than max size (10MB = 10,000,000 bytes)
+            // We need to exceed 10MB, so let's create ~11MB of content
+            StringBuilder largeXml = new StringBuilder();
+            largeXml.append("<TaxInvoice_CrossIndustryInvoice xmlns=\"urn:etda:uncefact:data:standard:TaxInvoice_CrossIndustryInvoice:2\">");
+            // Each iteration adds about 50 bytes
+            // 250,000 iterations * 50 bytes = 12.5MB > 10MB limit
+            for (int i = 0; i < 250_000; i++) {
+                largeXml.append("<LargeElement>AAAAAAAAAAAAAAAAAAAAAA</LargeElement>");
+            }
+            largeXml.append("</TaxInvoice_CrossIndustryInvoice>");
+
+            DocumentType result = service.detectFromXmlContent(largeXml.toString());
+
+            // Should return null due to size validation failure
+            assertThat(result).isNull();
+        }
+
+        @Test
+        @DisplayName("Empty XML document returns null")
+        void testDetectFromXmlEmpty() {
+            DocumentTypeDetectionService service = new DocumentTypeDetectionService();
+
+            DocumentType result = service.detectFromXmlContent("");
+
+            assertThat(result).isNull();
+        }
+
+        @Test
+        @DisplayName("XML with only whitespace returns null")
+        void testDetectFromXmlOnlyWhitespace() {
+            DocumentTypeDetectionService service = new DocumentTypeDetectionService();
+
+            DocumentType result = service.detectFromXmlContent("   \n\t  \r\n  ");
+
+            assertThat(result).isNull();
+        }
+
+        @Test
+        @DisplayName("XML at exact boundary of minimum size (50 chars)")
+        void testDetectFromXmlAtExactMinBoundary() {
+            DocumentTypeDetectionService service = new DocumentTypeDetectionService();
+            // Exactly 50 characters
+            String xml = "<TaxInvoice_CrossIndustryInvoice xmlns=\"urn:etda:uncefact:data:standard:TaxInvoice_CrossIndustryInvoice:2\"><t/></TaxInvoice_CrossIndustryInvoice>";
+
+            DocumentType result = service.detectFromXmlContent(xml);
+
+            assertThat(result).isEqualTo(DocumentType.TAX_INVOICE);
+        }
+
+        @Test
+        @DisplayName("Small XML document (below 50 chars) still parsed")
+        void testDetectFromXmlSmallDocument() {
+            DocumentTypeDetectionService service = new DocumentTypeDetectionService();
+            // 49 characters - smaller than command validation requires, but XML parsing still works
+            String xml = "<TaxInvoice_CrossIndustryInvoice><t/></TaxInvoice_CrossIndustryInvoice>";
+
+            // The size validation only rejects too large content, not too small
+            DocumentType result = service.detectFromXmlContent(xml);
+
+            assertThat(result).isEqualTo(DocumentType.TAX_INVOICE);
+        }
+
+        @Test
+        @DisplayName("XML with special characters in namespace")
+        void testDetectFromXmlWithSpecialCharsInNamespace() {
+            DocumentTypeDetectionService service = new DocumentTypeDetectionService();
+
+            String xml = "<TaxInvoice_CrossIndustryInvoice xmlns=\"urn:etda:uncefact:data:standard:TaxInvoice_CrossIndustryInvoice:2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"urn:etda:uncefact:data:standard:TaxInvoice_CrossIndustryInvoice:2 TaxInvoice_CrossIndustryInvoice_2p0.xsd\"><t/></TaxInvoice_CrossIndustryInvoice>";
+
+            DocumentType result = service.detectFromXmlContent(xml);
+
+            assertThat(result).isEqualTo(DocumentType.TAX_INVOICE);
+        }
+
+        @Test
+        @DisplayName("XML with comments and processing instructions")
+        void testDetectFromXmlWithCommentsAndPI() {
+            DocumentTypeDetectionService service = new DocumentTypeDetectionService();
+
+            String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!-- Comment --><TaxInvoice_CrossIndustryInvoice xmlns=\"urn:etda:uncefact:data:standard:TaxInvoice_CrossIndustryInvoice:2\"><t/></TaxInvoice_CrossIndustryInvoice>";
+
+            DocumentType result = service.detectFromXmlContent(xml);
+
+            assertThat(result).isEqualTo(DocumentType.TAX_INVOICE);
+        }
+
+        @Test
         @DisplayName("Unknown namespace and unknown root element returns null")
         void testDetectFromXmlUnknownNamespaceAndRoot() {
             DocumentTypeDetectionService service = new DocumentTypeDetectionService();

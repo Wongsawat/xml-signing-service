@@ -13,6 +13,7 @@ import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
 import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,6 +48,41 @@ public class SagaCommandHandler {
 
     @Value("${app.signing.max-retries:3}")
     private int maxRetries;
+
+    @Value("${app.signing.timeout-seconds:30}")
+    private int timeoutSeconds;
+
+    private static final int MAX_ALLOWED_RETRIES = 10;
+    private static final int MAX_ALLOWED_TIMEOUT_SECONDS = 300; // 5 minutes
+    private static final int MIN_ALLOWED_TIMEOUT_SECONDS = 5;   // 5 seconds
+
+    /**
+     * Validate configuration values after bean construction.
+     * Ensures maxRetries and timeoutSeconds are within acceptable bounds.
+     */
+    @PostConstruct
+    public void validateConfiguration() {
+        if (maxRetries < 0) {
+            throw new IllegalStateException(
+                    "Configuration error: app.signing.max-retries must be non-negative, got: " + maxRetries);
+        }
+        if (maxRetries > MAX_ALLOWED_RETRIES) {
+            throw new IllegalStateException(
+                    "Configuration error: app.signing.max-retries must be <= " + MAX_ALLOWED_RETRIES +
+                            ", got: " + maxRetries);
+        }
+        if (timeoutSeconds < MIN_ALLOWED_TIMEOUT_SECONDS) {
+            throw new IllegalStateException(
+                    "Configuration error: app.signing.timeout-seconds must be >= " + MIN_ALLOWED_TIMEOUT_SECONDS +
+                            " seconds, got: " + timeoutSeconds);
+        }
+        if (timeoutSeconds > MAX_ALLOWED_TIMEOUT_SECONDS) {
+            throw new IllegalStateException(
+                    "Configuration error: app.signing.timeout-seconds must be <= " + MAX_ALLOWED_TIMEOUT_SECONDS +
+                            " seconds, got: " + timeoutSeconds);
+        }
+        log.info("Configuration validated: maxRetries={}, timeoutSeconds={}", maxRetries, timeoutSeconds);
+    }
 
     /**
      * Handle a ProcessXmlSigningCommand from saga orchestrator.

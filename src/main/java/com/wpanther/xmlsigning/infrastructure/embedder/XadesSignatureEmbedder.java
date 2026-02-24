@@ -15,7 +15,9 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
@@ -163,8 +165,8 @@ public class XadesSignatureEmbedder {
         signingTime.setTextContent(java.time.Instant.now().toString());
         signedSignatureProperties.appendChild(signingTime);
 
-        Element signingCertificate = doc.createElementNS(XADES_NAMESPACE, "xades:SigningCertificate");
-        // Add certificate info here in production
+        // Create proper SigningCertificate element with CertDigest and IssuerSerial
+        Element signingCertificate = createSigningCertificateElement(doc, certificate);
         signedSignatureProperties.appendChild(signingCertificate);
 
         signedProperties.appendChild(signedSignatureProperties);
@@ -173,6 +175,66 @@ public class XadesSignatureEmbedder {
         signatureElement.appendChild(objectElement);
 
         return signatureElement;
+    }
+
+    /**
+     * Create a XAdES SigningCertificate element with CertDigest and IssuerSerial.
+     * <p>
+     * According to ETSI EN 319 132-1 (XAdES-BASELINE-T), the SigningCertificate element
+     * must contain the certificate digest and issuer/serial information to uniquely
+     * identify the signing certificate.
+     *
+     * @param doc         The document
+     * @param certificate Base64-encoded certificate from CSC
+     * @return The SigningCertificate element
+     */
+    private Element createSigningCertificateElement(Document doc, String certificate) {
+        Element signingCertificate = doc.createElementNS(XADES_NAMESPACE, "xades:SigningCertificate");
+
+        Element cert = doc.createElementNS(XADES_NAMESPACE, "xades:Cert");
+
+        try {
+            // Parse the certificate to extract digest and issuer/serial
+            X509Certificate x509Cert = parseCertificate(certificate);
+
+            // Create CertDigest element
+            Element certDigestElement = doc.createElementNS(XADES_NAMESPACE, "xades:CertDigest");
+
+            Element digestMethod = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:DigestMethod");
+            digestMethod.setAttribute("Algorithm", "http://www.w3.org/2001/04/xmlenc#sha256");
+            certDigestElement.appendChild(digestMethod);
+
+            Element digestValue = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:DigestValue");
+            // Calculate SHA-256 digest of the certificate
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] certDigestBytes = md.digest(x509Cert.getEncoded());
+            String base64Digest = Base64.getEncoder().encodeToString(certDigestBytes);
+            digestValue.setTextContent(base64Digest);
+            certDigestElement.appendChild(digestValue);
+
+            cert.appendChild(certDigestElement);
+
+            // Create IssuerSerial element
+            Element issuerSerial = doc.createElementNS(XADES_NAMESPACE, "xades:IssuerSerial");
+
+            Element x509IssuerName = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:X509IssuerName");
+            x509IssuerName.setTextContent(x509Cert.getIssuerX500Principal().getName());
+            issuerSerial.appendChild(x509IssuerName);
+
+            Element x509SerialNumber = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:X509SerialNumber");
+            x509SerialNumber.setTextContent(x509Cert.getSerialNumber().toString(10));
+            issuerSerial.appendChild(x509SerialNumber);
+
+            cert.appendChild(issuerSerial);
+
+        } catch (Exception e) {
+            log.warn("Failed to create SigningCertificate element, using empty element: {}", e.getMessage());
+            // If we can't parse the certificate details, still add the empty element
+            // This maintains XAdES structure compatibility
+        }
+
+        signingCertificate.appendChild(cert);
+        return signingCertificate;
     }
 
     /**

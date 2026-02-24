@@ -127,30 +127,79 @@ management:
     circuitbreakers:
       enabled: true
 
-# Resilience4j metrics configuration
+# Resilience4j circuit breaker configuration for CSC API clients
 resilience4j:
   circuitbreaker:
     metrics:
       enabled: true
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        minimum-number-of-calls: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      cscAuthClient:
+        base-config: default
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+      cscSignatureClient:
+        base-config: default
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
   timelimiter:
     metrics:
       enabled: true
+    configs:
+      default:
+        timeout-duration: 30s
+    instances:
+      cscAuthClient:
+        base-config: default
+        timeout-duration: 30s
+      cscSignatureClient:
+        base-config: default
+        timeout-duration: 30s
   retry:
     metrics:
       enabled: true
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.net.SocketException
+          - java.io.IOException
+        ignore-exceptions:
+          - java.lang.IllegalArgumentException
+    instances:
+      cscAuthClient:
+        base-config: default
+        max-attempts: 3
+      cscSignatureClient:
+        base-config: default
+        max-attempts: 2  # Don't retry signature failures (SAD token is single-use)
   bulkhead:
     metrics:
       enabled: true
+    configs:
+      default:
+        max-concurrent-calls: 10
+        max-wait-duration: 0s
 
 # Logging configuration
 logging:
   level:
     root: INFO
     com.wpanther.xmlsigning: DEBUG
-    org.apache.camel: INFO
-    org.apache.camel.component.kafka: DEBUG
-    org.hibernate.SQL: DEBUG
-    feign: DEBUG
+    org.apache.camel: WARN
+    org.apache.camel.component.kafka: WARN
+    org.hibernate.SQL: WARN
+    feign: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

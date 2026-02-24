@@ -51,16 +51,49 @@ public class FeignConfig {
 
     @Bean
     public Customizer<Resilience4JCircuitBreakerFactory> defaultCustomizer() {
-        return factory -> factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
-            .timeLimiterConfig(TimeLimiterConfig.custom()
-                .timeoutDuration(Duration.ofSeconds(30))
-                .build())
-            .circuitBreakerConfig(CircuitBreakerConfig.custom()
-                .slidingWindowSize(10)
-                .failureRateThreshold(50)
-                .waitDurationInOpenState(Duration.ofSeconds(60))
-                .permittedNumberOfCallsInHalfOpenState(3)
-                .build())
-            .build());
+        return factory -> {
+            // Default configuration for all circuit breakers
+            factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
+                .timeLimiterConfig(TimeLimiterConfig.custom()
+                    .timeoutDuration(Duration.ofSeconds(30))
+                    .build())
+                .circuitBreakerConfig(CircuitBreakerConfig.custom()
+                    .slidingWindowSize(10)
+                    .failureRateThreshold(50)
+                    .waitDurationInOpenState(Duration.ofSeconds(60))
+                    .permittedNumberOfCallsInHalfOpenState(3)
+                    .minimumNumberOfCalls(5)
+                    .build())
+                .build());
+
+            // Specific configuration for CSC Auth Client
+            factory.configure(builder -> builder
+                .circuitBreakerConfig(CircuitBreakerConfig.custom()
+                    .slidingWindowSize(10)
+                    .failureRateThreshold(50)
+                    .waitDurationInOpenState(Duration.ofSeconds(60))
+                    .permittedNumberOfCallsInHalfOpenState(3)
+                    .minimumNumberOfCalls(5)
+                    .build())
+                .timeLimiterConfig(TimeLimiterConfig.custom()
+                    .timeoutDuration(Duration.ofSeconds(30))
+                    .build()),
+                "cscAuthClient");
+
+            // Specific configuration for CSC Signature Client
+            // Note: Signature failures should NOT be retried (SAD token is single-use)
+            factory.configure(builder -> builder
+                .circuitBreakerConfig(CircuitBreakerConfig.custom()
+                    .slidingWindowSize(10)
+                    .failureRateThreshold(50)
+                    .waitDurationInOpenState(Duration.ofSeconds(60))
+                    .permittedNumberOfCallsInHalfOpenState(3)
+                    .minimumNumberOfCalls(5)
+                    .build())
+                .timeLimiterConfig(TimeLimiterConfig.custom()
+                    .timeoutDuration(Duration.ofSeconds(30))
+                    .build()),
+                "cscSignatureClient");
+        };
     }
 }
