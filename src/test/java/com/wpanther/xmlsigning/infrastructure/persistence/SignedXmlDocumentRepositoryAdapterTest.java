@@ -37,13 +37,15 @@ class SignedXmlDocumentRepositoryAdapterTest {
     @InjectMocks
     private SignedXmlDocumentRepositoryAdapter adapter;
 
+    private static final String FAKE_ORIGINAL_S3_KEY = "2024/01/15/TAX_INVOICE/original-xml-inv-001-uuid.xml";
+
     private SignedXmlDocument createDomainDoc() {
         return SignedXmlDocument.builder()
                 .id(SignedXmlDocumentId.create())
                 .invoiceId("inv-001")
                 .invoiceNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
-                .originalXml("<xml>test</xml>")
+                .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                 .build();
     }
 
@@ -53,7 +55,7 @@ class SignedXmlDocumentRepositoryAdapterTest {
         entity.setInvoiceId("inv-001");
         entity.setInvoiceNumber("T001");
         entity.setDocumentType(DocumentType.TAX_INVOICE);
-        entity.setOriginalXml("<xml>test</xml>");
+        entity.setOriginalXmlPath(FAKE_ORIGINAL_S3_KEY);
         entity.setStatus(SigningStatus.PENDING);
         entity.setRetryCount(0);
         entity.setCreatedAt(LocalDateTime.now());

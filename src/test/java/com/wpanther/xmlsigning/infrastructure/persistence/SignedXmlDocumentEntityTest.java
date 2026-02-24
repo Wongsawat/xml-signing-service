@@ -18,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("SignedXmlDocumentEntity")
 class SignedXmlDocumentEntityTest {
 
+    private static final String FAKE_ORIGINAL_S3_KEY = "2024/01/15/TAX_INVOICE/original-xml-inv-001-uuid.xml";
+    private static final String FAKE_ORIGINAL_URL    = "http://localhost:9000/signed-xml-documents/" + FAKE_ORIGINAL_S3_KEY;
     private static final String FAKE_S3_KEY = "2024/01/15/TAX_INVOICE/signed-xml-inv-001-uuid.xml";
     private static final String FAKE_URL    = "http://localhost:9000/signed-xml-documents/" + FAKE_S3_KEY;
     private static final long   FAKE_SIZE   = 1234L;
@@ -39,7 +41,8 @@ class SignedXmlDocumentEntityTest {
                     .invoiceId("INV-001")
                     .invoiceNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
-                    .originalXml("<xml>original</xml>")
+                    .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
+                    .originalXmlUrl(FAKE_ORIGINAL_URL)
                     .signedXmlPath(FAKE_S3_KEY)
                     .signedXmlUrl(FAKE_URL)
                     .signedXmlSize(FAKE_SIZE)
@@ -58,7 +61,8 @@ class SignedXmlDocumentEntityTest {
             assertThat(entity.getInvoiceId()).isEqualTo("INV-001");
             assertThat(entity.getInvoiceNumber()).isEqualTo("T001");
             assertThat(entity.getDocumentType()).isEqualTo(DocumentType.TAX_INVOICE);
-            assertThat(entity.getOriginalXml()).isEqualTo("<xml>original</xml>");
+            assertThat(entity.getOriginalXmlPath()).isEqualTo(FAKE_ORIGINAL_S3_KEY);
+            assertThat(entity.getOriginalXmlUrl()).isEqualTo(FAKE_ORIGINAL_URL);
             assertThat(entity.getSignedXmlPath()).isEqualTo(FAKE_S3_KEY);
             assertThat(entity.getSignedXmlUrl()).isEqualTo(FAKE_URL);
             assertThat(entity.getSignedXmlSize()).isEqualTo(FAKE_SIZE);
@@ -80,7 +84,7 @@ class SignedXmlDocumentEntityTest {
                     .invoiceId("INV-001")
                     .invoiceNumber("T001")
                     .documentType(DocumentType.RECEIPT)
-                    .originalXml("<xml/>")
+                    .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
@@ -103,7 +107,8 @@ class SignedXmlDocumentEntityTest {
             assertThat(entity.getInvoiceId()).isNull();
             assertThat(entity.getInvoiceNumber()).isNull();
             assertThat(entity.getDocumentType()).isNull();
-            assertThat(entity.getOriginalXml()).isNull();
+            assertThat(entity.getOriginalXmlPath()).isNull();
+            assertThat(entity.getOriginalXmlUrl()).isNull();
             assertThat(entity.getSignedXmlPath()).isNull();
             assertThat(entity.getSignedXmlUrl()).isNull();
             assertThat(entity.getSignedXmlSize()).isNull();
@@ -129,7 +134,8 @@ class SignedXmlDocumentEntityTest {
             entity.setInvoiceId("INV-002");
             entity.setInvoiceNumber("T002");
             entity.setDocumentType(DocumentType.INVOICE);
-            entity.setOriginalXml("<xml>test</xml>");
+            entity.setOriginalXmlPath(FAKE_ORIGINAL_S3_KEY);
+            entity.setOriginalXmlUrl(FAKE_ORIGINAL_URL);
             entity.setSignedXmlPath(FAKE_S3_KEY);
             entity.setSignedXmlUrl(FAKE_URL);
             entity.setSignedXmlSize(FAKE_SIZE);
@@ -147,7 +153,8 @@ class SignedXmlDocumentEntityTest {
             assertThat(entity.getInvoiceId()).isEqualTo("INV-002");
             assertThat(entity.getInvoiceNumber()).isEqualTo("T002");
             assertThat(entity.getDocumentType()).isEqualTo(DocumentType.INVOICE);
-            assertThat(entity.getOriginalXml()).isEqualTo("<xml>test</xml>");
+            assertThat(entity.getOriginalXmlPath()).isEqualTo(FAKE_ORIGINAL_S3_KEY);
+            assertThat(entity.getOriginalXmlUrl()).isEqualTo(FAKE_ORIGINAL_URL);
             assertThat(entity.getSignedXmlPath()).isEqualTo(FAKE_S3_KEY);
             assertThat(entity.getSignedXmlUrl()).isEqualTo(FAKE_URL);
             assertThat(entity.getSignedXmlSize()).isEqualTo(FAKE_SIZE);
@@ -174,7 +181,7 @@ class SignedXmlDocumentEntityTest {
                     .invoiceId("INV-001")
                     .invoiceNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
-                    .originalXml("<xml/>")
+                    .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)
                     .build();
 
@@ -193,7 +200,7 @@ class SignedXmlDocumentEntityTest {
                     .invoiceId("INV-001")
                     .invoiceNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
-                    .originalXml("<xml/>")
+                    .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)
                     .createdAt(originalCreatedAt)
                     .build();
@@ -212,7 +219,7 @@ class SignedXmlDocumentEntityTest {
                     .invoiceId("INV-001")
                     .invoiceNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
-                    .originalXml("<xml/>")
+                    .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)
                     .updatedAt(LocalDateTime.of(2024, 1, 1, 12, 0))
                     .build();

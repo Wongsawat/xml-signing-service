@@ -17,8 +17,9 @@ public class SignedXmlDocument {
     private final String invoiceNumber;
     private final DocumentType documentType;
 
-    // XML Content
-    private final String originalXml;
+    // Original XML stored in MinIO (uploaded before signing)
+    private final String originalXmlPath;   // S3 key
+    private final String originalXmlUrl;    // full URL (optional, derived from path)
 
     // Signed XML stored in MinIO
     private String signedXmlPath;   // S3 key
@@ -44,7 +45,8 @@ public class SignedXmlDocument {
         this.invoiceId = Objects.requireNonNull(builder.invoiceId, "Invoice ID is required");
         this.invoiceNumber = Objects.requireNonNull(builder.invoiceNumber, "Invoice number is required");
         this.documentType = Objects.requireNonNull(builder.documentType, "Document type is required");
-        this.originalXml = Objects.requireNonNull(builder.originalXml, "Original XML is required");
+        this.originalXmlPath = Objects.requireNonNull(builder.originalXmlPath, "Original XML path is required");
+        this.originalXmlUrl = builder.originalXmlUrl;
         this.signedXmlPath = builder.signedXmlPath;
         this.signedXmlUrl = builder.signedXmlUrl;
         this.signedXmlSize = builder.signedXmlSize;
@@ -76,8 +78,8 @@ public class SignedXmlDocument {
             throw new IllegalStateException("Document type is required");
         }
 
-        if (originalXml.isBlank()) {
-            throw new IllegalStateException("Original XML cannot be blank");
+        if (originalXmlPath.isBlank()) {
+            throw new IllegalStateException("Original XML path cannot be blank");
         }
 
         if (retryCount < 0) {
@@ -168,8 +170,12 @@ public class SignedXmlDocument {
         return documentType;
     }
 
-    public String getOriginalXml() {
-        return originalXml;
+    public String getOriginalXmlPath() {
+        return originalXmlPath;
+    }
+
+    public String getOriginalXmlUrl() {
+        return originalXmlUrl;
     }
 
     public String getSignedXmlPath() {
@@ -224,7 +230,8 @@ public class SignedXmlDocument {
         private String invoiceId;
         private String invoiceNumber;
         private DocumentType documentType;
-        private String originalXml;
+        private String originalXmlPath;
+        private String originalXmlUrl;
         private String signedXmlPath;
         private String signedXmlUrl;
         private long signedXmlSize;
@@ -257,8 +264,13 @@ public class SignedXmlDocument {
             return this;
         }
 
-        public Builder originalXml(String originalXml) {
-            this.originalXml = originalXml;
+        public Builder originalXmlPath(String originalXmlPath) {
+            this.originalXmlPath = originalXmlPath;
+            return this;
+        }
+
+        public Builder originalXmlUrl(String originalXmlUrl) {
+            this.originalXmlUrl = originalXmlUrl;
             return this;
         }
 

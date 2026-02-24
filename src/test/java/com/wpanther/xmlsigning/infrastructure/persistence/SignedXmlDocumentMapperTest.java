@@ -30,6 +30,8 @@ class SignedXmlDocumentMapperTest {
     @Autowired
     private SignedXmlDocumentMapper mapper;
 
+    private static final String FAKE_ORIGINAL_S3_KEY = "2024/01/15/TAX_INVOICE/original-xml-inv-001-uuid.xml";
+    private static final String FAKE_ORIGINAL_URL    = "http://localhost:9000/signed-xml-documents/" + FAKE_ORIGINAL_S3_KEY;
     private static final String FAKE_S3_KEY = "2024/01/15/TAX_INVOICE/signed-xml-inv-001-uuid.xml";
     private static final String FAKE_URL    = "http://localhost:9000/signed-xml-documents/" + FAKE_S3_KEY;
     private static final long   FAKE_SIZE   = 1234L;
@@ -40,7 +42,8 @@ class SignedXmlDocumentMapperTest {
                 .invoiceId("inv-001")
                 .invoiceNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
-                .originalXml("<xml>test</xml>")
+                .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
+                .originalXmlUrl(FAKE_ORIGINAL_URL)
                 .signedXmlPath(FAKE_S3_KEY)
                 .signedXmlUrl(FAKE_URL)
                 .signedXmlSize(FAKE_SIZE)
@@ -61,7 +64,8 @@ class SignedXmlDocumentMapperTest {
         entity.setInvoiceId("inv-001");
         entity.setInvoiceNumber("T001");
         entity.setDocumentType(DocumentType.TAX_INVOICE);
-        entity.setOriginalXml("<xml>test</xml>");
+        entity.setOriginalXmlPath(FAKE_ORIGINAL_S3_KEY);
+        entity.setOriginalXmlUrl(FAKE_ORIGINAL_URL);
         entity.setSignedXmlPath(FAKE_S3_KEY);
         entity.setSignedXmlUrl(FAKE_URL);
         entity.setSignedXmlSize(FAKE_SIZE);
@@ -91,7 +95,8 @@ class SignedXmlDocumentMapperTest {
             assertThat(domain.getInvoiceId()).isEqualTo(entity.getInvoiceId());
             assertThat(domain.getInvoiceNumber()).isEqualTo(entity.getInvoiceNumber());
             assertThat(domain.getDocumentType()).isEqualTo(entity.getDocumentType());
-            assertThat(domain.getOriginalXml()).isEqualTo(entity.getOriginalXml());
+            assertThat(domain.getOriginalXmlPath()).isEqualTo(entity.getOriginalXmlPath());
+            assertThat(domain.getOriginalXmlUrl()).isEqualTo(entity.getOriginalXmlUrl());
             assertThat(domain.getSignedXmlPath()).isEqualTo(entity.getSignedXmlPath());
             assertThat(domain.getSignedXmlUrl()).isEqualTo(entity.getSignedXmlUrl());
             assertThat(domain.getSignedXmlSize()).isEqualTo(entity.getSignedXmlSize());
@@ -119,7 +124,8 @@ class SignedXmlDocumentMapperTest {
             assertThat(entity.getInvoiceId()).isEqualTo(domain.getInvoiceId());
             assertThat(entity.getInvoiceNumber()).isEqualTo(domain.getInvoiceNumber());
             assertThat(entity.getDocumentType()).isEqualTo(domain.getDocumentType());
-            assertThat(entity.getOriginalXml()).isEqualTo(domain.getOriginalXml());
+            assertThat(entity.getOriginalXmlPath()).isEqualTo(domain.getOriginalXmlPath());
+            assertThat(entity.getOriginalXmlUrl()).isEqualTo(domain.getOriginalXmlUrl());
             assertThat(entity.getSignedXmlPath()).isEqualTo(domain.getSignedXmlPath());
             assertThat(entity.getSignedXmlUrl()).isEqualTo(domain.getSignedXmlUrl());
             assertThat(entity.getSignedXmlSize()).isEqualTo(domain.getSignedXmlSize());
@@ -146,7 +152,8 @@ class SignedXmlDocumentMapperTest {
             assertThat(result.getInvoiceId()).isEqualTo(original.getInvoiceId());
             assertThat(result.getInvoiceNumber()).isEqualTo(original.getInvoiceNumber());
             assertThat(result.getDocumentType()).isEqualTo(original.getDocumentType());
-            assertThat(result.getOriginalXml()).isEqualTo(original.getOriginalXml());
+            assertThat(result.getOriginalXmlPath()).isEqualTo(original.getOriginalXmlPath());
+            assertThat(result.getOriginalXmlUrl()).isEqualTo(original.getOriginalXmlUrl());
             assertThat(result.getSignedXmlPath()).isEqualTo(original.getSignedXmlPath());
             assertThat(result.getSignedXmlUrl()).isEqualTo(original.getSignedXmlUrl());
             assertThat(result.getSignedXmlSize()).isEqualTo(original.getSignedXmlSize());

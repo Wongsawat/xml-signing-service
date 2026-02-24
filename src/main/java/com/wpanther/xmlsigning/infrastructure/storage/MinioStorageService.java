@@ -27,6 +27,31 @@ public class MinioStorageService {
     private String baseUrl;
 
     /**
+     * Upload original (unsigned) XML content to MinIO before signing.
+     *
+     * @return the S3 key — store this in the original_xml_path column
+     */
+    public String uploadOriginalXml(String invoiceId, String documentType, String xmlContent) {
+        byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
+        LocalDate now = LocalDate.now();
+        String sanitizedInvoiceId = invoiceId.replaceAll("[^a-zA-Z0-9\\-_]", "_");
+        String fileName = String.format("original-xml-%s-%s.xml", sanitizedInvoiceId, UUID.randomUUID());
+        String s3Key = String.format("%04d/%02d/%02d/%s/%s",
+                now.getYear(), now.getMonthValue(), now.getDayOfMonth(), documentType, fileName);
+
+        PutObjectRequest putRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(s3Key)
+                .contentType("application/xml")
+                .contentLength((long) xmlBytes.length)
+                .build();
+
+        s3Client.putObject(putRequest, RequestBody.fromBytes(xmlBytes));
+        log.info("Uploaded original XML to MinIO: bucket={}, key={}", bucketName, s3Key);
+        return s3Key;
+    }
+
+    /**
      * Upload signed XML content to MinIO.
      *
      * @return the S3 key — store this in the signed_xml_path column

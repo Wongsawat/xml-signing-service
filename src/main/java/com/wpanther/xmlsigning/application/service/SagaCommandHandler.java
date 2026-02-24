@@ -1,6 +1,5 @@
 package com.wpanther.xmlsigning.application.service;
 
-import com.wpanther.saga.domain.enums.ReplyStatus;
 import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
@@ -18,13 +17,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
- * Handles saga commands from orchestrator.
- * Delegates business logic to XmlSigningService and sends replies.
+ * Handles saga commands from the orchestrator.
+ *
+ * <p>Transaction strategy (H1 fix): DB connections are held only during short
+ * read/write bursts. External I/O (CSC API signing, MinIO uploads) runs outside
+ * any transaction so Hikari pool threads are never blocked during network calls.
+ *
+ * <p>Storage strategy (H2 fix): original XML is uploaded to MinIO before signing
+ * so the {@code signed_xml_documents} table never stores large TEXT payloads.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,169 +43,179 @@ public class SagaCommandHandler {
     private final SagaReplyPublisher sagaReplyPublisher;
     private final EventPublisher eventPublisher;
     private final MinioStorageService minioStorageService;
+    private final TransactionTemplate transactionTemplate;
 
     @Value("${app.signing.max-retries:3}")
     private int maxRetries;
 
     /**
      * Handle a ProcessXmlSigningCommand from saga orchestrator.
-     * Processes XML signing and sends a SUCCESS or FAILURE reply.
+     *
+     * <p>Flow:
+     * <ol>
+     *   <li>Detect document type (pure logic, no I/O)</li>
+     *   <li>Idempotency check — short DB read, no connection held after return</li>
+     *   <li>Upload original XML to MinIO (external I/O, no transaction)</li>
+     *   <li>TX1 — persist SIGNING state (short-lived connection)</li>
+     *   <li>Sign XML via CSC API + upload signed XML to MinIO (no transaction)</li>
+     *   <li>TX2 — persist COMPLETED + write both outbox events atomically</li>
+     * </ol>
      */
-    @Transactional
     public void handleProcessCommand(ProcessXmlSigningCommand command) {
         log.info("Handling ProcessXmlSigningCommand for saga {} document {}",
                 command.getSagaId(), command.getDocumentId());
 
-        SignedXmlDocument document = null;
-
-        try {
-            // Detect document type from command or XML content
-            final DocumentType documentType;
-            DocumentType detectedType = null;
-
-            // First, try to get from command's documentType
-            if (command.getDocumentType() != null && !command.getDocumentType().isBlank()) {
-                detectedType = DocumentType.fromName(command.getDocumentType());
-            }
-
-            // Fallback to detection from XML content
-            if (detectedType == null) {
-                detectedType = documentTypeDetectionService.detectFromXmlContent(command.getXmlContent());
-                if (detectedType == null) {
-                    log.error("Could not detect document type for saga {} document {}",
-                            command.getSagaId(), command.getDocumentId());
-                    sagaReplyPublisher.publishFailure(
-                            command.getSagaId(),
-                            command.getSagaStep(),
-                            command.getCorrelationId(),
-                            "Document type detection failed"
-                    );
-                    return;
-                }
-                log.info("Detected document type from XML content: {} for saga {} document {}",
-                                detectedType, command.getSagaId(), command.getDocumentId());
-            } else {
-                log.info("Using document type from command: {} for saga {} document {}",
-                                detectedType, command.getSagaId(), command.getDocumentId());
-            }
-
-            documentType = detectedType;
-
-            // Check if already signed
-            Optional<SignedXmlDocument> existing =
-                    documentRepository.findByInvoiceId(command.getDocumentId());
-
-            if (existing.isPresent() && existing.get().isSuccessful()) {
-                log.warn("Document {} already signed, sending SUCCESS reply", command.getDocumentId());
-                SignedXmlDocument completedDoc = existing.get();
-                sagaReplyPublisher.publishSuccess(
-                        command.getSagaId(),
-                        command.getSagaStep(),
-                        command.getCorrelationId(),
-                        completedDoc.getSignedXmlUrl(),
-                        completedDoc.getSignedXmlSize()
-                );
-                return;
-            }
-
-            // Create or retrieve document
-            document = existing.orElseGet(() ->
-                    SignedXmlDocument.builder()
-                            .invoiceId(command.getDocumentId())
-                            .invoiceNumber(command.getInvoiceNumber())
-                            .documentType(documentType)
-                            .originalXml(command.getXmlContent())
-                            .build()
-            );
-
-            // Check retry limit
-            if (document.isMaxRetriesExceeded(maxRetries)) {
-                log.error("Max retries exceeded for saga {} document {}", command.getSagaId(), command.getDocumentId());
-                sagaReplyPublisher.publishFailure(
-                        command.getSagaId(),
-                        command.getSagaStep(),
-                        command.getCorrelationId(),
-                        "Maximum retry attempts exceeded"
-                );
-                document.markFailed("Maximum retry attempts exceeded");
-                documentRepository.save(document);
-                return;
-            }
-
-            // Start signing
-            document.startSigning();
-            documentRepository.save(document);
-
-            // Sign XML using CSC API
-            String documentId = document.getId().toString();
-            String signedXml = signingService.signXml(command.getXmlContent(), documentId);
-
-            // Upload signed XML to MinIO
-            String s3Key = minioStorageService.upload(
-                    command.getDocumentId(), documentType.name(), signedXml);
-            String signedXmlUrl = minioStorageService.buildUrl(s3Key);
-            long signedXmlSize = signedXml.getBytes(StandardCharsets.UTF_8).length;
-
-            // Mark as completed
-            document.markCompleted(
-                    s3Key,
-                    signedXmlUrl,
-                    signedXmlSize,
-                    "TXN-" + documentId,     // Transaction ID from CSC response would be better
-                    null,                    // Certificate from CSC response
-                    "XAdES-BASELINE-T"
-            );
-            documentRepository.save(document);
-
-            // Publish notification event
-            XmlSignedEvent xmlSignedEvent = new XmlSignedEvent(
-                    command.getDocumentId(),
-                    command.getInvoiceNumber(),
-                    documentType.name(),
-                    command.getCorrelationId()
-            );
-            eventPublisher.publishXmlSigned(xmlSignedEvent);
-
-            // Send SUCCESS reply (includes MinIO URL for orchestrator to forward to SIGNEDXML_STORAGE step)
-            sagaReplyPublisher.publishSuccess(
-                    command.getSagaId(),
-                    command.getSagaStep(),
-                    command.getCorrelationId(),
-                    signedXmlUrl,
-                    signedXmlSize
-            );
-
-            log.info("Successfully processed XML signing for saga {} document {}",
-                            command.getSagaId(), command.getDocumentId());
-
-        } catch (Exception e) {
-            log.error("Failed to process XML signing for saga {} document {}: {}",
-                            command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
-
-            if (document != null) {
-                document.markFailed(e.getMessage());
-                document.incrementRetryCount();
-                documentRepository.save(document);
-            }
-
-            // Send FAILURE reply
-            sagaReplyPublisher.publishFailure(
-                    command.getSagaId(),
-                    command.getSagaStep(),
-                    command.getCorrelationId(),
-                    e.getMessage()
-            );
+        // --- Phase 0: document type detection (pure logic) ---
+        DocumentType documentType = resolveDocumentType(command);
+        if (documentType == null) {
+            log.error("Could not detect document type for saga {} document {}",
+                    command.getSagaId(), command.getDocumentId());
+            transactionTemplate.execute(s -> {
+                sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                        command.getCorrelationId(), "Document type detection failed");
+                return null;
+            });
+            return;
         }
+
+        // --- Phase 1: idempotency check (read-only, no connection held after return) ---
+        Optional<SignedXmlDocument> existing =
+                documentRepository.findByInvoiceId(command.getDocumentId());
+        if (existing.isPresent() && existing.get().isSuccessful()) {
+            log.warn("Document {} already signed, sending SUCCESS reply", command.getDocumentId());
+            SignedXmlDocument completedDoc = existing.get();
+            transactionTemplate.execute(s -> {
+                sagaReplyPublisher.publishSuccess(command.getSagaId(), command.getSagaStep(),
+                        command.getCorrelationId(),
+                        completedDoc.getSignedXmlUrl(), completedDoc.getSignedXmlSize());
+                return null;
+            });
+            return;
+        }
+
+        // --- Phase 2: upload original XML to MinIO if this is a new document (no transaction) ---
+        final String originalXmlPath;
+        final String originalXmlUrl;
+        if (existing.isEmpty()) {
+            try {
+                originalXmlPath = minioStorageService.uploadOriginalXml(
+                        command.getDocumentId(), documentType.name(), command.getXmlContent());
+                originalXmlUrl = minioStorageService.buildUrl(originalXmlPath);
+                log.info("Uploaded original XML to MinIO: key={}", originalXmlPath);
+            } catch (Exception e) {
+                log.error("Failed to upload original XML for saga {} document {}: {}",
+                        command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
+                transactionTemplate.execute(s -> {
+                    sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                            command.getCorrelationId(),
+                            "Failed to store original XML: " + e.getMessage());
+                    return null;
+                });
+                return;
+            }
+        } else {
+            originalXmlPath = existing.get().getOriginalXmlPath();
+            originalXmlUrl = existing.get().getOriginalXmlUrl();
+        }
+
+        // --- TX1: persist SIGNING state (short-lived DB connection) ---
+        final DocumentType finalDocumentType = documentType;
+        SignedXmlDocument document;
+        try {
+            document = transactionTemplate.execute(s -> {
+                SignedXmlDocument doc = existing.orElseGet(() -> SignedXmlDocument.builder()
+                        .invoiceId(command.getDocumentId())
+                        .invoiceNumber(command.getInvoiceNumber())
+                        .documentType(finalDocumentType)
+                        .originalXmlPath(originalXmlPath)
+                        .originalXmlUrl(originalXmlUrl)
+                        .build());
+
+                if (doc.isMaxRetriesExceeded(maxRetries)) {
+                    log.error("Max retries exceeded for saga {} document {}",
+                            command.getSagaId(), command.getDocumentId());
+                    doc.markFailed("Maximum retry attempts exceeded");
+                    documentRepository.save(doc);
+                    sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                            command.getCorrelationId(), "Maximum retry attempts exceeded");
+                    return null; // signals caller to stop
+                }
+
+                doc.startSigning();
+                return documentRepository.save(doc);
+            });
+        } catch (Exception e) {
+            log.error("Failed to persist SIGNING state for saga {} document {}: {}",
+                    command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
+            transactionTemplate.execute(s -> {
+                sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                        command.getCorrelationId(), e.getMessage());
+                return null;
+            });
+            return;
+        }
+
+        if (document == null) {
+            // null return from TX1 means max-retries — reply already published inside TX1
+            return;
+        }
+
+        // --- Phase 3: external I/O — CSC API signing + MinIO upload (no transaction held) ---
+        final String signedXml;
+        final String s3Key;
+        final String signedXmlUrl;
+        final long signedXmlSize;
+        try {
+            signedXml = signingService.signXml(command.getXmlContent(), document.getId().toString());
+            s3Key = minioStorageService.upload(
+                    command.getDocumentId(), finalDocumentType.name(), signedXml);
+            signedXmlUrl = minioStorageService.buildUrl(s3Key);
+            signedXmlSize = signedXml.getBytes(StandardCharsets.UTF_8).length;
+        } catch (Exception e) {
+            log.error("Failed to sign XML for saga {} document {}: {}",
+                    command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
+            final SignedXmlDocument failedDoc = document;
+            transactionTemplate.execute(s -> {
+                failedDoc.markFailed(e.getMessage());
+                failedDoc.incrementRetryCount();
+                documentRepository.save(failedDoc);
+                sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                        command.getCorrelationId(), e.getMessage());
+                return null;
+            });
+            return;
+        }
+
+        // --- TX2: persist COMPLETED + publish both outbox events atomically ---
+        final SignedXmlDocument completedDoc = document;
+        transactionTemplate.execute(s -> {
+            completedDoc.markCompleted(
+                    s3Key, signedXmlUrl, signedXmlSize,
+                    "TXN-" + completedDoc.getId(), null, "XAdES-BASELINE-T");
+            documentRepository.save(completedDoc);
+
+            eventPublisher.publishXmlSigned(new XmlSignedEvent(
+                    command.getDocumentId(), command.getInvoiceNumber(),
+                    finalDocumentType.name(), command.getCorrelationId()));
+
+            sagaReplyPublisher.publishSuccess(command.getSagaId(), command.getSagaStep(),
+                    command.getCorrelationId(), signedXmlUrl, signedXmlSize);
+            return null;
+        });
+
+        log.info("Successfully processed XML signing for saga {} document {}",
+                command.getSagaId(), command.getDocumentId());
     }
 
     /**
      * Handle a CompensateXmlSigningCommand from saga orchestrator.
-     * Deletes signed XML document and sends a COMPENSATED reply.
+     * Deletes both the original and signed XML from MinIO, removes the DB record,
+     * and sends a COMPENSATED reply.
      */
     @Transactional
     public void handleCompensation(CompensateXmlSigningCommand command) {
         log.info("Handling compensation for saga {} document {}",
-                        command.getSagaId(), command.getDocumentId());
+                command.getSagaId(), command.getDocumentId());
 
         try {
             Optional<SignedXmlDocument> existing =
@@ -207,6 +223,9 @@ public class SagaCommandHandler {
 
             if (existing.isPresent()) {
                 SignedXmlDocument doc = existing.get();
+                if (doc.getOriginalXmlPath() != null) {
+                    minioStorageService.delete(doc.getOriginalXmlPath());
+                }
                 if (doc.getSignedXmlPath() != null) {
                     minioStorageService.delete(doc.getSignedXmlPath());
                 }
@@ -214,27 +233,36 @@ public class SagaCommandHandler {
                 log.info("Deleted SignedXmlDocument {} for compensation", doc.getId());
             } else {
                 log.info("No SignedXmlDocument found for document {} - already compensated or never processed",
-                                command.getDocumentId());
+                        command.getDocumentId());
             }
 
-            // Send COMPENSATED reply (idempotent - safe to call multiple times)
             sagaReplyPublisher.publishCompensated(
-                        command.getSagaId(),
-                        command.getSagaStep(),
-                        command.getCorrelationId()
-            );
+                    command.getSagaId(), command.getSagaStep(), command.getCorrelationId());
 
         } catch (Exception e) {
             log.error("Failed to compensate XML signing for saga {} document {}: {}",
-                            command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
-
-            // Send FAILURE reply
+                    command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
             sagaReplyPublisher.publishFailure(
-                    command.getSagaId(),
-                    command.getSagaStep(),
-                    command.getCorrelationId(),
-                    "Compensation failed: " + e.getMessage()
-            );
+                    command.getSagaId(), command.getSagaStep(), command.getCorrelationId(),
+                    "Compensation failed: " + e.getMessage());
         }
+    }
+
+    private DocumentType resolveDocumentType(ProcessXmlSigningCommand command) {
+        if (command.getDocumentType() != null && !command.getDocumentType().isBlank()) {
+            DocumentType type = DocumentType.fromName(command.getDocumentType());
+            if (type != null) {
+                log.info("Using document type from command: {} for document {}",
+                        type, command.getDocumentId());
+                return type;
+            }
+        }
+        DocumentType detected =
+                documentTypeDetectionService.detectFromXmlContent(command.getXmlContent());
+        if (detected != null) {
+            log.info("Detected document type from XML content: {} for document {}",
+                    detected, command.getDocumentId());
+        }
+        return detected;
     }
 }
