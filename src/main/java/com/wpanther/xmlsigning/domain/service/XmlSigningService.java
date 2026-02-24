@@ -9,8 +9,8 @@ public interface XmlSigningService {
      * Sign XML document using XAdES-BASELINE-T
      *
      * @param xmlContent The XML content to sign
-     * @param documentId Unique identifier for the document
-     * @return Signed XML content
+     * @param documentId  Unique identifier for the document
+     * @return SigningResult containing signed XML, certificate, and transaction ID
      */
-    String signXml(String xmlContent, String documentId);
+    SigningResult signXml(String xmlContent, String documentId);
 }

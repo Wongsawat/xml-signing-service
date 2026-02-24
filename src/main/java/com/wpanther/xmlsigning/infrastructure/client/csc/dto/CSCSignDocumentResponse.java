@@ -7,8 +7,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * CSC API document signing response
+ * CSC API document signing response.
+ *
+ * @deprecated As of 1.1.0, use {@link com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse}
+ *             with the signHash endpoint instead. The signDocument endpoint requires
+ *             uploading the full document, while signHash only requires the digest.
+ *             This class will be removed in version 2.0.0.
  */
+@Deprecated(since = "1.1.0", forRemoval = true)
 @Data
 @Builder
 @NoArgsConstructor

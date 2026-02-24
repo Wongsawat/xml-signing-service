@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.infrastructure.client;
 
+import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
@@ -52,7 +53,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
     private String digestAlgorithm;
 
     @Override
-    public String signXml(String xmlContent, String documentId) {
+    public SigningResult signXml(String xmlContent, String documentId) {
         log.info("Starting XML signing process for document: {}", documentId);
 
         try {
@@ -61,17 +62,17 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             log.debug("Computed digest for document: {}", documentId);
 
             // Step 2: Call CSC signHash endpoint with digest and SAD token
-            CSCSignatureResponse signatureResponse = signHash(documentDigest);
+            SigningApiResponse apiResponse = signHash(documentDigest);
             log.info("Document signed successfully: {}", documentId);
 
             // Step 3: Extract raw signature and certificate from response
-            String rawSignature = signatureResponse.getSignatures()[0];
-            String certificate = signatureResponse.getCertificate();
+            String rawSignature = apiResponse.signatureResponse().getSignatures()[0];
+            String certificate = apiResponse.signatureResponse().getCertificate();
 
             // Step 4: Embed signature into XML locally (XAdES-BASELINE-T)
             String signedXml = signatureEmbedder.embedSignature(xmlContent, documentDigest, rawSignature, certificate);
 
-            return signedXml;
+            return new SigningResult(signedXml, certificate, apiResponse.transactionId());
 
         } catch (Exception e) {
             log.error("Failed to sign XML document: {}", documentId, e);
@@ -86,9 +87,9 @@ public class XmlSigningServiceImpl implements XmlSigningService {
      * SAD token is obtained via /credentials/authorize endpoint for each signing operation.
      *
      * @param documentDigest The base64url-encoded SHA-256 digest
-     * @return The signature response with raw signature and certificate
+     * @return The signing API response containing transaction ID and signature response
      */
-    private CSCSignatureResponse signHash(String documentDigest) {
+    private SigningApiResponse signHash(String documentDigest) {
         // Build signature attributes for XAdES-BASELINE-T
         SignatureAttributes signatureAttributes = SignatureAttributes.builder()
             .signatureType("XAdES")
@@ -117,7 +118,8 @@ public class XmlSigningServiceImpl implements XmlSigningService {
 
         CSCAuthorizeResponse authResponse = authClient.authorize(authRequest);
         String sadToken = authResponse.getSAD();
-        log.debug("Received SAD token from CSC API");
+        String transactionId = authResponse.getTransactionID();
+        log.debug("Received SAD token and transaction ID {} from CSC API", transactionId);
 
         // Step 2: Build signHash request with SAD (no credentials/PIN)
         CSCSignatureRequest signRequest = CSCSignatureRequest.builder()
@@ -129,7 +131,8 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             .build();
 
         // Step 3: Call signHash endpoint
-        return signatureClient.signHash(signRequest);
+        CSCSignatureResponse signatureResponse = signatureClient.signHash(signRequest);
+        return new SigningApiResponse(transactionId, signatureResponse);
     }
 
     /**
@@ -144,4 +147,12 @@ public class XmlSigningServiceImpl implements XmlSigningService {
         String base64 = Base64.getEncoder().encodeToString(hash);
         return base64.replace("+", "-").replace("/", "_").replaceAll("=+$", "");
     }
+
+    /**
+     * Internal record to hold the CSC API responses together.
+     */
+    private record SigningApiResponse(
+            String transactionId,
+            CSCSignatureResponse signatureResponse
+    ) {}
 }

@@ -8,6 +8,7 @@ import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
 import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
+import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
@@ -164,8 +165,14 @@ public class SagaCommandHandler {
         final String s3Key;
         final String signedXmlUrl;
         final long signedXmlSize;
+        final String certificate;
+        final String transactionId;
         try {
-            signedXml = signingService.signXml(command.getXmlContent(), document.getId().toString());
+            var signingResult = signingService.signXml(command.getXmlContent(), document.getId().toString());
+            signedXml = signingResult.signedXml();
+            certificate = signingResult.certificate();
+            transactionId = signingResult.transactionId();
+
             s3Key = minioStorageService.upload(
                     command.getDocumentId(), finalDocumentType.name(), signedXml);
             signedXmlUrl = minioStorageService.buildUrl(s3Key);
@@ -190,7 +197,7 @@ public class SagaCommandHandler {
         transactionTemplate.execute(s -> {
             completedDoc.markCompleted(
                     s3Key, signedXmlUrl, signedXmlSize,
-                    "TXN-" + completedDoc.getId(), null, "XAdES-BASELINE-T");
+                    transactionId, certificate, "XAdES-BASELINE-T");
             documentRepository.save(completedDoc);
 
             eventPublisher.publishXmlSigned(new XmlSignedEvent(

@@ -5,6 +5,7 @@ import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureRequest;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse;
+import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -86,11 +87,13 @@ class XmlSigningServiceImplTest {
 
             // Execute
             String originalXml = "<xml>test</xml>";
-            String result = signingService.signXml(originalXml, "doc-1");
+            SigningResult result = signingService.signXml(originalXml, "doc-1");
 
             // Verify result is not null and contains signature
             assertThat(result).isNotNull();
-            assertThat(result).contains("ds:Signature");
+            assertThat(result.signedXml()).contains("ds:Signature");
+            assertThat(result.certificate()).isEqualTo("base64-encoded-certificate");
+            assertThat(result.transactionId()).isEqualTo("txn-123");
         }
 
         @Test
@@ -199,6 +202,7 @@ class XmlSigningServiceImplTest {
 
             CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
                 .SAD("test-sad-token")
+                .transactionID("txn-digest-test")
                 .build();
 
             CSCSignatureResponse signResponse = CSCSignatureResponse.builder()

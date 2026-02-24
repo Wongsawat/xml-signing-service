@@ -8,6 +8,7 @@ import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SigningStatus;
 import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
+import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
 import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
@@ -89,7 +90,8 @@ class SagaCommandHandlerTest {
         );
 
         when(documentRepository.findByInvoiceId("doc-success")).thenReturn(Optional.empty());
-        when(signingService.signXml(any(), any())).thenReturn("<signed>xml</signed>");
+        when(signingService.signXml(any(), any())).thenReturn(
+                new SigningResult("<signed>xml</signed>", "FAKE-CERT", "CSC-TXN-123"));
         when(documentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(minioStorageService.uploadOriginalXml(any(), any(), any())).thenReturn(FAKE_ORIGINAL_S3_KEY);
         when(minioStorageService.upload(any(), any(), any())).thenReturn(FAKE_S3_KEY);
