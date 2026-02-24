@@ -2,10 +2,10 @@ package com.wpanther.xmlsigning.infrastructure.client;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
+import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
+import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
-import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
-import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.*;
 import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
 import lombok.RequiredArgsConstructor;
@@ -29,14 +29,18 @@ import java.util.Base64;
  * <p>
  * The signHash endpoint uses SAD token-based authentication for security,
  * following CSC API v2.0 best practices. SAD tokens are short-lived (typically 15 min).
+ * <p>
+ * <strong>Hexagonal Architecture:</strong> This service depends on domain ports
+ * ({@link CscAuthorizationPort}, {@link CscSignaturePort}) rather than infrastructure
+ * implementations, enabling clean separation and easier testing.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class XmlSigningServiceImpl implements XmlSigningService {
 
-    private final CSCSignatureClient signatureClient;
-    private final CSCAuthClient authClient;
+    private final CscSignaturePort signaturePort;
+    private final CscAuthorizationPort authorizationPort;
     private final XadesSignatureEmbedder signatureEmbedder;
 
     @Value("${app.csc.client-id}")
@@ -126,7 +130,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
         CSCAuthorizeResponse authResponse;
         String transactionId;
         try {
-            authResponse = authClient.authorize(authRequest);
+            authResponse = authorizationPort.authorize(authRequest);
             transactionId = authResponse.getTransactionID();
             log.debug("Received SAD token and transaction ID {} from CSC API", transactionId);
         } catch (Exception e) {
@@ -151,7 +155,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
 
         // Step 3: Call signHash endpoint
         try {
-            CSCSignatureResponse signatureResponse = signatureClient.signHash(signRequest);
+            CSCSignatureResponse signatureResponse = signaturePort.signHash(signRequest);
             return new SigningApiResponse(transactionId, signatureResponse);
         } catch (Exception e) {
             log.error("CSC signHash failed for transaction {}", transactionId, e);
