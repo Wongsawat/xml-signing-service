@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.domain.event;
 
+import com.wpanther.saga.domain.enums.SagaStep;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,7 @@ class CompensateXmlSigningCommandTest {
     void shouldCreateCommandWithJsonCreatorConstructor() {
         UUID eventId = UUID.randomUUID();
         String sagaId = "saga-123";
-        String sagaStep = "SIGN_XML";
+        SagaStep sagaStep = SagaStep.SIGN_XML;
         String correlationId = "corr-456";
         String stepToCompensate = "PROCESS_TAX_INVOICE";
         String documentId = "doc-789";
@@ -46,7 +47,7 @@ class CompensateXmlSigningCommandTest {
     @DisplayName("Should create command with convenience constructor")
     void shouldCreateCommandWithConvenienceConstructor() {
         String sagaId = "saga-123";
-        String sagaStep = "SIGN_XML";
+        SagaStep sagaStep = SagaStep.SIGN_XML;
         String correlationId = "corr-456";
         String stepToCompensate = "PROCESS_TAX_INVOICE";
         String documentId = "doc-789";
@@ -74,7 +75,7 @@ class CompensateXmlSigningCommandTest {
     void shouldSerializeToJsonCorrectly() {
         CompensateXmlSigningCommand command = new CompensateXmlSigningCommand(
                         "saga-123",
-                        "SIGN_XML",
+                        SagaStep.SIGN_XML,
                         "corr-456",
                         "PROCESS_TAX_INVOICE",
                         "doc-789",

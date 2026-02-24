@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.application.service;
 
+import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
@@ -66,7 +67,7 @@ class SagaCommandHandlerTest {
     void testHandleProcessCommandSuccess() throws Exception {
         setMaxRetries(3);
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
-            "saga-1", "sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "doc-success", "<xml>test</xml>", "INV-001", "INVOICE"
         );
 
@@ -79,7 +80,7 @@ class SagaCommandHandlerTest {
         handler.handleProcessCommand(command);
 
         verify(minioStorageService).upload(eq("doc-success"), eq("INVOICE"), eq("<signed>xml</signed>"));
-        verify(sagaReplyPublisher).publishSuccess(eq("saga-1"), eq("sign-xml"), eq("corr-1"),
+        verify(sagaReplyPublisher).publishSuccess(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
                 eq(FAKE_URL), anyLong());
         verify(sagaReplyPublisher, never()).publishFailure(any(), any(), any(), any());
         verify(eventPublisher).publishXmlSigned(any());
@@ -90,7 +91,7 @@ class SagaCommandHandlerTest {
         setMaxRetries(3);
 
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
-            "saga-1", "sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "doc-type-fail", "<xml>unknown</xml>", "INV-001", null
         );
 
@@ -99,7 +100,7 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishFailure("saga-1", "sign-xml", "corr-1", "Document type detection failed");
+        verify(sagaReplyPublisher).publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Document type detection failed");
         verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any(), any(), any());
         verify(eventPublisher, never()).publishXmlSigned(any());
         verify(minioStorageService, never()).upload(any(), any(), any());
@@ -110,7 +111,7 @@ class SagaCommandHandlerTest {
         setMaxRetries(3);
 
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
-            "saga-1", "sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "doc-already-signed", "<xml>test</xml>", "INV-001", "INVOICE"
         );
 
@@ -131,7 +132,7 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishSuccess(eq("saga-1"), eq("sign-xml"), eq("corr-1"),
+        verify(sagaReplyPublisher).publishSuccess(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
                 eq(FAKE_URL), eq(100L));
         verify(signingService, never()).signXml(any(), any());
         verify(minioStorageService, never()).upload(any(), any(), any());
@@ -143,7 +144,7 @@ class SagaCommandHandlerTest {
         setMaxRetries(3);
 
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
-            "saga-1", "sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "doc-max-retries", "<xml>test</xml>", "INV-001", "INVOICE"
         );
 
@@ -162,7 +163,7 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishFailure("saga-1", "sign-xml", "corr-1", "Maximum retry attempts exceeded");
+        verify(sagaReplyPublisher).publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Maximum retry attempts exceeded");
         verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any(), any(), any());
         verify(eventPublisher, never()).publishXmlSigned(any());
         verify(minioStorageService, never()).upload(any(), any(), any());
@@ -173,7 +174,7 @@ class SagaCommandHandlerTest {
         setMaxRetries(3);
 
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
-            "saga-1", "sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "doc-sign-fail", "<xml>test</xml>", "INV-001", "INVOICE"
         );
 
@@ -183,7 +184,7 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishFailure(eq("saga-1"), eq("sign-xml"), eq("corr-1"), contains("CSC API error"));
+        verify(sagaReplyPublisher).publishFailure(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"), contains("CSC API error"));
         verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any(), any(), any());
         verify(eventPublisher, never()).publishXmlSigned(any());
         // upload never reached when signXml throws
@@ -204,7 +205,7 @@ class SagaCommandHandlerTest {
             .build();
 
         CompensateXmlSigningCommand compensateCommand = new CompensateXmlSigningCommand(
-            "saga-1", "COMPENSATE_sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "sign-xml", "doc-comp-found", "INVOICE"
         );
 
@@ -214,7 +215,7 @@ class SagaCommandHandlerTest {
 
         verify(minioStorageService).delete(FAKE_S3_KEY);
         verify(documentRepository).deleteById(document.getId());
-        verify(sagaReplyPublisher).publishCompensated("saga-1", "COMPENSATE_sign-xml", "corr-1");
+        verify(sagaReplyPublisher).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
         verify(sagaReplyPublisher, never()).publishFailure(any(), any(), any(), any());
     }
 
@@ -229,7 +230,7 @@ class SagaCommandHandlerTest {
             .build();
 
         CompensateXmlSigningCommand compensateCommand = new CompensateXmlSigningCommand(
-            "saga-1", "COMPENSATE_sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "sign-xml", "doc-comp-pending", "INVOICE"
         );
 
@@ -239,13 +240,13 @@ class SagaCommandHandlerTest {
 
         verify(minioStorageService, never()).delete(any());
         verify(documentRepository).deleteById(document.getId());
-        verify(sagaReplyPublisher).publishCompensated("saga-1", "COMPENSATE_sign-xml", "corr-1");
+        verify(sagaReplyPublisher).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
     }
 
     @Test
     void testHandleCompensationNotFound() {
         CompensateXmlSigningCommand compensateCommand = new CompensateXmlSigningCommand(
-            "saga-1", "COMPENSATE_sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "sign-xml", "doc-comp-not-found", "INVOICE"
         );
 
@@ -255,7 +256,7 @@ class SagaCommandHandlerTest {
 
         verify(documentRepository, never()).deleteById(any());
         verify(minioStorageService, never()).delete(any());
-        verify(sagaReplyPublisher).publishCompensated("saga-1", "COMPENSATE_sign-xml", "corr-1");
+        verify(sagaReplyPublisher).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
     }
 
     @Test
@@ -268,7 +269,7 @@ class SagaCommandHandlerTest {
             .build();
 
         CompensateXmlSigningCommand compensateCommand = new CompensateXmlSigningCommand(
-            "saga-1", "COMPENSATE_sign-xml", "corr-1",
+            "saga-1", SagaStep.SIGN_XML, "corr-1",
             "sign-xml", "doc-comp-del-error", "INVOICE"
         );
 
@@ -278,7 +279,7 @@ class SagaCommandHandlerTest {
         handler.handleCompensation(compensateCommand);
 
         verify(sagaReplyPublisher).publishFailure(
-            eq("saga-1"), eq("COMPENSATE_sign-xml"), eq("corr-1"),
+            eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
             contains("Compensation failed")
         );
         verify(sagaReplyPublisher, never()).publishCompensated(any(), any(), any());

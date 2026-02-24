@@ -24,9 +24,6 @@ class XmlSigningRequestedEventTest {
         @Test
         @DisplayName("Simple constructor sets all fields and generates metadata")
         void testSimpleConstructor() {
-            UUID eventId = UUID.randomUUID();
-            Instant occurredAt = Instant.now();
-
             XmlSigningRequestedEvent event = new XmlSigningRequestedEvent(
                     "inv-001", "T001", "<xml>test</xml>", "{}", "corr-1", DocumentType.TAX_INVOICE);
 
@@ -50,7 +47,11 @@ class XmlSigningRequestedEventTest {
 
             XmlSigningRequestedEvent event = new XmlSigningRequestedEvent(
                     eventId, occurredAt, "custom", 2,
-                    "inv-002", "T002", "<xml>test2</xml>", "{}", "corr-2", null);
+                    "corr-2",              // sagaId (stores correlationId)
+                    "xml-signing-service", // source
+                    "XML_SIGNING_REQUESTED", // traceType
+                    null,                  // context
+                    "inv-002", "T002", "<xml>test2</xml>", "{}", null);
 
             assertThat(event.getEventId()).isEqualTo(eventId);
             assertThat(event.getOccurredAt()).isEqualTo(occurredAt);

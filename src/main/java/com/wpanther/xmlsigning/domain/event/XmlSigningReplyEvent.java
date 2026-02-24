@@ -1,6 +1,7 @@
 package com.wpanther.xmlsigning.domain.event;
 
 import com.wpanther.saga.domain.enums.ReplyStatus;
+import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.saga.domain.model.SagaReply;
 
 /**
@@ -18,7 +19,7 @@ public class XmlSigningReplyEvent extends SagaReply {
     /**
      * Create a SUCCESS reply with MinIO URL and byte size.
      */
-    public static XmlSigningReplyEvent success(String sagaId, String sagaStep, String correlationId,
+    public static XmlSigningReplyEvent success(String sagaId, SagaStep sagaStep, String correlationId,
                                                String signedXmlUrl, Long signedXmlSize) {
         XmlSigningReplyEvent reply = new XmlSigningReplyEvent(sagaId, sagaStep, correlationId, ReplyStatus.SUCCESS);
         reply.signedXmlUrl = signedXmlUrl;
@@ -37,7 +38,7 @@ public class XmlSigningReplyEvent extends SagaReply {
     /**
      * Create a FAILURE reply.
      */
-    public static XmlSigningReplyEvent failure(String sagaId, String sagaStep, String correlationId,
+    public static XmlSigningReplyEvent failure(String sagaId, SagaStep sagaStep, String correlationId,
                                                String errorMessage) {
         return new XmlSigningReplyEvent(sagaId, sagaStep, correlationId, errorMessage);
     }
@@ -45,17 +46,17 @@ public class XmlSigningReplyEvent extends SagaReply {
     /**
      * Create a COMPENSATED reply.
      */
-    public static XmlSigningReplyEvent compensated(String sagaId, String sagaStep, String correlationId) {
+    public static XmlSigningReplyEvent compensated(String sagaId, SagaStep sagaStep, String correlationId) {
         return new XmlSigningReplyEvent(sagaId, sagaStep, correlationId, ReplyStatus.COMPENSATED);
     }
 
     // For SUCCESS and COMPENSATED (delegates to SagaReply 4-arg status constructor)
-    private XmlSigningReplyEvent(String sagaId, String sagaStep, String correlationId, ReplyStatus status) {
+    private XmlSigningReplyEvent(String sagaId, SagaStep sagaStep, String correlationId, ReplyStatus status) {
         super(sagaId, sagaStep, correlationId, status);
     }
 
     // For FAILURE (delegates to SagaReply 4-arg error constructor)
-    private XmlSigningReplyEvent(String sagaId, String sagaStep, String correlationId, String errorMessage) {
+    private XmlSigningReplyEvent(String sagaId, SagaStep sagaStep, String correlationId, String errorMessage) {
         super(sagaId, sagaStep, correlationId, errorMessage);
     }
 }

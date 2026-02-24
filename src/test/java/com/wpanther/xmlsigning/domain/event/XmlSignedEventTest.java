@@ -47,7 +47,11 @@ class XmlSignedEventTest {
 
         XmlSignedEvent event = new XmlSignedEvent(
             eventId, occurredAt, "xml.signed", 1,
-            "doc-123", "INV-001", "TAX_INVOICE", "corr-456"
+            "corr-456",             // sagaId (stores correlationId)
+            "xml-signing-service",  // source
+            "XML_SIGNED",           // traceType
+            null,                   // context
+            "doc-123", "INV-001", "TAX_INVOICE"
         );
 
         assertThat(event.getEventId()).isEqualTo(eventId);
@@ -84,10 +88,13 @@ class XmlSignedEventTest {
                 "occurredAt": "2024-01-15T10:30:00Z",
                 "eventType": "xml.signed",
                 "version": 1,
+                "sagaId": "corr-xyz",
+                "source": "xml-signing-service",
+                "traceType": "XML_SIGNED",
+                "context": null,
                 "invoiceId": "doc-abc",
                 "invoiceNumber": "INV-100",
-                "documentType": "INVOICE",
-                "correlationId": "corr-xyz"
+                "documentType": "INVOICE"
             }
             """;
 

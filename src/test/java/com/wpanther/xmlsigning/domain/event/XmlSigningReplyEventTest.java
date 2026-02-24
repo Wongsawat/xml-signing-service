@@ -1,6 +1,7 @@
 package com.wpanther.xmlsigning.domain.event;
 
 import com.wpanther.saga.domain.enums.ReplyStatus;
+import com.wpanther.saga.domain.enums.SagaStep;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ class XmlSigningReplyEventTest {
         @DisplayName("Should create SUCCESS reply")
         void shouldCreateSuccessReply() {
             String sagaId = "saga-123";
-            String sagaStep = "SIGN_XML";
+            SagaStep sagaStep = SagaStep.SIGN_XML;
             String correlationId = "corr-456";
 
             String signedXmlUrl = "http://localhost:9000/signed-xml-documents/2024/01/15/INVOICE/signed.xml";
@@ -45,7 +46,7 @@ class XmlSigningReplyEventTest {
         @DisplayName("Should create FAILURE reply")
         void shouldCreateFailureReply() {
             String sagaId = "saga-123";
-            String sagaStep = "SIGN_XML";
+            SagaStep sagaStep = SagaStep.SIGN_XML;
             String correlationId = "corr-456";
             String errorMessage = "Signing failed";
 
@@ -67,7 +68,7 @@ class XmlSigningReplyEventTest {
         @DisplayName("Should create COMPENSATED reply")
         void shouldCreateCompensatedReply() {
             String sagaId = "saga-123";
-            String sagaStep = "SIGN_XML";
+            SagaStep sagaStep = SagaStep.SIGN_XML;
             String correlationId = "corr-456";
 
             XmlSigningReplyEvent reply = XmlSigningReplyEvent.compensated(sagaId, sagaStep, correlationId);

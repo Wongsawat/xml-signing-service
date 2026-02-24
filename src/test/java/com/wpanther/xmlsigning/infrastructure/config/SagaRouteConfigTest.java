@@ -80,7 +80,7 @@ class SagaRouteConfigTest {
     @Test
     void shouldProcessSagaCommand() throws Exception {
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
-            "saga-1", "sign-xml", "corr-1",
+            "saga-1", com.wpanther.saga.domain.enums.SagaStep.SIGN_XML, "corr-1",
             "doc-1", "<xml>test</xml>", "INV-001", "INVOICE"
         );
         String json = objectMapper.writeValueAsString(command);
@@ -94,7 +94,7 @@ class SagaRouteConfigTest {
     @Test
     void shouldProcessCompensationCommand() throws Exception {
         CompensateXmlSigningCommand command = new CompensateXmlSigningCommand(
-            "saga-1", "COMPENSATE_sign-xml", "corr-1",
+            "saga-1", com.wpanther.saga.domain.enums.SagaStep.SIGN_XML, "corr-1",
             "sign-xml", "doc-1", "INVOICE"
         );
         String json = objectMapper.writeValueAsString(command);

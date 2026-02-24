@@ -2,6 +2,7 @@ package com.wpanther.xmlsigning.infrastructure.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
 import com.wpanther.xmlsigning.domain.event.XmlSigningReplyEvent;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +36,7 @@ class SagaReplyPublisherTest {
     void testPublishSuccessCallsOutboxWithCorrectParameters() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"SUCCESS\"}");
 
-        publisher.publishSuccess("saga-1", "sign-xml", "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         verify(outboxService).saveWithRouting(
             any(XmlSigningReplyEvent.class),
@@ -51,7 +52,7 @@ class SagaReplyPublisherTest {
     void testPublishSuccessUsesSagaIdAsPartitionKey() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        publisher.publishSuccess("my-saga-id", "step-1", "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        publisher.publishSuccess("my-saga-id", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         ArgumentCaptor<String> partitionKeyCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(
@@ -67,7 +68,7 @@ class SagaReplyPublisherTest {
     void testPublishFailureCallsOutboxWithCorrectParameters() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"FAILURE\"}");
 
-        publisher.publishFailure("saga-1", "sign-xml", "corr-1", "Sign error");
+        publisher.publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Sign error");
 
         verify(outboxService).saveWithRouting(
             any(XmlSigningReplyEvent.class),
@@ -83,7 +84,7 @@ class SagaReplyPublisherTest {
     void testPublishCompensatedCallsOutboxWithCorrectParameters() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"COMPENSATED\"}");
 
-        publisher.publishCompensated("saga-1", "COMPENSATE_sign-xml", "corr-1");
+        publisher.publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
 
         verify(outboxService).saveWithRouting(
             any(XmlSigningReplyEvent.class),
@@ -99,7 +100,7 @@ class SagaReplyPublisherTest {
     void testPublishSuccessHeadersContainCorrectFields() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"SUCCESS\"}");
 
-        publisher.publishSuccess("saga-1", "step-1", "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         ArgumentCaptor<String> headersCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), any(), any(), any(), any(), headersCaptor.capture());
@@ -115,7 +116,7 @@ class SagaReplyPublisherTest {
         when(objectMapper.writeValueAsString(any()))
             .thenThrow(new JsonProcessingException("JSON error") {});
 
-        publisher.publishSuccess("saga-1", "step-1", "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         ArgumentCaptor<String> headersCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), any(), any(), any(), any(), headersCaptor.capture());
@@ -127,7 +128,7 @@ class SagaReplyPublisherTest {
     void testPublishReplyEventHasCorrectTopic() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        publisher.publishSuccess("saga-1", "step-1", "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), any(), any(), topicCaptor.capture(), any(), any());
@@ -139,7 +140,7 @@ class SagaReplyPublisherTest {
     void testPublishReplyEventHasCorrectAggregateType() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        publisher.publishFailure("saga-1", "step-1", "corr-1", "error");
+        publisher.publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "error");
 
         ArgumentCaptor<String> aggregateTypeCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), aggregateTypeCaptor.capture(), any(), any(), any(), any());

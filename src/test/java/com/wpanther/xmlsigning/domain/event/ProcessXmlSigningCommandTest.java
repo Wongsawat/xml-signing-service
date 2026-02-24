@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.domain.event;
 
+import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ class ProcessXmlSigningCommandTest {
     void shouldCreateCommandWithJsonCreatorConstructor() {
         UUID eventId = UUID.randomUUID();
         String sagaId = "saga-123";
-        String sagaStep = "SIGN_XML";
+        SagaStep sagaStep = SagaStep.SIGN_XML;
         String correlationId = "corr-456";
         String documentId = "doc-789";
         String xmlContent = "<xml>content</xml>";
@@ -50,7 +51,7 @@ class ProcessXmlSigningCommandTest {
     @DisplayName("Should create command with convenience constructor")
     void shouldCreateCommandWithConvenienceConstructor() {
         String sagaId = "saga-123";
-        String sagaStep = "SIGN_XML";
+        SagaStep sagaStep = SagaStep.SIGN_XML;
         String correlationId = "corr-456";
         String documentId = "doc-789";
         String xmlContent = "<xml>content</xml>";
@@ -81,7 +82,7 @@ class ProcessXmlSigningCommandTest {
     void shouldSerializeToJsonCorrectly() {
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
                         "saga-123",
-                        "SIGN_XML",
+                        SagaStep.SIGN_XML,
                         "corr-456",
                         "doc-789",
                         "<xml>content</xml>",
