@@ -231,15 +231,15 @@ class XmlSigningServiceImplTest {
         }
 
         @Test
-        @DisplayName("Throws RuntimeException when signing fails")
+        @DisplayName("Throws CscAuthorizationException when signing fails")
         void testSigningFailure() {
             // Setup
             when(authClient.authorize(any())).thenThrow(new RuntimeException("Authorize failed"));
 
             // Execute & Verify
             assertThatThrownBy(() -> signingService.signXml("<xml/>", "doc-1"))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("XML signing failed");
+                    .isInstanceOf(com.wpanther.xmlsigning.domain.exception.CscAuthorizationException.class)
+                    .hasMessageContaining("CSC authorization failed");
         }
 
         @Test

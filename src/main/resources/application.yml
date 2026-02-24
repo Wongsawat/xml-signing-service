@@ -113,17 +113,34 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,camelroutes
+        include: health,info,metrics,prometheus,camelroutes,circuitbreakers
   endpoint:
     health:
       show-details: always
   metrics:
     tags:
       application: ${spring.application.name}
-  prometheus:
-    metrics:
-      export:
+    export:
+      prometheus:
         enabled: true
+  health:
+    circuitbreakers:
+      enabled: true
+
+# Resilience4j metrics configuration
+resilience4j:
+  circuitbreaker:
+    metrics:
+      enabled: true
+  timelimiter:
+    metrics:
+      enabled: true
+  retry:
+    metrics:
+      enabled: true
+  bulkhead:
+    metrics:
+      enabled: true
 
 # Logging configuration
 logging:

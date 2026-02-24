@@ -127,13 +127,13 @@ class MinioStorageServiceTest {
     }
 
     @Test
-    @DisplayName("delete() wraps S3 exception in RuntimeException")
+    @DisplayName("delete() wraps S3 exception in DocumentStorageException")
     void testDeleteWrapsException() {
         String key = "2024/01/15/INVOICE/signed-xml-inv-001-uuid.xml";
         doThrow(new RuntimeException("S3 error")).when(s3Client).deleteObject(any(DeleteObjectRequest.class));
 
         assertThatThrownBy(() -> service.delete(key))
-                .isExactlyInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Failed to delete signed XML from MinIO");
+                .isExactlyInstanceOf(com.wpanther.xmlsigning.domain.exception.DocumentStorageException.class)
+                .hasMessageContaining("Failed to delete from MinIO");
     }
 }

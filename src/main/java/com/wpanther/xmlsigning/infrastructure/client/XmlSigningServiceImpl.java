@@ -1,5 +1,7 @@
 package com.wpanther.xmlsigning.infrastructure.client;
 
+import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
+import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
@@ -74,9 +76,12 @@ public class XmlSigningServiceImpl implements XmlSigningService {
 
             return new SigningResult(signedXml, certificate, apiResponse.transactionId());
 
+        } catch (CscAuthorizationException | CscSignatureException e) {
+            // Re-throw our specific exceptions as-is
+            throw e;
         } catch (Exception e) {
             log.error("Failed to sign XML document: {}", documentId, e);
-            throw new RuntimeException("XML signing failed: " + e.getMessage(), e);
+            throw new CscSignatureException("XML signing failed: " + e.getMessage(), e, null);
         }
     }
 
@@ -88,6 +93,8 @@ public class XmlSigningServiceImpl implements XmlSigningService {
      *
      * @param documentDigest The base64url-encoded SHA-256 digest
      * @return The signing API response containing transaction ID and signature response
+     * @throws CscAuthorizationException if CSC authorization fails
+     * @throws CscSignatureException if CSC signHash call fails
      */
     private SigningApiResponse signHash(String documentDigest) {
         // Build signature attributes for XAdES-BASELINE-T
@@ -116,23 +123,44 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             .description("Thai e-Tax Invoice XML Signing")
             .build();
 
-        CSCAuthorizeResponse authResponse = authClient.authorize(authRequest);
-        String sadToken = authResponse.getSAD();
-        String transactionId = authResponse.getTransactionID();
-        log.debug("Received SAD token and transaction ID {} from CSC API", transactionId);
+        CSCAuthorizeResponse authResponse;
+        String transactionId;
+        try {
+            authResponse = authClient.authorize(authRequest);
+            transactionId = authResponse.getTransactionID();
+            log.debug("Received SAD token and transaction ID {} from CSC API", transactionId);
+        } catch (Exception e) {
+            log.error("CSC authorization failed for client {} credential {}",
+                    clientId, credentialId, e);
+            throw new CscAuthorizationException(
+                    "CSC authorization failed: " + e.getMessage(),
+                    e,
+                    clientId,
+                    credentialId
+            );
+        }
 
         // Step 2: Build signHash request with SAD (no credentials/PIN)
         CSCSignatureRequest signRequest = CSCSignatureRequest.builder()
             .clientId(clientId)
             .credentialID(credentialId)
-            .SAD(sadToken)
+            .SAD(authResponse.getSAD())
             .hashAlgo(hashAlgorithm)
             .signatureData(signatureData)
             .build();
 
         // Step 3: Call signHash endpoint
-        CSCSignatureResponse signatureResponse = signatureClient.signHash(signRequest);
-        return new SigningApiResponse(transactionId, signatureResponse);
+        try {
+            CSCSignatureResponse signatureResponse = signatureClient.signHash(signRequest);
+            return new SigningApiResponse(transactionId, signatureResponse);
+        } catch (Exception e) {
+            log.error("CSC signHash failed for transaction {}", transactionId, e);
+            throw new CscSignatureException(
+                    "CSC signHash failed: " + e.getMessage(),
+                    e,
+                    transactionId
+            );
+        }
     }
 
     /**

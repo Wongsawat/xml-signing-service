@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.infrastructure.embedder;
 
+import com.wpanther.xmlsigning.domain.exception.XmlValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -73,7 +74,11 @@ public class XadesSignatureEmbedder {
 
         } catch (Exception e) {
             log.error("Failed to embed XAdES signature", e);
-            throw new RuntimeException("Failed to embed XAdES signature: " + e.getMessage(), e);
+            throw new XmlValidationException(
+                    "Failed to embed XAdES signature: " + e.getMessage(),
+                    e,
+                    "embed-signature"
+            );
         }
     }
 
@@ -195,7 +200,11 @@ public class XadesSignatureEmbedder {
             return (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certBytes));
         } catch (Exception e) {
             log.error("Failed to parse certificate", e);
-            throw new RuntimeException("Failed to parse certificate: " + e.getMessage(), e);
+            throw new XmlValidationException(
+                    "Failed to parse certificate: " + e.getMessage(),
+                    e,
+                    "parse-certificate"
+            );
         }
     }
 }

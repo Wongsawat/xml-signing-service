@@ -67,6 +67,9 @@ app:
 management:
   endpoints:
     enabled-by-default: false
+  health:
+    circuitbreakers:
+      enabled: false
 
 logging:
   level:
