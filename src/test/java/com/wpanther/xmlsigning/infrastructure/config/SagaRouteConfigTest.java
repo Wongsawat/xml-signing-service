@@ -81,7 +81,9 @@ class SagaRouteConfigTest {
     void shouldProcessSagaCommand() throws Exception {
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
             "saga-1", com.wpanther.saga.domain.enums.SagaStep.SIGN_XML, "corr-1",
-            "doc-1", "<xml>test</xml>", "INV-001", "INVOICE"
+            "doc-1",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><CrossIndustryInvoice xsi:schemaLocation=\"urn:un:unece:unce:data:standard:CrossIndustryInvoice:100\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"></CrossIndustryInvoice>",
+            "INV-001", "INVOICE"
         );
         String json = objectMapper.writeValueAsString(command);
 

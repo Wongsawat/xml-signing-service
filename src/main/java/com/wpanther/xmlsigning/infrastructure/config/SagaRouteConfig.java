@@ -3,6 +3,7 @@ package com.wpanther.xmlsigning.infrastructure.config;
 import com.wpanther.xmlsigning.application.service.SagaCommandHandler;
 import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.infrastructure.messaging.CommandValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class SagaRouteConfig extends RouteBuilder {
 
     private final SagaCommandHandler sagaCommandHandler;
+    private final CommandValidator commandValidator;
 
     @Value("${app.kafka.bootstrap-servers}")
     private String kafkaBrokers;
@@ -31,8 +33,9 @@ public class SagaRouteConfig extends RouteBuilder {
     @Value("${app.kafka.topics.dlq:xml.signing.dlq}")
     private String dlqTopic;
 
-    public SagaRouteConfig(SagaCommandHandler sagaCommandHandler) {
+    public SagaRouteConfig(SagaCommandHandler sagaCommandHandler, CommandValidator commandValidator) {
         this.sagaCommandHandler = sagaCommandHandler;
+        this.commandValidator = commandValidator;
     }
 
     @Override
@@ -62,6 +65,7 @@ public class SagaRouteConfig extends RouteBuilder {
                         .routeId("saga-command-consumer")
                         .log("Received saga command from Kafka: partition=${header[kafka.PARTITION]}, offset=${header[kafka.OFFSET]}")
                         .unmarshal().json(JsonLibrary.Jackson, ProcessXmlSigningCommand.class)
+                        .process(commandValidator)  // Validate command before processing
                         .process(exchange -> {
                                 ProcessXmlSigningCommand cmd = exchange.getIn().getBody(ProcessXmlSigningCommand.class);
                                 log.info("Processing saga command for saga: {}, invoice: {}",
@@ -84,6 +88,7 @@ public class SagaRouteConfig extends RouteBuilder {
                         .routeId("saga-compensation-consumer")
                         .log("Received compensation command from Kafka: partition=${header[kafka.PARTITION]}, offset=${header[kafka.OFFSET]}")
                         .unmarshal().json(JsonLibrary.Jackson, CompensateXmlSigningCommand.class)
+                        .process(commandValidator)  // Validate command before processing
                         .process(exchange -> {
                                 CompensateXmlSigningCommand cmd = exchange.getIn().getBody(CompensateXmlSigningCommand.class);
                                 log.info("Processing compensation for saga: {}, document: {}",

@@ -1,27 +1,24 @@
 package com.wpanther.xmlsigning.domain.service;
 
 import com.wpanther.xmlsigning.domain.model.DocumentType;
+import com.wpanther.xmlsigning.infrastructure.util.SecureXmlParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.xml.sax.InputSource;
 
-import javax.xml.namespace.QName;
-import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
-import java.io.StringReader;
+import javax.xml.xpath.XPathExpressionException;
 
 /**
  * Service for detecting document type from Camel headers or XML content.
  * Provides fallback detection when document type header is not available.
+ *
+ * <p>All XML parsing is done through SecureXmlParser to prevent XXE attacks.
  */
 @Service
 public class DocumentTypeDetectionService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentTypeDetectionService.class);
-
-    private static final XPath XPATH = XPathFactory.newInstance().newXPath();
 
     /**
      * Detect document type from Camel header.
@@ -48,7 +45,7 @@ public class DocumentTypeDetectionService {
     }
 
     /**
-     * Detect document type from XML content.
+     * Detect document type from XML content using secure parsing.
      * Uses namespace URI detection first, then falls back to root element name.
      *
      * @param xmlContent the XML content to parse
@@ -60,14 +57,20 @@ public class DocumentTypeDetectionService {
             return null;
         }
 
+        // Validate size before parsing to prevent DoS
         try {
-            InputSource source = new InputSource(new StringReader(xmlContent));
+            SecureXmlParser.validateSize(xmlContent, SecureXmlParser.DEFAULT_MAX_XML_SIZE_BYTES);
+        } catch (IllegalArgumentException e) {
+            log.warn("XML content size validation failed: {}", e.getMessage());
+            return null;
+        }
 
+        try {
             // Try namespace URI detection first
-            String namespaceUri = (String) XPATH.evaluate(
-                "namespace-uri(/*)",
-                source,
-                XPathConstants.STRING
+            String namespaceUri = (String) SecureXmlParser.evaluateXPath(
+                    "namespace-uri(/*)",
+                    xmlContent,
+                    XPathConstants.STRING
             );
 
             if (namespaceUri != null && !namespaceUri.isBlank()) {
@@ -79,11 +82,10 @@ public class DocumentTypeDetectionService {
             }
 
             // Fallback to root element name detection
-            source = new InputSource(new StringReader(xmlContent));
-            String rootElementName = (String) XPATH.evaluate(
-                "local-name(/*)",
-                source,
-                XPathConstants.STRING
+            String rootElementName = (String) SecureXmlParser.evaluateXPath(
+                    "local-name(/*)",
+                    xmlContent,
+                    XPathConstants.STRING
             );
 
             if (rootElementName != null && !rootElementName.isBlank()) {
@@ -97,6 +99,13 @@ public class DocumentTypeDetectionService {
             log.warn("Could not detect document type from XML content");
             return null;
 
+        } catch (IllegalArgumentException e) {
+            // Size validation failed
+            log.warn("XML content validation failed: {}", e.getMessage());
+            return null;
+        } catch (XPathExpressionException e) {
+            log.error("Failed to evaluate XPath for document type detection", e);
+            return null;
         } catch (Exception e) {
             log.error("Failed to detect document type from XML content", e);
             return null;
@@ -108,7 +117,7 @@ public class DocumentTypeDetectionService {
      * This is the primary method to use for document type detection.
      *
      * @param documentTypeHeader the document type header value (may be null)
-     * @param xmlContent the XML content for fallback detection (may be null)
+     * @param xmlContent       the XML content for fallback detection (may be null)
      * @return the detected DocumentType, or null if detection fails
      */
     public DocumentType detectOrDefault(String documentTypeHeader, String xmlContent) {

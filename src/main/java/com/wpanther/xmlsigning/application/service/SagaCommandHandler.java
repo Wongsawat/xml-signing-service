@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -211,41 +210,87 @@ public class SagaCommandHandler {
      * Handle a CompensateXmlSigningCommand from saga orchestrator.
      * Deletes both the original and signed XML from MinIO, removes the DB record,
      * and sends a COMPENSATED reply.
+     *
+     * <p>Transaction strategy: MinIO deletions happen outside any transaction.
+     * Only the DB delete and outbox event are wrapped in a short transaction.
      */
-    @Transactional
     public void handleCompensation(CompensateXmlSigningCommand command) {
         log.info("Handling compensation for saga {} document {}",
                 command.getSagaId(), command.getDocumentId());
 
+        // Phase 1: Read document to get MinIO paths (short read-only transaction)
+        final Optional<SignedXmlDocument> existing;
         try {
-            Optional<SignedXmlDocument> existing =
-                    documentRepository.findByInvoiceId(command.getDocumentId());
-
-            if (existing.isPresent()) {
-                SignedXmlDocument doc = existing.get();
-                if (doc.getOriginalXmlPath() != null) {
-                    minioStorageService.delete(doc.getOriginalXmlPath());
-                }
-                if (doc.getSignedXmlPath() != null) {
-                    minioStorageService.delete(doc.getSignedXmlPath());
-                }
-                documentRepository.deleteById(doc.getId());
-                log.info("Deleted SignedXmlDocument {} for compensation", doc.getId());
-            } else {
-                log.info("No SignedXmlDocument found for document {} - already compensated or never processed",
-                        command.getDocumentId());
-            }
-
-            sagaReplyPublisher.publishCompensated(
-                    command.getSagaId(), command.getSagaStep(), command.getCorrelationId());
-
+            existing = documentRepository.findByInvoiceId(command.getDocumentId());
         } catch (Exception e) {
-            log.error("Failed to compensate XML signing for saga {} document {}: {}",
-                    command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
+            log.error("Failed to find document for compensation: saga {} document {}",
+                    command.getSagaId(), command.getDocumentId(), e);
+            publishCompensationFailure(command, "Failed to lookup document: " + e.getMessage());
+            return;
+        }
+
+        if (existing.isEmpty()) {
+            log.info("No SignedXmlDocument found for document {} - already compensated or never processed",
+                    command.getDocumentId());
+            // Still publish compensated (idempotent)
+            transactionTemplate.execute(s -> {
+                sagaReplyPublisher.publishCompensated(
+                        command.getSagaId(), command.getSagaStep(), command.getCorrelationId());
+                return null;
+            });
+            return;
+        }
+
+        SignedXmlDocument doc = existing.get();
+        final String originalXmlPath = doc.getOriginalXmlPath();
+        final String signedXmlPath = doc.getSignedXmlPath();
+
+        // Phase 2: Delete from MinIO outside transaction (external I/O)
+        try {
+            if (originalXmlPath != null) {
+                minioStorageService.delete(originalXmlPath);
+                log.info("Deleted original XML from MinIO: {}", originalXmlPath);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to delete original XML from MinIO: {}, proceeding with DB cleanup",
+                    originalXmlPath, e);
+            // Continue with cleanup even if MinIO deletion fails
+        }
+
+        try {
+            if (signedXmlPath != null) {
+                minioStorageService.delete(signedXmlPath);
+                log.info("Deleted signed XML from MinIO: {}", signedXmlPath);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to delete signed XML from MinIO: {}, proceeding with DB cleanup",
+                    signedXmlPath, e);
+            // Continue with cleanup even if MinIO deletion fails
+        }
+
+        // Phase 3: Delete DB record and publish reply (short transaction)
+        try {
+            transactionTemplate.execute(s -> {
+                documentRepository.deleteById(doc.getId());
+                sagaReplyPublisher.publishCompensated(
+                        command.getSagaId(), command.getSagaStep(), command.getCorrelationId());
+                return null;
+            });
+            log.info("Deleted SignedXmlDocument {} for compensation", doc.getId());
+        } catch (Exception e) {
+            log.error("Failed to delete document from database for compensation: saga {} document {}",
+                    command.getSagaId(), command.getDocumentId(), e);
+            publishCompensationFailure(command, "Failed to delete document: " + e.getMessage());
+        }
+    }
+
+    private void publishCompensationFailure(CompensateXmlSigningCommand command, String errorMessage) {
+        transactionTemplate.execute(s -> {
             sagaReplyPublisher.publishFailure(
                     command.getSagaId(), command.getSagaStep(), command.getCorrelationId(),
-                    "Compensation failed: " + e.getMessage());
-        }
+                    "Compensation failed: " + errorMessage);
+            return null;
+        });
     }
 
     private DocumentType resolveDocumentType(ProcessXmlSigningCommand command) {
