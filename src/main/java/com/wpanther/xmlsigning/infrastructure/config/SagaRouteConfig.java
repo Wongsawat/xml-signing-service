@@ -33,6 +33,24 @@ public class SagaRouteConfig extends RouteBuilder {
     @Value("${app.kafka.topics.dlq:xml.signing.dlq}")
     private String dlqTopic;
 
+    /**
+     * Builds common Kafka consumer URL parameters.
+     * Used by both saga command and compensation consumers.
+     *
+     * @param topic the Kafka topic name
+     * @return the Kafka endpoint URL with common parameters
+     */
+    private String kafkaConsumerUrl(String topic) {
+        return "kafka:" + topic
+                + "?brokers=" + kafkaBrokers
+                + "&groupId=xml-signing-service"
+                + "&autoOffsetReset=earliest"
+                + "&autoCommitEnable=false"
+                + "&breakOnFirstError=true"
+                + "&maxPollRecords=100"
+                + "&consumersCount=3";
+    }
+
     public SagaRouteConfig(SagaCommandHandler sagaCommandHandler, CommandValidator commandValidator) {
         this.sagaCommandHandler = sagaCommandHandler;
         this.commandValidator = commandValidator;
@@ -54,14 +72,7 @@ public class SagaRouteConfig extends RouteBuilder {
         // ============================================================
         // CONSUMER ROUTE: saga.command.xml-signing (from orchestrator)
         // ============================================================
-        from("kafka:" + sagaCommandTopic
-                        + "?brokers=" + kafkaBrokers
-                        + "&groupId=xml-signing-service"
-                        + "&autoOffsetReset=earliest"
-                        + "&autoCommitEnable=false"
-                        + "&breakOnFirstError=true"
-                        + "&maxPollRecords=100"
-                        + "&consumersCount=3")
+        from(kafkaConsumerUrl(sagaCommandTopic))
                         .routeId("saga-command-consumer")
                         .log("Received saga command from Kafka: partition=${header[kafka.PARTITION]}, offset=${header[kafka.OFFSET]}")
                         .unmarshal().json(JsonLibrary.Jackson, ProcessXmlSigningCommand.class)
@@ -77,14 +88,7 @@ public class SagaRouteConfig extends RouteBuilder {
         // ============================================================
         // CONSUMER ROUTE: saga.compensation.xml-signing (from orchestrator)
         // ============================================================
-        from("kafka:" + sagaCompensationTopic
-                        + "?brokers=" + kafkaBrokers
-                        + "&groupId=xml-signing-service"
-                        + "&autoOffsetReset=earliest"
-                        + "&autoCommitEnable=false"
-                        + "&breakOnFirstError=true"
-                        + "&maxPollRecords=100"
-                        + "&consumersCount=3")
+        from(kafkaConsumerUrl(sagaCompensationTopic))
                         .routeId("saga-compensation-consumer")
                         .log("Received compensation command from Kafka: partition=${header[kafka.PARTITION]}, offset=${header[kafka.OFFSET]}")
                         .unmarshal().json(JsonLibrary.Jackson, CompensateXmlSigningCommand.class)

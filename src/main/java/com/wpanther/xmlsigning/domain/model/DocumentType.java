@@ -1,10 +1,24 @@
 package com.wpanther.xmlsigning.domain.model;
 
 /**
- * Enum representing the 6 Thai e-Tax document types for XML signing routing.
+ * Enum representing the 6 Thai e-Tax document types supported by the XML signing service.
  *
- * <p>This is a simplified version of document-intake-service's DocumentType,
- * used for document type detection from XML namespace URIs and root element names.
+ * <p>This mirrors the {@code DocumentType} enum from document-intake-service,
+ * providing consistent document type identification across the invoice processing
+ * microservices. Used for document type detection from XML namespace URIs and
+ * root element names when processing documents for XAdES-BASELINE-T signing.
+ *
+ * <p>Supported document types:
+ * <ul>
+ *   <li>{@link #TAX_INVOICE} - Tax Invoice (ใบกำกับภาษี)</li>
+ *   <li>{@link #RECEIPT} - Receipt (ใบเสร็จรับเงิน)</li>
+ *   <li>{@link #INVOICE} - Invoice (ใบแจ้งหนี้)</li>
+ *   <li>{@link #DEBIT_CREDIT_NOTE} - Debit/Credit Note (ใบลดหนี้/ใบเพิ่มหนี้)</li>
+ *   <li>{@link #CANCELLATION_NOTE} - Cancellation Note (ใบแจ้งยกเลิก)</li>
+ *   <li>{@link #ABBREVIATED_TAX_INVOICE} - Abbreviated Tax Invoice (ใบกำกับภาษีแบบย่อ)</li>
+ * </ul>
+ *
+ * @since 1.0.0
  */
 public enum DocumentType {
 
