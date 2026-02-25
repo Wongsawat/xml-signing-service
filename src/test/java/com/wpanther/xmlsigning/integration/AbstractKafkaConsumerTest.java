@@ -5,10 +5,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.wpanther.xmlsigning.domain.event.XmlSigningRequestedEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
-import com.wpanther.xmlsigning.infrastructure.client.csc.CSCApiClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
+import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignDocumentResponse;
+import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse;
 import com.wpanther.xmlsigning.integration.config.ConsumerTestConfiguration;
 import com.wpanther.xmlsigning.integration.config.TestKafkaProducerConfig;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,7 +59,7 @@ public abstract class AbstractKafkaConsumerTest {
     protected CSCAuthClient authClient;
 
     @MockBean
-    protected CSCApiClient apiClient;
+    protected CSCSignatureClient signatureClient;
 
     protected ObjectMapper objectMapper;
 
@@ -71,8 +71,10 @@ public abstract class AbstractKafkaConsumerTest {
     }
 
     @BeforeEach
-    void setupMocksAndCleanup() {
-        // Configure mock CSC API responses
+    void setupMockResponses() throws IOException {
+        // Configure mock CSC API responses using SAD token pattern
+
+        // 1. Mock authorization endpoint - returns SAD token
         CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
             .SAD("test-sad-token-" + UUID.randomUUID())
             .transactionID("test-txn-" + UUID.randomUUID())
@@ -80,15 +82,17 @@ public abstract class AbstractKafkaConsumerTest {
             .build();
         when(authClient.authorize(any())).thenReturn(authResponse);
 
-        // Base64-encode a "signed" XML for the mock response
-        String signedXml = "<signed>test-signed-xml</signed>";
-        String signedXmlBase64 = Base64.getEncoder().encodeToString(signedXml.getBytes());
-        CSCSignDocumentResponse signResponse = CSCSignDocumentResponse.builder()
-            .signedDocument(signedXmlBase64)
+        // 2. Mock signHash endpoint - returns raw signature and certificate
+        // The XadesSignatureEmbedder will embed this into the XML
+        String rawSignature = Base64.getEncoder().encodeToString("test-raw-signature-bytes".getBytes());
+        String certificate = Base64.getEncoder().encodeToString("test-certificate".getBytes());
+
+        CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
             .signatureAlgorithm("SHA256withRSA")
-            .certificate("test-certificate-base64")
+            .signatures(new String[]{rawSignature})
+            .certificate(certificate)
             .build();
-        when(apiClient.signDocument(any())).thenReturn(signResponse);
+        when(signatureClient.signHash(any())).thenReturn(signResponse);
 
         // Clean database (order matters for FK constraints)
         testJdbcTemplate.execute("DELETE FROM outbox_events");
@@ -126,28 +130,29 @@ public abstract class AbstractKafkaConsumerTest {
 
     protected Map<String, Object> getDocumentByInvoiceId(String invoiceId) {
         List<Map<String, Object>> results = testJdbcTemplate.queryForList(
-            "SELECT * FROM signed_xml_documents WHERE invoice_id = ?", invoiceId);
+                "SELECT * FROM signed_xml_documents WHERE invoice_id = ?", invoiceId);
         return results.isEmpty() ? null : results.get(0);
     }
 
     protected List<Map<String, Object>> getOutboxEventsByAggregateId(String aggregateId) {
         return testJdbcTemplate.queryForList(
-            "SELECT * FROM outbox_events WHERE aggregate_id = ? ORDER BY created_at",
-            aggregateId);
-    }
-
-    protected String loadTestXml(String filename) throws IOException {
-        Path path = Path.of(getClass().getClassLoader()
-            .getResource("samples/" + filename).getPath());
-        return Files.readString(path);
+                "SELECT * FROM outbox_events WHERE aggregate_id = ? ORDER BY created_at",
+                aggregateId);
     }
 
     /**
-     * Configure mock CSC API to fail signing with the given error message.
+     * Configure mock CSC signature client to fail signing.
      * Call this in a test method BEFORE sending the event to override the default mock.
+     *
+     * @param errorMessage the error message to throw
      */
     protected void setupSigningFailure(String errorMessage) {
-        when(apiClient.signDocument(any()))
-            .thenThrow(new RuntimeException(errorMessage));
+        when(signatureClient.signHash(any()))
+                .thenThrow(new RuntimeException(errorMessage));
+    }
+
+    protected String loadTestXml(String filename) throws IOException {
+        Path path = Path.of("src/test/resources/xml", filename);
+        return Files.readString(path);
     }
 }

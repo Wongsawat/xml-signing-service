@@ -33,6 +33,10 @@ import java.util.Base64;
  * 2. Hash is sent to CSC via signHash
  * 3. Raw signature is returned
  * 4. Signature is embedded locally (this service)
+ * <p>
+ * <strong>Security:</strong> XML parsing is configured with XXS (XML External Entity)
+ * attack protection following OWASP recommendations. All external entity processing
+ * is disabled, and DTD loading is prevented.
  */
 @Component
 @Slf4j
@@ -54,13 +58,8 @@ public class XadesSignatureEmbedder {
         try {
             log.debug("Embedding XAdES signature into XML document");
 
-            // Parse the original XML document
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            dbf.setNamespaceAware(true);
-            dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-            dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-
+            // Parse the original XML document with XXS protection
+            DocumentBuilderFactory dbf = createSecureDocumentBuilderFactory();
             DocumentBuilder db = dbf.newDocumentBuilder();
             Document doc = db.parse(new ByteArrayInputStream(originalXml.getBytes(StandardCharsets.UTF_8)));
 
@@ -235,6 +234,50 @@ public class XadesSignatureEmbedder {
 
         signingCertificate.appendChild(cert);
         return signingCertificate;
+    }
+
+    /**
+     * Creates a secure DocumentBuilderFactory configured with XXS protection.
+     * <p>
+     * This factory is configured according to OWASP recommendations for preventing
+     * XML External Entity (XXE) attacks. All external entity processing is disabled.
+     * <p>
+     * Security features enabled:
+     * <ul>
+     *   <li>DOCTYPE declarations disallowed</li>
+     *   <li>External general entities disabled</li>
+     *   <li>External parameter entities disabled</li>
+     *   <li>External DTD loading disabled</li>
+     *   <li>Entity reference expansion disabled</li>
+     *   <li>XInclude processing disabled</li>
+     * </ul>
+     *
+     * @return a securely configured DocumentBuilderFactory
+     * @throws javax.xml.parsers.ParserConfigurationException if feature configuration fails
+     */
+    private DocumentBuilderFactory createSecureDocumentBuilderFactory() throws javax.xml.parsers.ParserConfigurationException {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+
+        // XXE Protection: Disable DOCTYPE declarations
+        dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+
+        // XXE Protection: Disable external general entities
+        dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+
+        // XXE Protection: Disable external parameter entities
+        dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+
+        // XXE Protection: Disable loading of external DTDs
+        dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+
+        // XXE Protection: Disable entity reference expansion
+        dbf.setExpandEntityReferences(false);
+
+        // XXE Protection: Disable XInclude processing
+        dbf.setXIncludeAware(false);
+
+        return dbf;
     }
 
     /**

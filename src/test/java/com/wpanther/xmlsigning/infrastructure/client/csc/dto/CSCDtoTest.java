@@ -106,82 +106,6 @@ class CSCDtoTest {
     }
 
     @Nested
-    @DisplayName("CSCSignDocumentRequest")
-    class CSCSignDocumentRequestTests {
-
-        @Test
-        @DisplayName("Builder with all fields")
-        void testBuilderWithAllFields() {
-            SignatureAttributes attrs = SignatureAttributes.builder()
-                    .signatureType("XAdES")
-                    .build();
-
-            CSCSignDocumentRequest request = CSCSignDocumentRequest.builder()
-                    .clientId("client-1")
-                    .credentialID("cred-1")
-                    .SAD("sad-token")
-                    .documentID("doc-1")
-                    .document("base64doc")
-                    .documentDigest("digest123")
-                    .hashAlgo("SHA256")
-                    .signatureAttributes(attrs)
-                    .build();
-
-            assertThat(request.getClientId()).isEqualTo("client-1");
-            assertThat(request.getCredentialID()).isEqualTo("cred-1");
-            assertThat(request.getSAD()).isEqualTo("sad-token");
-            assertThat(request.getDocumentID()).isEqualTo("doc-1");
-            assertThat(request.getDocument()).isEqualTo("base64doc");
-            assertThat(request.getDocumentDigest()).isEqualTo("digest123");
-            assertThat(request.getHashAlgo()).isEqualTo("SHA256");
-            assertThat(request.getSignatureAttributes()).isEqualTo(attrs);
-        }
-
-        @Test
-        @DisplayName("No-args constructor and setters")
-        void testNoArgsConstructor() {
-            CSCSignDocumentRequest request = new CSCSignDocumentRequest();
-            request.setClientId("client-2");
-            request.setDocumentID("doc-2");
-
-            assertThat(request.getClientId()).isEqualTo("client-2");
-            assertThat(request.getDocumentID()).isEqualTo("doc-2");
-        }
-    }
-
-    @Nested
-    @DisplayName("CSCSignDocumentResponse")
-    class CSCSignDocumentResponseTests {
-
-        @Test
-        @DisplayName("Builder with all fields")
-        void testBuilderWithAllFields() {
-            CSCSignDocumentResponse response = CSCSignDocumentResponse.builder()
-                    .transactionID("txn-1")
-                    .signedDocument("signed-base64")
-                    .certificate("cert-data")
-                    .signatureAlgorithm("RSA-SHA256")
-                    .build();
-
-            assertThat(response.getTransactionID()).isEqualTo("txn-1");
-            assertThat(response.getSignedDocument()).isEqualTo("signed-base64");
-            assertThat(response.getCertificate()).isEqualTo("cert-data");
-            assertThat(response.getSignatureAlgorithm()).isEqualTo("RSA-SHA256");
-        }
-
-        @Test
-        @DisplayName("No-args constructor and setters")
-        void testNoArgsConstructor() {
-            CSCSignDocumentResponse response = new CSCSignDocumentResponse();
-            response.setTransactionID("txn-2");
-            response.setSignedDocument("signed-2");
-
-            assertThat(response.getTransactionID()).isEqualTo("txn-2");
-            assertThat(response.getSignedDocument()).isEqualTo("signed-2");
-        }
-    }
-
-    @Nested
     @DisplayName("SignatureAttributes")
     class SignatureAttributesTests {
 
@@ -334,6 +258,56 @@ class CSCDtoTest {
 
             assertThat(sigData.getHashToSign()).isNotNull();
             assertThat(sigData.getHashToSign()[0]).isEqualTo("hash1");
+        }
+    }
+
+    @Nested
+    @DisplayName("CSCSignatureResponse")
+    class CSCSignatureResponseTests {
+
+        @Test
+        @DisplayName("Builder with all fields")
+        void testBuilderWithAllFields() {
+            CSCSignatureResponse response = CSCSignatureResponse.builder()
+                    .operationID("op-123")
+                    .signatureAlgorithm("SHA256withRSA")
+                    .signatures(new String[]{"sig1", "sig2"})
+                    .certificate("cert-base64")
+                    .build();
+
+            assertThat(response.getOperationID()).isEqualTo("op-123");
+            assertThat(response.getSignatureAlgorithm()).isEqualTo("SHA256withRSA");
+            assertThat(response.getSignatures()).isNotNull();
+            assertThat(response.getSignatures()).hasSize(2);
+            assertThat(response.getSignatures()[0]).isEqualTo("sig1");
+            assertThat(response.getSignatures()[1]).isEqualTo("sig2");
+            assertThat(response.getCertificate()).isEqualTo("cert-base64");
+        }
+
+        @Test
+        @DisplayName("Builder with minimal fields")
+        void testBuilderWithMinimalFields() {
+            CSCSignatureResponse response = CSCSignatureResponse.builder()
+                    .signatureAlgorithm("SHA256withRSA")
+                    .signatures(new String[]{"sig1"})
+                    .build();
+
+            assertThat(response.getSignatureAlgorithm()).isEqualTo("SHA256withRSA");
+            assertThat(response.getSignatures()).isNotNull();
+            assertThat(response.getSignatures()[0]).isEqualTo("sig1");
+            assertThat(response.getOperationID()).isNull();
+            assertThat(response.getCertificate()).isNull();
+        }
+
+        @Test
+        @DisplayName("No-args constructor and setters")
+        void testNoArgsConstructor() {
+            CSCSignatureResponse response = new CSCSignatureResponse();
+            response.setSignatureAlgorithm("RSA-SHA256");
+            response.setSignatures(new String[]{"sig-1"});
+
+            assertThat(response.getSignatureAlgorithm()).isEqualTo("RSA-SHA256");
+            assertThat(response.getSignatures()[0]).isEqualTo("sig-1");
         }
     }
 }
