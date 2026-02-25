@@ -1,7 +1,6 @@
 package com.wpanther.xmlsigning.infrastructure.config;
 
 import feign.Logger;
-import feign.Request;
 import feign.Retryer;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
@@ -34,15 +33,9 @@ class FeignConfigTest {
             assertThat(level).isEqualTo(Logger.Level.FULL);
         }
 
-        @Test
-        @DisplayName("options returns configured Request.Options")
-        void testOptions() {
-            Request.Options options = config.options();
-
-            assertThat(options).isNotNull();
-            assertThat(options.connectTimeout()).isEqualTo(10000);
-            assertThat(options.readTimeout()).isEqualTo(30000);
-        }
+        // Note: Request.Options is now configured via application.yml
+        // (spring.cloud.openfeign.client.config.default.connectTimeout/readTimeout)
+        // The options() bean was removed to allow YAML configuration to take effect
 
         @Test
         @DisplayName("retryer returns configured Retryer")

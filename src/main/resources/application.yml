@@ -53,8 +53,11 @@ camel:
       client:
         config:
           default:
-            connectTimeout: 10000
-            readTimeout: 30000
+            # Connection timeout in milliseconds (time to establish connection)
+            connectTimeout: 10000  # 10 seconds
+            # Read timeout in milliseconds (time waiting for response)
+            readTimeout: 30000     # 30 seconds
+            # Logger level: BASIC, HEADERS, FULL (can be overridden by FeignConfig bean)
             loggerLevel: FULL
 
 # Application-specific configuration
