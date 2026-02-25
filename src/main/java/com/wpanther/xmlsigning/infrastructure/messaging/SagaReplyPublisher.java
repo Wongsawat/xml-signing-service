@@ -97,12 +97,23 @@ public class SagaReplyPublisher {
         log.info("Published COMPENSATED saga reply for saga {} step {}", sagaId, sagaStep);
     }
 
+    /**
+     * Serializes headers map to JSON for outbox storage.
+     * <p>
+     * This method runs within a transaction context, so any exception will
+     * trigger transaction rollback and ensure data consistency.
+     *
+     * @param map the headers map to serialize
+     * @return JSON string representation
+     * @throws IllegalStateException if JSON serialization fails
+     */
     private String toJson(Map<String, String> map) {
         try {
             return objectMapper.writeValueAsString(map);
         } catch (JsonProcessingException e) {
-            log.warn("Failed to serialize headers to JSON", e);
-            return null;
+            log.error("Failed to serialize outbox headers to JSON: {}", map, e);
+            throw new IllegalStateException(
+                    "Cannot serialize outbox headers - transaction aborted. Headers: " + map, e);
         }
     }
 }

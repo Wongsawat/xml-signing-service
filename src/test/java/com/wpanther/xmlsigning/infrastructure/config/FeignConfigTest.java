@@ -53,13 +53,8 @@ class FeignConfigTest {
             assertThat(retryer).isInstanceOf(Retryer.Default.class);
         }
 
-        @Test
-        @DisplayName("errorDecoder returns CSCErrorDecoder")
-        void testErrorDecoder() {
-            var decoder = config.errorDecoder();
-
-            assertThat(decoder).isInstanceOf(CSCErrorDecoder.class);
-        }
+        // Note: CSCErrorDecoder is now a @Component and tested separately in CSCErrorDecoderTest
+        // The errorDecoder() bean method was removed from FeignConfig
 
         @Test
         @DisplayName("defaultCustomizer returns non-null Customizer")

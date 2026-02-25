@@ -85,13 +85,14 @@ app:
     timeout-seconds: ${SIGNING_TIMEOUT_SECONDS:30}
 
   # MinIO (S3-compatible) for signed XML storage
+  # Note: Default port changed from 9000 to 9001 to avoid conflict with eidasremotesigning (CSC service)
   minio:
-    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9001}
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket-name: ${MINIO_BUCKET_NAME:signed-xml-documents}
     region: ${MINIO_REGION:us-east-1}
-    base-url: ${MINIO_BASE_URL:http://localhost:9000/signed-xml-documents}
+    base-url: ${MINIO_BASE_URL:http://localhost:9001/signed-xml-documents}
     path-style-access: ${MINIO_PATH_STYLE_ACCESS:true}
 
 # Eureka client configuration

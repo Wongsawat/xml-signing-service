@@ -76,7 +76,7 @@ class EventPublisherTest {
     }
 
     @Test
-    @DisplayName("Should handle JSON serialization error gracefully")
+    @DisplayName("Should throw IllegalStateException on JSON serialization error")
     void testToJsonError() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
             "doc-123", "INV-001", "INVOICE", "corr-123"
@@ -85,14 +85,17 @@ class EventPublisherTest {
         when(objectMapper.writeValueAsString(any()))
             .thenThrow(new JsonProcessingException("JSON error") {});
 
-        eventPublisher.publishXmlSigned(event);
+        // Should throw IllegalStateException when JSON serialization fails
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            eventPublisher.publishXmlSigned(event);
+        });
 
-        ArgumentCaptor<String> headersCaptor = ArgumentCaptor.forClass(String.class);
-        verify(outboxService).saveWithRouting(
-            any(), any(), any(), any(), any(), headersCaptor.capture()
-        );
+        assertTrue(exception.getMessage().contains("Cannot serialize outbox headers"));
+        assertTrue(exception.getCause() instanceof JsonProcessingException);
 
-        assertNull(headersCaptor.getValue());
+        // Verify outboxService.saveWithRouting was NOT called (transaction rolled back)
+        verify(outboxService, never()).saveWithRouting(
+                any(), any(), any(), any(), any(), any());
     }
 
     @Test

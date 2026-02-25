@@ -112,16 +112,21 @@ class SagaReplyPublisherTest {
     }
 
     @Test
-    void testToJsonErrorReturnsNull() throws Exception {
+    void testToJsonErrorThrowsIllegalStateException() throws Exception {
         when(objectMapper.writeValueAsString(any()))
             .thenThrow(new JsonProcessingException("JSON error") {});
 
-        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        // Should throw IllegalStateException when JSON serialization fails
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        });
 
-        ArgumentCaptor<String> headersCaptor = ArgumentCaptor.forClass(String.class);
-        verify(outboxService).saveWithRouting(any(), any(), any(), any(), any(), headersCaptor.capture());
+        assertTrue(exception.getMessage().contains("Cannot serialize outbox headers"));
+        assertTrue(exception.getCause() instanceof JsonProcessingException);
 
-        assertNull(headersCaptor.getValue());
+        // Verify outboxService.saveWithRouting was NOT called (transaction rolled back)
+        verify(outboxService, never()).saveWithRouting(
+                any(), any(), any(), any(), any(), any());
     }
 
     @Test

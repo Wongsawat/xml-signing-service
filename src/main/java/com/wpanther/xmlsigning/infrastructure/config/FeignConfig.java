@@ -44,10 +44,8 @@ public class FeignConfig {
         );
     }
 
-    @Bean
-    public ErrorDecoder errorDecoder() {
-        return new CSCErrorDecoder();
-    }
+    // Note: CSCErrorDecoder is now a @Component and is auto-wired by Spring.
+    // The Feign clients will use the CSCErrorDecoder bean automatically.
 
     @Bean
     public Customizer<Resilience4JCircuitBreakerFactory> defaultCustomizer() {
