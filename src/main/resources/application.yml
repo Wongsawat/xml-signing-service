@@ -84,8 +84,17 @@ app:
 
   # Signing configuration
   signing:
+    # Number of retry attempts for failed signing operations
     max-retries: ${SIGNING_MAX_RETRIES:3}
+    # Timeout for signing operations (in seconds)
     timeout-seconds: ${SIGNING_TIMEOUT_SECONDS:30}
+    # Configuration validation limits
+    # Maximum allowed retry attempts (prevents excessive retry loops)
+    max-allowed-retries: ${SIGNING_MAX_ALLOWED_RETRIES:10}
+    # Maximum allowed timeout (5 minutes)
+    max-allowed-timeout-seconds: ${SIGNING_MAX_ALLOWED_TIMEOUT_SECONDS:300}
+    # Minimum allowed timeout (5 seconds)
+    min-allowed-timeout-seconds: ${SIGNING_MIN_ALLOWED_TIMEOUT_SECONDS:5}
 
   # MinIO (S3-compatible) for signed XML storage
   # Note: Default port changed from 9000 to 9001 to avoid conflict with eidasremotesigning (CSC service)

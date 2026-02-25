@@ -52,13 +52,25 @@ public class SagaCommandHandler {
     @Value("${app.signing.timeout-seconds:30}")
     private int timeoutSeconds;
 
-    private static final int MAX_ALLOWED_RETRIES = 10;
-    private static final int MAX_ALLOWED_TIMEOUT_SECONDS = 300; // 5 minutes
-    private static final int MIN_ALLOWED_TIMEOUT_SECONDS = 5;   // 5 seconds
+    @Value("${app.signing.max-allowed-retries:10}")
+    private int maxAllowedRetries;
+
+    @Value("${app.signing.max-allowed-timeout-seconds:300}")
+    private int maxAllowedTimeoutSeconds;
+
+    @Value("${app.signing.min-allowed-timeout-seconds:5}")
+    private int minAllowedTimeoutSeconds;
 
     /**
      * Validate configuration values after bean construction.
      * Ensures maxRetries and timeoutSeconds are within acceptable bounds.
+     * <p>
+     * Configuration limits are also configurable via:
+     * <ul>
+     *   <li>app.signing.max-allowed-retries (default: 10)</li>
+     *   <li>app.signing.max-allowed-timeout-seconds (default: 300)</li>
+     *   <li>app.signing.min-allowed-timeout-seconds (default: 5)</li>
+     * </ul>
      */
     @PostConstruct
     public void validateConfiguration() {
@@ -66,19 +78,19 @@ public class SagaCommandHandler {
             throw new IllegalStateException(
                     "Configuration error: app.signing.max-retries must be non-negative, got: " + maxRetries);
         }
-        if (maxRetries > MAX_ALLOWED_RETRIES) {
+        if (maxRetries > maxAllowedRetries) {
             throw new IllegalStateException(
-                    "Configuration error: app.signing.max-retries must be <= " + MAX_ALLOWED_RETRIES +
+                    "Configuration error: app.signing.max-retries must be <= " + maxAllowedRetries +
                             ", got: " + maxRetries);
         }
-        if (timeoutSeconds < MIN_ALLOWED_TIMEOUT_SECONDS) {
+        if (timeoutSeconds < minAllowedTimeoutSeconds) {
             throw new IllegalStateException(
-                    "Configuration error: app.signing.timeout-seconds must be >= " + MIN_ALLOWED_TIMEOUT_SECONDS +
+                    "Configuration error: app.signing.timeout-seconds must be >= " + minAllowedTimeoutSeconds +
                             " seconds, got: " + timeoutSeconds);
         }
-        if (timeoutSeconds > MAX_ALLOWED_TIMEOUT_SECONDS) {
+        if (timeoutSeconds > maxAllowedTimeoutSeconds) {
             throw new IllegalStateException(
-                    "Configuration error: app.signing.timeout-seconds must be <= " + MAX_ALLOWED_TIMEOUT_SECONDS +
+                    "Configuration error: app.signing.timeout-seconds must be <= " + maxAllowedTimeoutSeconds +
                             " seconds, got: " + timeoutSeconds);
         }
         log.info("Configuration validated: maxRetries={}, timeoutSeconds={}", maxRetries, timeoutSeconds);
