@@ -58,7 +58,7 @@ camel:
             # Read timeout in milliseconds (time waiting for response)
             readTimeout: 30000     # 30 seconds
             # Logger level: BASIC, HEADERS, FULL (can be overridden by FeignConfig bean)
-            loggerLevel: FULL
+            loggerLevel: BASIC
 
 # Application-specific configuration
 app:
@@ -76,8 +76,6 @@ app:
     service-url: ${CSC_SERVICE_URL:http://localhost:9000}
     client-id: ${CSC_CLIENT_ID:etax-invoice-service}
     credential-id: ${CSC_CREDENTIAL_ID:default-credential}
-    # PIN-based authentication is deprecated in favor of SAD token authentication
-    # pin: ${CSC_PIN:1234}
     hash-algorithm: ${CSC_HASH_ALGORITHM:SHA256}
     signature-level: ${CSC_SIGNATURE_LEVEL:XAdES-BASELINE-T}
     digest-algorithm: ${CSC_DIGEST_ALGORITHM:SHA256}
@@ -89,11 +87,8 @@ app:
     # Timeout for signing operations (in seconds)
     timeout-seconds: ${SIGNING_TIMEOUT_SECONDS:30}
     # Configuration validation limits
-    # Maximum allowed retry attempts (prevents excessive retry loops)
     max-allowed-retries: ${SIGNING_MAX_ALLOWED_RETRIES:10}
-    # Maximum allowed timeout (5 minutes)
     max-allowed-timeout-seconds: ${SIGNING_MAX_ALLOWED_TIMEOUT_SECONDS:300}
-    # Minimum allowed timeout (5 seconds)
     min-allowed-timeout-seconds: ${SIGNING_MIN_ALLOWED_TIMEOUT_SECONDS:5}
 
   # MinIO (S3-compatible) for signed XML storage
@@ -114,111 +109,93 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
     register-with-eureka: true
     fetch-registry: true
-  instance:
-    prefer-ip-address: true
-    hostname: ${HOSTNAME:localhost}
-    instance-id: ${spring.application.name}:${random.value}
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
+    instance:
+      prefer-ip-address: true
 
-# Actuator endpoints
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus,camelroutes,circuitbreakers
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    tags:
-      application: ${spring.application.name}
-    export:
-      prometheus:
-        enabled: true
-  health:
-    circuitbreakers:
-      enabled: true
-
-# Resilience4j circuit breaker configuration for CSC API clients
+# Circuit breaker configuration
 resilience4j:
   circuitbreaker:
-    metrics:
-      enabled: true
-    configs:
-      default:
+    instances:
+      cscSignatureClient:
         sliding-window-size: 10
         failure-rate-threshold: 50
         wait-duration-in-open-state: 60s
         permitted-number-of-calls-in-half-open-state: 3
         minimum-number-of-calls: 5
-        automatic-transition-from-open-to-half-open-enabled: true
-    instances:
       cscAuthClient:
-        base-config: default
         sliding-window-size: 10
         failure-rate-threshold: 50
         wait-duration-in-open-state: 60s
-      cscSignatureClient:
-        base-config: default
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 60s
-  timelimiter:
-    metrics:
-      enabled: true
-    configs:
-      default:
-        timeout-duration: 30s
-    instances:
-      cscAuthClient:
-        base-config: default
-        timeout-duration: 30s
-      cscSignatureClient:
-        base-config: default
-        timeout-duration: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        minimum-number-of-calls: 5
   retry:
-    metrics:
-      enabled: true
-    configs:
-      default:
+    instances:
+      cscSignatureClient:
         max-attempts: 3
         wait-duration: 500ms
-        retry-exceptions:
-          - java.net.SocketException
-          - java.io.IOException
-        ignore-exceptions:
-          - java.lang.IllegalArgumentException
-    instances:
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
       cscAuthClient:
-        base-config: default
-        max-attempts: 3
+        max-attempts: 2
+        wait-duration: 300ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+  timelimiter:
+    instances:
       cscSignatureClient:
-        base-config: default
-        max-attempts: 2  # Don't retry signature failures (SAD token is single-use)
-  bulkhead:
-    metrics:
-      enabled: true
-    configs:
-      default:
-        max-concurrent-calls: 10
-        max-wait-duration: 0s
+        timeout-duration: 30s
+      cscAuthClient:
+        timeout-duration: 10s
 
-# Logging configuration (development defaults)
-# For production, use --spring.profiles.active=prod to load application-prod.yml
+# Actuator endpoints
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always
+  health:
+    circuitbreakers:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# Production logging configuration
 logging:
   level:
-    root: INFO
-    # Package-level DEBUG for development
-    com.wpanther.xmlsigning: DEBUG
-    # Apache Camel - reduce noise
-    org.apache.camel: WARN
-    org.apache.camel.component.kafka: WARN
-    # Hibernate SQL - set to DEBUG to see SQL queries (not recommended in production)
+    root: WARN
+    com.wpanther.xmlsigning: INFO
+    # Application layer - business operations
+    com.wpanther.xmlsigning.application: INFO
+    # Domain layer - core business logic
+    com.wpanther.xmlsigning.domain: INFO
+    # Infrastructure - CSC clients (WARN for failures, INFO for normal flow)
+    com.wpanther.xmlsigning.infrastructure.client: WARN
+    # Infrastructure - messaging
+    com.wpanther.xmlsigning.infrastructure.messaging: INFO
+    # Infrastructure - persistence
+    com.wpanther.xmlsigning.infrastructure.persistence: WARN
+    # Infrastructure - storage
+    com.wpanther.xmlsigning.infrastructure.storage: INFO
+    # Hibernate SQL (set to DEBUG only for troubleshooting slow queries)
     org.hibernate.SQL: WARN
-    # Feign client logging
-    feign: INFO
-  pattern:
-    # Include traceId, sagaId, documentId MDC values for distributed tracing
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{sagaId},%X{documentId}] %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{sagaId},%X{documentId}] %logger{36} - %msg%n"
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    # Spring framework
+    org.springframework: WARN
+    org.springframework.transaction: WARN
+    # Apache Camel
+    org.apache.camel: INFO
+    # Resilience4j circuit breaker events
+    io.github.resilience4j: INFO
+    # Kubernetes
+    io.kubernetes: WARN
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{sagaId},%X{documentId}] %logger{36} - %msg%n"
