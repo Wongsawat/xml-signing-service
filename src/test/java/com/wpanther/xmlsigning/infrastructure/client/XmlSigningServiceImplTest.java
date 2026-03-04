@@ -2,10 +2,10 @@ package com.wpanther.xmlsigning.infrastructure.client;
 
 import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
 import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
+import com.wpanther.xmlsigning.domain.model.csc.CscSignHashCommand;
+import com.wpanther.xmlsigning.domain.model.csc.CscSignHashResult;
 import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
-import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureRequest;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse;
+import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +22,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,16 +34,16 @@ import static org.mockito.Mockito.when;
  * Unit tests for {@link XmlSigningServiceImpl}.
  * Tests the signHash pattern with SAD token authentication.
  *
- * <p>Note: {@code authorizationPort} is mocked as {@link CscAuthorizationPort} (the domain port),
- * not as {@code CSCAuthClient} directly. The adapter ({@code CscAuthorizationAdapter}) is tested
- * separately in {@code CscAuthorizationAdapterTest}.
+ * <p>Both {@code authorizationPort} and {@code signaturePort} are mocked as domain port
+ * interfaces. Adapter-level mapping (domain types → Feign DTOs) is tested separately in
+ * {@code CscAuthorizationAdapterTest} and {@code CscSignatureAdapterTest}.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("XmlSigningServiceImpl")
 class XmlSigningServiceImplTest {
 
     @Mock
-    private CSCSignatureClient signatureClient;
+    private CscSignaturePort signaturePort;
 
     @Mock
     private CscAuthorizationPort authorizationPort;
@@ -73,17 +74,13 @@ class XmlSigningServiceImplTest {
             // Setup auth result (domain type)
             CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-123");
 
-            // Setup signHash response
+            // Setup signHash result (domain type)
             String rawSignature = "base64-encoded-signature";
             String certificate = "base64-encoded-certificate";
-
-            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
-                    .signatures(new String[]{rawSignature})
-                    .certificate(certificate)
-                    .build();
+            CscSignHashResult signResult = new CscSignHashResult(List.of(rawSignature), certificate);
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signaturePort.signHash(any())).thenReturn(signResult);
             when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
                 .thenReturn("<signed><ds:Signature>test</ds:Signature></signed>");
 
@@ -99,20 +96,16 @@ class XmlSigningServiceImplTest {
         }
 
         @Test
-        @DisplayName("Sends correct signHash request with SAD token (not PIN)")
+        @DisplayName("Sends correct CscSignHashCommand with SAD token (not PIN)")
         void testSignHashRequestFields() {
             // Setup
             String xmlContent = "<xml>test</xml>";
 
             CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token-xyz", "txn-456");
-
-            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
-                    .signatures(new String[]{"signature-value"})
-                    .certificate("certificate-value")
-                    .build();
+            CscSignHashResult signResult = new CscSignHashResult(List.of("signature-value"), "certificate-value");
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signaturePort.signHash(any())).thenReturn(signResult);
             when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
                 .thenReturn("<signed>xml</signed>");
 
@@ -122,30 +115,27 @@ class XmlSigningServiceImplTest {
             // Verify authorize was called
             verify(authorizationPort).authorize(any());
 
-            // Capture and verify signHash request
-            ArgumentCaptor<CSCSignatureRequest> captor = ArgumentCaptor.forClass(CSCSignatureRequest.class);
-            verify(signatureClient).signHash(captor.capture());
+            // Capture and verify CscSignHashCommand fields
+            ArgumentCaptor<CscSignHashCommand> captor = ArgumentCaptor.forClass(CscSignHashCommand.class);
+            verify(signaturePort).signHash(captor.capture());
 
-            CSCSignatureRequest request = captor.getValue();
-            assertThat(request.getClientId()).isEqualTo("test-client");
-            assertThat(request.getCredentialID()).isEqualTo("test-credential");
-            assertThat(request.getHashAlgo()).isEqualTo("SHA256");
+            CscSignHashCommand command = captor.getValue();
+            assertThat(command.clientId()).isEqualTo("test-client");
+            assertThat(command.credentialId()).isEqualTo("test-credential");
+            assertThat(command.hashAlgorithm()).isEqualTo("SHA256");
 
-            // Verify SAD is set (not credentials.pin)
-            assertThat(request.getSAD()).isEqualTo("test-sad-token-xyz");
-            assertThat(request.getCredentials()).isNull(); // No PIN-based auth
+            // Verify SAD token is set
+            assertThat(command.sadToken()).isEqualTo("test-sad-token-xyz");
 
-            // Verify signature data contains hash
-            assertThat(request.getSignatureData()).isNotNull();
-            assertThat(request.getSignatureData().getHashToSign()).isNotEmpty();
-            assertThat(request.getSignatureData().getHashToSign()[0]).isNotEmpty();
+            // Verify document digests contain hash
+            assertThat(command.documentDigests()).isNotEmpty();
+            assertThat(command.documentDigests().get(0)).isNotEmpty();
 
             // Verify signature attributes
-            assertThat(request.getSignatureData().getSignatureAttributes()).isNotNull();
-            assertThat(request.getSignatureData().getSignatureAttributes().getSignatureType()).isEqualTo("XAdES");
-            assertThat(request.getSignatureData().getSignatureAttributes().getSignatureLevel()).isEqualTo("XAdES-BASELINE-T");
-            assertThat(request.getSignatureData().getSignatureAttributes().getSignatureForm()).isEqualTo("enveloped");
-            assertThat(request.getSignatureData().getSignatureAttributes().getDigestAlgorithm()).isEqualTo("SHA256");
+            assertThat(command.signatureType()).isEqualTo("XAdES");
+            assertThat(command.signatureLevel()).isEqualTo("XAdES-BASELINE-T");
+            assertThat(command.signatureForm()).isEqualTo("enveloped");
+            assertThat(command.digestAlgorithm()).isEqualTo("SHA256");
         }
 
         @Test
@@ -155,14 +145,10 @@ class XmlSigningServiceImplTest {
             String xmlContent = "<xml>test</xml>";
 
             CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-789");
-
-            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
-                    .signatures(new String[]{"sig"})
-                    .certificate("cert")
-                    .build();
+            CscSignHashResult signResult = new CscSignHashResult(List.of("sig"), "cert");
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signaturePort.signHash(any())).thenReturn(signResult);
             when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
                 .thenReturn("<signed>xml</signed>");
 
@@ -197,14 +183,10 @@ class XmlSigningServiceImplTest {
             String expectedDigest = base64.replace("+", "-").replace("/", "_").replaceAll("=+$", "");
 
             CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-digest-test");
-
-            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
-                    .signatures(new String[]{"sig"})
-                    .certificate("cert")
-                    .build();
+            CscSignHashResult signResult = new CscSignHashResult(List.of("sig"), "cert");
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signaturePort.signHash(any())).thenReturn(signResult);
             when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
                 .thenReturn("<signed>xml</signed>");
 
@@ -217,10 +199,10 @@ class XmlSigningServiceImplTest {
             verify(authorizationPort).authorize(authCaptor.capture());
             assertThat(authCaptor.getValue().documentDigests().get(0)).isEqualTo(expectedDigest);
 
-            // Verify digest in signHash request
-            ArgumentCaptor<CSCSignatureRequest> signCaptor = ArgumentCaptor.forClass(CSCSignatureRequest.class);
-            verify(signatureClient).signHash(signCaptor.capture());
-            assertThat(signCaptor.getValue().getSignatureData().getHashToSign()[0]).isEqualTo(expectedDigest);
+            // Verify digest in CscSignHashCommand
+            ArgumentCaptor<CscSignHashCommand> signCaptor = ArgumentCaptor.forClass(CscSignHashCommand.class);
+            verify(signaturePort).signHash(signCaptor.capture());
+            assertThat(signCaptor.getValue().documentDigests().get(0)).isEqualTo(expectedDigest);
         }
 
         @Test
@@ -236,30 +218,26 @@ class XmlSigningServiceImplTest {
         }
 
         @Test
-        @DisplayName("Uses SAD token from authorize result in signHash request")
+        @DisplayName("Uses SAD token from authorize result in CscSignHashCommand")
         void testSadTokenUsage() {
             // Setup
             String expectedSadToken = "received-sad-token-12345";
 
             CscAuthorizeResult authResult = new CscAuthorizeResult(expectedSadToken, "txn-001");
-
-            CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
-                    .signatures(new String[]{"sig"})
-                    .certificate("cert")
-                    .build();
+            CscSignHashResult signResult = new CscSignHashResult(List.of("sig"), "cert");
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signatureClient.signHash(any())).thenReturn(signResponse);
+            when(signaturePort.signHash(any())).thenReturn(signResult);
             when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
                 .thenReturn("<signed>xml</signed>");
 
             // Execute
             signingService.signXml("<xml/>", "doc-1");
 
-            // Verify SAD token is used in signHash request
-            ArgumentCaptor<CSCSignatureRequest> captor = ArgumentCaptor.forClass(CSCSignatureRequest.class);
-            verify(signatureClient).signHash(captor.capture());
-            assertThat(captor.getValue().getSAD()).isEqualTo(expectedSadToken);
+            // Verify SAD token is used in CscSignHashCommand
+            ArgumentCaptor<CscSignHashCommand> captor = ArgumentCaptor.forClass(CscSignHashCommand.class);
+            verify(signaturePort).signHash(captor.capture());
+            assertThat(captor.getValue().sadToken()).isEqualTo(expectedSadToken);
         }
     }
 }

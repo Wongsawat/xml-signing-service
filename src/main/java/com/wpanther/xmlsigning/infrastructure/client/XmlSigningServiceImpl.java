@@ -4,14 +4,12 @@ import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
 import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
 import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
+import com.wpanther.xmlsigning.domain.model.csc.CscSignHashCommand;
+import com.wpanther.xmlsigning.domain.model.csc.CscSignHashResult;
 import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
 import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureRequest;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.SignatureAttributes;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.SignatureData;
 import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,9 +75,9 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             SigningApiResponse apiResponse = signHash(documentDigest);
             log.info("Document signed successfully: {}", documentId);
 
-            // Step 3: Extract raw signature and certificate from response
-            String rawSignature = apiResponse.signatureResponse().getSignatures()[0];
-            String certificate = apiResponse.signatureResponse().getCertificate();
+            // Step 3: Extract raw signature and certificate from result
+            String rawSignature = apiResponse.signHashResult().signatures().get(0);
+            String certificate = apiResponse.signHashResult().certificate();
 
             // Step 4: Embed signature into XML locally (XAdES-BASELINE-T)
             String signedXml = signatureEmbedder.embedSignature(xmlContent, documentDigest, rawSignature, certificate);
@@ -102,26 +100,11 @@ public class XmlSigningServiceImpl implements XmlSigningService {
      * SAD token is obtained via /credentials/authorize endpoint for each signing operation.
      *
      * @param documentDigest The base64url-encoded SHA-256 digest
-     * @return The signing API response containing transaction ID and signature response
+     * @return The signing API response containing transaction ID and sign-hash result
      * @throws CscAuthorizationException if CSC authorization fails
-     * @throws CscSignatureException if CSC signHash call fails
+     * @throws CscSignatureException     if CSC signHash call fails
      */
     private SigningApiResponse signHash(String documentDigest) {
-        // Build signature attributes for XAdES-BASELINE-T
-        SignatureAttributes signatureAttributes = SignatureAttributes.builder()
-            .signatureType("XAdES")
-            .signatureLevel(signatureLevel)
-            .signatureForm("enveloped")
-            .digestAlgorithm(digestAlgorithm)
-            .signDate(System.currentTimeMillis())
-            .build();
-
-        // Build signature data with hash to sign
-        SignatureData signatureData = SignatureData.builder()
-            .hashToSign(new String[]{documentDigest})
-            .signatureAttributes(signatureAttributes)
-            .build();
-
         // Step 1: Authorize to get SAD token via domain port (uses CscAuthorizeCommand)
         log.debug("Authorizing signing operation with CSC API");
         CscAuthorizeCommand authCommand = new CscAuthorizeCommand(
@@ -147,19 +130,26 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             );
         }
 
-        // Step 2: Build signHash request with SAD (no credentials/PIN)
-        CSCSignatureRequest signRequest = CSCSignatureRequest.builder()
-            .clientId(clientId)
-            .credentialID(credentialId)
-            .SAD(authResult.sadToken())
-            .hashAlgo(hashAlgorithm)
-            .signatureData(signatureData)
-            .build();
+        // Step 2: Build CscSignHashCommand with SAD token and signature attributes
+        CscSignHashCommand signCommand = new CscSignHashCommand(
+                clientId,
+                credentialId,
+                authResult.sadToken(),
+                hashAlgorithm,
+                List.of(documentDigest),
+                "XAdES",
+                signatureLevel,
+                "enveloped",
+                digestAlgorithm,
+                System.currentTimeMillis()
+        );
 
-        // Step 3: Call signHash endpoint
+        // Step 3: Call signHash port
         try {
-            CSCSignatureResponse signatureResponse = signaturePort.signHash(signRequest);
-            return new SigningApiResponse(transactionId, signatureResponse);
+            CscSignHashResult signHashResult = signaturePort.signHash(signCommand);
+            return new SigningApiResponse(transactionId, signHashResult);
+        } catch (CscSignatureException e) {
+            throw e;  // already the correct domain exception, don't re-wrap
         } catch (Exception e) {
             log.error("CSC signHash failed for transaction {}", transactionId, e);
             throw new CscSignatureException(
@@ -188,6 +178,6 @@ public class XmlSigningServiceImpl implements XmlSigningService {
      */
     private record SigningApiResponse(
             String transactionId,
-            CSCSignatureResponse signatureResponse
+            CscSignHashResult signHashResult
     ) {}
 }
