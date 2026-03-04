@@ -1,6 +1,5 @@
 package com.wpanther.xmlsigning.infrastructure.client.csc;
 
-import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeRequest;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;
@@ -9,10 +8,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 /**
- * Feign client adapter for CSC API authorization endpoints.
+ * Feign client for CSC API authorization endpoints.
  * <p>
- * This is an infrastructure adapter that implements the {@link CscAuthorizationPort}
- * domain port interface using Spring Cloud OpenFeign for HTTP communication.
+ * This is a low-level HTTP client that speaks the CSC API wire format.
+ * It is used exclusively by {@link com.wpanther.xmlsigning.infrastructure.adapter.out.csc.CscAuthorizationAdapter},
+ * which maps between domain types and these infrastructure DTOs.
  * <p>
  * The Feign client is configured with:
  * <ul>
@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  *   <li>Full request/response logging for debugging</li>
  * </ul>
  *
- * @see CscAuthorizationPort
+ * @see com.wpanther.xmlsigning.infrastructure.adapter.out.csc.CscAuthorizationAdapter
  * @see com.wpanther.xmlsigning.infrastructure.config.FeignConfig
  */
 @FeignClient(
@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
     url = "${app.csc.service-url}",
     configuration = com.wpanther.xmlsigning.infrastructure.config.FeignConfig.class
 )
-public interface CSCAuthClient extends CscAuthorizationPort {
+public interface CSCAuthClient {
 
     /**
      * Authorize credential for signing.
@@ -42,6 +42,5 @@ public interface CSCAuthClient extends CscAuthorizationPort {
      * @throws CscAuthorizationException propagated from circuit breaker/error decoder
      */
     @PostMapping("/csc/v2/credentials/authorize")
-    @Override
     CSCAuthorizeResponse authorize(@RequestBody CSCAuthorizeRequest request) throws CscAuthorizationException;
 }

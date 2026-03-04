@@ -2,11 +2,16 @@ package com.wpanther.xmlsigning.infrastructure.client;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
+import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
+import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
 import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
 import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.*;
+import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureRequest;
+import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse;
+import com.wpanther.xmlsigning.infrastructure.client.csc.dto.SignatureAttributes;
+import com.wpanther.xmlsigning.infrastructure.client.csc.dto.SignatureData;
 import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * Implementation of XML signing using CSC API v2.0 signHash endpoint.
@@ -116,22 +122,17 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             .signatureAttributes(signatureAttributes)
             .build();
 
-        // Step 1: Authorize to get SAD token
+        // Step 1: Authorize to get SAD token via domain port (uses CscAuthorizeCommand)
         log.debug("Authorizing signing operation with CSC API");
-        CSCAuthorizeRequest authRequest = CSCAuthorizeRequest.builder()
-            .clientId(clientId)
-            .credentialID(credentialId)
-            .numSignatures("1")
-            .hashAlgo(digestAlgorithm)
-            .hash(new String[]{documentDigest})
-            .description("Thai e-Tax Invoice XML Signing")
-            .build();
+        CscAuthorizeCommand authCommand = new CscAuthorizeCommand(
+                clientId, credentialId, "1", digestAlgorithm,
+                List.of(documentDigest), "Thai e-Tax Invoice XML Signing");
 
-        CSCAuthorizeResponse authResponse;
+        CscAuthorizeResult authResult;
         String transactionId;
         try {
-            authResponse = authorizationPort.authorize(authRequest);
-            transactionId = authResponse.getTransactionID();
+            authResult = authorizationPort.authorize(authCommand);
+            transactionId = authResult.transactionId();
             log.debug("Received SAD token and transaction ID {} from CSC API", transactionId);
         } catch (Exception e) {
             log.error("CSC authorization failed for client {} credential {}",
@@ -148,7 +149,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
         CSCSignatureRequest signRequest = CSCSignatureRequest.builder()
             .clientId(clientId)
             .credentialID(credentialId)
-            .SAD(authResponse.getSAD())
+            .SAD(authResult.sadToken())
             .hashAlgo(hashAlgorithm)
             .signatureData(signatureData)
             .build();

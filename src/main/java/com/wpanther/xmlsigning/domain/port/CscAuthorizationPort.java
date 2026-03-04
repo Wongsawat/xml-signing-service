@@ -1,8 +1,8 @@
 package com.wpanther.xmlsigning.domain.port;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeRequest;
-import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;
+import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
+import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
 
 /**
  * Port for CSC (Cloud Signature Consortium) authorization operations.
@@ -13,8 +13,10 @@ import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeRespons
  * The SAD token-based authentication follows CSC API v2.0 best practices and provides
  * better security than deprecated PIN-based authentication.
  * <p>
- * <strong>Architecture Note:</strong> This is a domain port interface. The infrastructure
- * layer provides the adapter implementation (e.g., Feign-based HTTP client).
+ * <strong>Architecture Note:</strong> This is a domain port interface. All types
+ * referenced here are domain types — no infrastructure imports are permitted.
+ * The infrastructure layer provides the adapter implementation
+ * (e.g., {@code CscAuthorizationAdapter} backed by a Feign HTTP client).
  *
  * @see <a href="https://cloudsignatureconsortium.org/wp-content/uploads/2022/10/CSC-API-v2.0.2-Final.pdf">CSC API v2.0 Specification</a>
  */
@@ -34,11 +36,11 @@ public interface CscAuthorizationPort {
      *   <li>The hash algorithm matches the credential's capabilities</li>
      * </ul>
      *
-     * @param request the authorization request containing client ID, credential ID,
+     * @param command the authorization command containing client ID, credential ID,
      *                 hash algorithm, and document digests
-     * @return the authorization response containing the SAD token and transaction ID
+     * @return the authorization result containing the SAD token and transaction ID
      * @throws CscAuthorizationException if authorization fails due to invalid credentials,
      *                                      insufficient permissions, or service unavailability
      */
-    CSCAuthorizeResponse authorize(CSCAuthorizeRequest request) throws CscAuthorizationException;
+    CscAuthorizeResult authorize(CscAuthorizeCommand command) throws CscAuthorizationException;
 }
