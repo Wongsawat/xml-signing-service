@@ -1,5 +1,7 @@
-package com.wpanther.xmlsigning.infrastructure.client;
+package com.wpanther.xmlsigning.application.service;
 
+import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
+import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
 import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
 import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
 import com.wpanther.xmlsigning.domain.model.csc.CscSignHashCommand;
@@ -70,7 +72,7 @@ class XmlSigningServiceImplTest {
 
         @Test
         @DisplayName("Signs XML successfully with valid response")
-        void testSignXmlSuccess() {
+        void signXml_happyPath_returnsSigningResult() {
             // Setup auth result (domain type)
             CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-123");
 
@@ -93,6 +95,38 @@ class XmlSigningServiceImplTest {
             assertThat(result.signedXml()).contains("ds:Signature");
             assertThat(result.certificate()).isEqualTo("base64-encoded-certificate");
             assertThat(result.transactionId()).isEqualTo("txn-123");
+        }
+
+        @Test
+        @DisplayName("Throws CscAuthorizationException when authorization port throws")
+        void signXml_authorizationFails_throwsCscAuthorizationException() {
+            // Setup authorization port to throw CscAuthorizationException directly
+            CscAuthorizationException authException = new CscAuthorizationException(
+                    "Authorization denied by CSC", null, "test-client", "test-credential");
+            when(authorizationPort.authorize(any())).thenThrow(authException);
+
+            // Execute & Verify the exception propagates as-is
+            assertThatThrownBy(() -> signingService.signXml("<xml>test</xml>", "doc-auth-fail"))
+                    .isInstanceOf(CscAuthorizationException.class)
+                    .hasMessageContaining("Authorization denied by CSC");
+        }
+
+        @Test
+        @DisplayName("Throws CscSignatureException when signature port throws")
+        void signXml_signingFails_throwsCscSignatureException() {
+            // Setup auth to succeed
+            CscAuthorizeResult authResult = new CscAuthorizeResult("sad-token", "txn-sign-fail");
+            when(authorizationPort.authorize(any())).thenReturn(authResult);
+
+            // Setup signature port to throw CscSignatureException directly
+            CscSignatureException signException = new CscSignatureException(
+                    "HSM unavailable", null, "txn-sign-fail");
+            when(signaturePort.signHash(any())).thenThrow(signException);
+
+            // Execute & Verify the exception propagates as-is
+            assertThatThrownBy(() -> signingService.signXml("<xml>test</xml>", "doc-sign-fail"))
+                    .isInstanceOf(CscSignatureException.class)
+                    .hasMessageContaining("HSM unavailable");
         }
 
         @Test

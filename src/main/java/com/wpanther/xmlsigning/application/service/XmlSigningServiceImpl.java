@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.infrastructure.client;
+package com.wpanther.xmlsigning.application.service;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
