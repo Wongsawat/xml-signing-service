@@ -52,6 +52,19 @@ class CscAuthorizationAdapterTest {
     }
 
     @Test
+    void authorize_propagatesExceptionWhenClientThrows() {
+        when(feignClient.authorize(any())).thenThrow(new RuntimeException("CSC unavailable"));
+
+        CscAuthorizeCommand cmd = new CscAuthorizeCommand(
+            "client-1", "cred-1", "1", "SHA256",
+            List.of("digest1"), "description");
+
+        assertThatThrownBy(() -> adapter.authorize(cmd))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("CSC unavailable");
+    }
+
+    @Test
     void authorize_mapsMultipleDigests() {
         CSCAuthorizeResponse feignResponse = CSCAuthorizeResponse.builder()
             .SAD("sad-multi")

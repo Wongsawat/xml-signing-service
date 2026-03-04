@@ -134,6 +134,8 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             authResult = authorizationPort.authorize(authCommand);
             transactionId = authResult.transactionId();
             log.debug("Received SAD token and transaction ID {} from CSC API", transactionId);
+        } catch (CscAuthorizationException e) {
+            throw e;  // already the correct domain exception, don't re-wrap
         } catch (Exception e) {
             log.error("CSC authorization failed for client {} credential {}",
                     clientId, credentialId, e);
