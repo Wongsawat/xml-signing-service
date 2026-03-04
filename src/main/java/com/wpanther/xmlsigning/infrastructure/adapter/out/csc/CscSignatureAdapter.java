@@ -81,11 +81,7 @@ public class CscSignatureAdapter implements CscSignaturePort {
         } catch (Exception e) {
             log.error("CSC signHash failed for clientId={} credentialId={}",
                     command.clientId(), command.credentialId(), e);
-            throw new CscSignatureException(
-                    "CSC signHash failed: " + e.getMessage(),
-                    e,
-                    null
-            );
+            throw new CscSignatureException("CSC signHash failed: " + e.getMessage(), e);
         }
     }
 }
