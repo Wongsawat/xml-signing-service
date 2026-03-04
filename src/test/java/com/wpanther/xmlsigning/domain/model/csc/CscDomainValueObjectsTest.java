@@ -1,6 +1,7 @@
 package com.wpanther.xmlsigning.domain.model.csc;
 
 import org.junit.jupiter.api.Test;
+import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 
 class CscDomainValueObjectsTest {
@@ -9,7 +10,7 @@ class CscDomainValueObjectsTest {
     void cscAuthorizeCommand_storesAllFields() {
         var cmd = new CscAuthorizeCommand(
             "client-1", "cred-1", "1", "SHA256",
-            new String[]{"abc123"}, "Thai e-Tax signing");
+            List.of("abc123"), "Thai e-Tax signing");
         assertThat(cmd.clientId()).isEqualTo("client-1");
         assertThat(cmd.credentialId()).isEqualTo("cred-1");
         assertThat(cmd.documentDigests()).containsExactly("abc123");
@@ -26,15 +27,16 @@ class CscDomainValueObjectsTest {
     void cscSignHashCommand_storesAllFields() {
         var cmd = new CscSignHashCommand(
             "client-1", "cred-1", "sad-token", "SHA256withRSA",
-            new String[]{"digest1"}, "XAdES", "XAdES-BASELINE-T",
+            List.of("digest1"), "XAdES", "XAdES-BASELINE-T",
             "enveloped", "SHA256", System.currentTimeMillis());
         assertThat(cmd.clientId()).isEqualTo("client-1");
         assertThat(cmd.sadToken()).isEqualTo("sad-token");
+        assertThat(cmd.documentDigests()).containsExactly("digest1");
     }
 
     @Test
     void cscSignHashResult_storesAllFields() {
-        var result = new CscSignHashResult(new String[]{"sig1"}, "cert-pem");
+        var result = new CscSignHashResult(List.of("sig1"), "cert-pem");
         assertThat(result.signatures()).containsExactly("sig1");
         assertThat(result.certificate()).isEqualTo("cert-pem");
     }
