@@ -2,7 +2,7 @@ package com.wpanther.xmlsigning.infrastructure.persistence;
 
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
-import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
+import com.wpanther.xmlsigning.domain.port.out.SignedXmlDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 

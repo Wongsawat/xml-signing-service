@@ -6,7 +6,7 @@ import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
-import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
+import com.wpanther.xmlsigning.domain.port.out.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
