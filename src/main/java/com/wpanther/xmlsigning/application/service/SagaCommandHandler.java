@@ -12,7 +12,9 @@ import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
 import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
 import com.wpanther.xmlsigning.domain.port.out.SagaReplyPort;
-import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
+import com.wpanther.xmlsigning.domain.port.out.XmlStoragePort;
+import com.wpanther.xmlsigning.domain.port.in.SagaCommandPort;
+import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,14 +38,14 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class SagaCommandHandler {
+public class SagaCommandHandler implements SagaCommandPort {
 
     private final SignedXmlDocumentRepository documentRepository;
     private final XmlSigningService signingService;
     private final DocumentTypeDetectionService documentTypeDetectionService;
     private final SagaReplyPort sagaReplyPort;
     private final XmlSignedEventPort xmlSignedEventPort;
-    private final MinioStorageService minioStorageService;
+    private final XmlStoragePort xmlStoragePort;
     private final TransactionTemplate transactionTemplate;
 
     @Value("${app.signing.max-retries:3}")
@@ -146,9 +148,10 @@ public class SagaCommandHandler {
         final String originalXmlUrl;
         if (existing.isEmpty()) {
             try {
-                originalXmlPath = minioStorageService.uploadOriginalXml(
+                XmlStorageKey originalXmlKey = xmlStoragePort.storeOriginalXml(
                         command.getDocumentId(), documentType.name(), command.getXmlContent());
-                originalXmlUrl = minioStorageService.buildUrl(originalXmlPath);
+                originalXmlPath = originalXmlKey.value();
+                originalXmlUrl = xmlStoragePort.buildUrl(originalXmlKey);
                 log.info("Uploaded original XML to MinIO: key={}", originalXmlPath);
             } catch (Exception e) {
                 log.error("Failed to upload original XML for saga {} document {}: {}",
@@ -210,7 +213,7 @@ public class SagaCommandHandler {
 
         // --- Phase 3: external I/O — CSC API signing + MinIO upload (no transaction held) ---
         final String signedXml;
-        final String s3Key;
+        final String signedXmlPath;
         final String signedXmlUrl;
         final long signedXmlSize;
         final String certificate;
@@ -221,9 +224,10 @@ public class SagaCommandHandler {
             certificate = signingResult.certificate();
             transactionId = signingResult.transactionId();
 
-            s3Key = minioStorageService.upload(
+            XmlStorageKey signedXmlKey = xmlStoragePort.storeSignedXml(
                     command.getDocumentId(), finalDocumentType.name(), signedXml);
-            signedXmlUrl = minioStorageService.buildUrl(s3Key);
+            signedXmlPath = signedXmlKey.value();
+            signedXmlUrl = xmlStoragePort.buildUrl(signedXmlKey);
             signedXmlSize = signedXml.getBytes(StandardCharsets.UTF_8).length;
         } catch (Exception e) {
             log.error("Failed to sign XML for saga {} document {}: {}",
@@ -244,7 +248,7 @@ public class SagaCommandHandler {
         final SignedXmlDocument completedDoc = document;
         transactionTemplate.execute(s -> {
             completedDoc.markCompleted(
-                    s3Key, signedXmlUrl, signedXmlSize,
+                    signedXmlPath, signedXmlUrl, signedXmlSize,
                     transactionId, certificate, "XAdES-BASELINE-T");
             documentRepository.save(completedDoc);
 
@@ -303,7 +307,7 @@ public class SagaCommandHandler {
         // Phase 2: Delete from MinIO outside transaction (external I/O)
         try {
             if (originalXmlPath != null) {
-                minioStorageService.delete(originalXmlPath);
+                xmlStoragePort.delete(new XmlStorageKey(originalXmlPath));
                 log.info("Deleted original XML from MinIO: {}", originalXmlPath);
             }
         } catch (Exception e) {
@@ -314,7 +318,7 @@ public class SagaCommandHandler {
 
         try {
             if (signedXmlPath != null) {
-                minioStorageService.delete(signedXmlPath);
+                xmlStoragePort.delete(new XmlStorageKey(signedXmlPath));
                 log.info("Deleted signed XML from MinIO: {}", signedXmlPath);
             }
         } catch (Exception e) {
