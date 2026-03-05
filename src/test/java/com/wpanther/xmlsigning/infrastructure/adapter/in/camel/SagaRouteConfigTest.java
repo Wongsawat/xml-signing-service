@@ -1,10 +1,10 @@
-package com.wpanther.xmlsigning.infrastructure.config;
+package com.wpanther.xmlsigning.infrastructure.adapter.in.camel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.wpanther.xmlsigning.application.service.SagaCommandHandler;
 import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.domain.port.in.SagaCommandPort;
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.Route;
@@ -34,7 +34,7 @@ class SagaRouteConfigTest {
     private CamelContext camelContext;
 
     @MockBean
-    private SagaCommandHandler sagaCommandHandler;
+    private SagaCommandPort sagaCommandPort;
 
     private ObjectMapper objectMapper;
 
@@ -90,7 +90,7 @@ class SagaRouteConfigTest {
         ProducerTemplate producer = camelContext.createProducerTemplate();
         producer.sendBody("direct:saga-command", json);
 
-        verify(sagaCommandHandler).handleProcessCommand(any(ProcessXmlSigningCommand.class));
+        verify(sagaCommandPort).handleProcessCommand(any(ProcessXmlSigningCommand.class));
     }
 
     @Test
@@ -104,6 +104,6 @@ class SagaRouteConfigTest {
         ProducerTemplate producer = camelContext.createProducerTemplate();
         producer.sendBody("direct:saga-compensation", json);
 
-        verify(sagaCommandHandler).handleCompensation(any(CompensateXmlSigningCommand.class));
+        verify(sagaCommandPort).handleCompensation(any(CompensateXmlSigningCommand.class));
     }
 }

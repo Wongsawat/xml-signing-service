@@ -1,8 +1,8 @@
-package com.wpanther.xmlsigning.infrastructure.config;
+package com.wpanther.xmlsigning.infrastructure.adapter.in.camel;
 
-import com.wpanther.xmlsigning.application.service.SagaCommandHandler;
 import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.domain.port.in.SagaCommandPort;
 import com.wpanther.xmlsigning.infrastructure.messaging.CommandValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.builder.RouteBuilder;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SagaRouteConfig extends RouteBuilder {
 
-    private final SagaCommandHandler sagaCommandHandler;
+    private final SagaCommandPort sagaCommandPort;
     private final CommandValidator commandValidator;
 
     @Value("${app.kafka.bootstrap-servers}")
@@ -51,8 +51,8 @@ public class SagaRouteConfig extends RouteBuilder {
                 + "&consumersCount=3";
     }
 
-    public SagaRouteConfig(SagaCommandHandler sagaCommandHandler, CommandValidator commandValidator) {
-        this.sagaCommandHandler = sagaCommandHandler;
+    public SagaRouteConfig(SagaCommandPort sagaCommandPort, CommandValidator commandValidator) {
+        this.sagaCommandPort = sagaCommandPort;
         this.commandValidator = commandValidator;
     }
 
@@ -81,7 +81,7 @@ public class SagaRouteConfig extends RouteBuilder {
                                 ProcessXmlSigningCommand cmd = exchange.getIn().getBody(ProcessXmlSigningCommand.class);
                                 log.info("Processing saga command for saga: {}, invoice: {}",
                                                 cmd.getSagaId(), cmd.getInvoiceNumber());
-                                sagaCommandHandler.handleProcessCommand(cmd);
+                                sagaCommandPort.handleProcessCommand(cmd);
                         })
                         .log("Successfully processed saga command");
 
@@ -97,7 +97,7 @@ public class SagaRouteConfig extends RouteBuilder {
                                 CompensateXmlSigningCommand cmd = exchange.getIn().getBody(CompensateXmlSigningCommand.class);
                                 log.info("Processing compensation for saga: {}, document: {}",
                                                 cmd.getSagaId(), cmd.getDocumentId());
-                                sagaCommandHandler.handleCompensation(cmd);
+                                sagaCommandPort.handleCompensation(cmd);
                         })
                         .log("Successfully processed compensation command");
     }
