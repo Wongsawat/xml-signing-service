@@ -1,10 +1,11 @@
-package com.wpanther.xmlsigning.infrastructure.messaging;
+package com.wpanther.xmlsigning.infrastructure.adapter.out.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
 import com.wpanther.xmlsigning.domain.event.XmlSigningReplyEvent;
+import com.wpanther.xmlsigning.domain.port.out.SagaReplyPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,7 +18,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class SagaReplyPublisherTest {
+class OutboxSagaReplyAdapterTest {
 
     @Mock
     private OutboxService outboxService;
@@ -25,18 +26,18 @@ class SagaReplyPublisherTest {
     @Mock
     private ObjectMapper objectMapper;
 
-    private SagaReplyPublisher publisher;
+    private SagaReplyPort adapter;
 
     @BeforeEach
     void setUp() {
-        publisher = new SagaReplyPublisher(outboxService, objectMapper);
+        adapter = new OutboxSagaReplyAdapter(outboxService, objectMapper);
     }
 
     @Test
     void testPublishSuccessCallsOutboxWithCorrectParameters() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"SUCCESS\"}");
 
-        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        adapter.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         verify(outboxService).saveWithRouting(
             any(XmlSigningReplyEvent.class),
@@ -52,7 +53,7 @@ class SagaReplyPublisherTest {
     void testPublishSuccessUsesSagaIdAsPartitionKey() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        publisher.publishSuccess("my-saga-id", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        adapter.publishSuccess("my-saga-id", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         ArgumentCaptor<String> partitionKeyCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(
@@ -68,7 +69,7 @@ class SagaReplyPublisherTest {
     void testPublishFailureCallsOutboxWithCorrectParameters() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"FAILURE\"}");
 
-        publisher.publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Sign error");
+        adapter.publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Sign error");
 
         verify(outboxService).saveWithRouting(
             any(XmlSigningReplyEvent.class),
@@ -84,7 +85,7 @@ class SagaReplyPublisherTest {
     void testPublishCompensatedCallsOutboxWithCorrectParameters() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"COMPENSATED\"}");
 
-        publisher.publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
+        adapter.publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
 
         verify(outboxService).saveWithRouting(
             any(XmlSigningReplyEvent.class),
@@ -100,7 +101,7 @@ class SagaReplyPublisherTest {
     void testPublishSuccessHeadersContainCorrectFields() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"sagaId\":\"saga-1\",\"correlationId\":\"corr-1\",\"status\":\"SUCCESS\"}");
 
-        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        adapter.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         ArgumentCaptor<String> headersCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), any(), any(), any(), any(), headersCaptor.capture());
@@ -118,7 +119,7 @@ class SagaReplyPublisherTest {
 
         // Should throw IllegalStateException when JSON serialization fails
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+            adapter.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
         });
 
         assertTrue(exception.getMessage().contains("Cannot serialize outbox headers"));
@@ -133,7 +134,7 @@ class SagaReplyPublisherTest {
     void testPublishReplyEventHasCorrectTopic() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        publisher.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
+        adapter.publishSuccess("saga-1", SagaStep.SIGN_XML, "corr-1", "http://localhost:9000/signed-xml/key.xml", 512L);
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), any(), any(), topicCaptor.capture(), any(), any());
@@ -145,7 +146,7 @@ class SagaReplyPublisherTest {
     void testPublishReplyEventHasCorrectAggregateType() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        publisher.publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "error");
+        adapter.publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "error");
 
         ArgumentCaptor<String> aggregateTypeCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), aggregateTypeCaptor.capture(), any(), any(), any(), any());

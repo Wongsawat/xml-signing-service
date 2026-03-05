@@ -1,26 +1,29 @@
-package com.wpanther.xmlsigning.infrastructure.messaging;
+package com.wpanther.xmlsigning.infrastructure.adapter.out.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
+import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
+import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
+/**
+ * Outbox-based adapter for publishing signed XML events.
+ * Implements XmlSignedEventPort by writing events to the transactional outbox.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class EventPublisher {
+public class OutboxXmlSignedEventAdapter implements XmlSignedEventPort {
 
     private final OutboxService outboxService;
     private final ObjectMapper objectMapper;
 
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Override
     public void publishXmlSigned(XmlSignedEvent event) {
         Map<String, String> headers = Map.of(
             "correlationId", event.getCorrelationId(),

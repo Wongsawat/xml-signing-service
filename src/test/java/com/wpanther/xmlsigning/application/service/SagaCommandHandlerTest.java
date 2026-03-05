@@ -10,8 +10,8 @@ import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
-import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
-import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
+import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
+import com.wpanther.xmlsigning.domain.port.out.SagaReplyPort;
 import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,10 +44,10 @@ class SagaCommandHandlerTest {
     private DocumentTypeDetectionService documentTypeDetectionService;
 
     @Mock
-    private SagaReplyPublisher sagaReplyPublisher;
+    private SagaReplyPort sagaReplyPort;
 
     @Mock
-    private EventPublisher eventPublisher;
+    private XmlSignedEventPort xmlSignedEventPort;
 
     @Mock
     private MinioStorageService minioStorageService;
@@ -101,10 +101,10 @@ class SagaCommandHandlerTest {
 
         verify(minioStorageService).uploadOriginalXml(eq("doc-success"), eq("INVOICE"), eq("<xml>test</xml>"));
         verify(minioStorageService).upload(eq("doc-success"), eq("INVOICE"), eq("<signed>xml</signed>"));
-        verify(sagaReplyPublisher).publishSuccess(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
+        verify(sagaReplyPort).publishSuccess(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
                 eq(FAKE_URL), anyLong());
-        verify(sagaReplyPublisher, never()).publishFailure(any(), any(), any(), any());
-        verify(eventPublisher).publishXmlSigned(any());
+        verify(sagaReplyPort, never()).publishFailure(any(), any(), any(), any());
+        verify(xmlSignedEventPort).publishXmlSigned(any());
     }
 
     @Test
@@ -119,9 +119,9 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Document type detection failed");
-        verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any(), any(), any());
-        verify(eventPublisher, never()).publishXmlSigned(any());
+        verify(sagaReplyPort).publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Document type detection failed");
+        verify(sagaReplyPort, never()).publishSuccess(any(), any(), any(), any(), any());
+        verify(xmlSignedEventPort, never()).publishXmlSigned(any());
         verify(minioStorageService, never()).upload(any(), any(), any());
         verify(minioStorageService, never()).uploadOriginalXml(any(), any(), any());
     }
@@ -151,12 +151,12 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishSuccess(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
+        verify(sagaReplyPort).publishSuccess(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
                 eq(FAKE_URL), eq(100L));
         verify(signingService, never()).signXml(any(), any());
         verify(minioStorageService, never()).upload(any(), any(), any());
         verify(minioStorageService, never()).uploadOriginalXml(any(), any(), any());
-        verify(eventPublisher, never()).publishXmlSigned(any());
+        verify(xmlSignedEventPort, never()).publishXmlSigned(any());
     }
 
     @Test
@@ -181,9 +181,9 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Maximum retry attempts exceeded");
-        verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any(), any(), any());
-        verify(eventPublisher, never()).publishXmlSigned(any());
+        verify(sagaReplyPort).publishFailure("saga-1", SagaStep.SIGN_XML, "corr-1", "Maximum retry attempts exceeded");
+        verify(sagaReplyPort, never()).publishSuccess(any(), any(), any(), any(), any());
+        verify(xmlSignedEventPort, never()).publishXmlSigned(any());
         verify(minioStorageService, never()).upload(any(), any(), any());
         verify(minioStorageService, never()).uploadOriginalXml(any(), any(), any());
     }
@@ -203,9 +203,9 @@ class SagaCommandHandlerTest {
 
         handler.handleProcessCommand(command);
 
-        verify(sagaReplyPublisher).publishFailure(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"), contains("CSC API error"));
-        verify(sagaReplyPublisher, never()).publishSuccess(any(), any(), any(), any(), any());
-        verify(eventPublisher, never()).publishXmlSigned(any());
+        verify(sagaReplyPort).publishFailure(eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"), contains("CSC API error"));
+        verify(sagaReplyPort, never()).publishSuccess(any(), any(), any(), any(), any());
+        verify(xmlSignedEventPort, never()).publishXmlSigned(any());
         // upload (signed) never reached when signXml throws
         verify(minioStorageService, never()).upload(any(), any(), any());
         // original XML was uploaded before signing attempt
@@ -238,8 +238,8 @@ class SagaCommandHandlerTest {
         verify(minioStorageService).delete(FAKE_ORIGINAL_S3_KEY);
         verify(minioStorageService).delete(FAKE_S3_KEY);
         verify(documentRepository).deleteById(document.getId());
-        verify(sagaReplyPublisher).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
-        verify(sagaReplyPublisher, never()).publishFailure(any(), any(), any(), any());
+        verify(sagaReplyPort).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
+        verify(sagaReplyPort, never()).publishFailure(any(), any(), any(), any());
     }
 
     @Test
@@ -267,7 +267,7 @@ class SagaCommandHandlerTest {
         // Signed XML was never uploaded, so no second delete
         verify(minioStorageService, never()).delete(FAKE_S3_KEY);
         verify(documentRepository).deleteById(document.getId());
-        verify(sagaReplyPublisher).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
+        verify(sagaReplyPort).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
     }
 
     @Test
@@ -283,7 +283,7 @@ class SagaCommandHandlerTest {
 
         verify(documentRepository, never()).deleteById(any());
         verify(minioStorageService, never()).delete(any());
-        verify(sagaReplyPublisher).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
+        verify(sagaReplyPort).publishCompensated("saga-1", SagaStep.SIGN_XML, "corr-1");
     }
 
     @Test
@@ -305,10 +305,10 @@ class SagaCommandHandlerTest {
 
         handler.handleCompensation(compensateCommand);
 
-        verify(sagaReplyPublisher).publishFailure(
+        verify(sagaReplyPort).publishFailure(
             eq("saga-1"), eq(SagaStep.SIGN_XML), eq("corr-1"),
             contains("Compensation failed")
         );
-        verify(sagaReplyPublisher, never()).publishCompensated(any(), any(), any());
+        verify(sagaReplyPort, never()).publishCompensated(any(), any(), any());
     }
 }

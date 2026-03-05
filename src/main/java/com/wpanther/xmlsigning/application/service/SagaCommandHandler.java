@@ -10,8 +10,8 @@ import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
 import com.wpanther.xmlsigning.domain.service.SigningResult;
 import com.wpanther.xmlsigning.domain.service.XmlSigningService;
-import com.wpanther.xmlsigning.infrastructure.messaging.EventPublisher;
-import com.wpanther.xmlsigning.infrastructure.messaging.SagaReplyPublisher;
+import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
+import com.wpanther.xmlsigning.domain.port.out.SagaReplyPort;
 import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -41,8 +41,8 @@ public class SagaCommandHandler {
     private final SignedXmlDocumentRepository documentRepository;
     private final XmlSigningService signingService;
     private final DocumentTypeDetectionService documentTypeDetectionService;
-    private final SagaReplyPublisher sagaReplyPublisher;
-    private final EventPublisher eventPublisher;
+    private final SagaReplyPort sagaReplyPort;
+    private final XmlSignedEventPort xmlSignedEventPort;
     private final MinioStorageService minioStorageService;
     private final TransactionTemplate transactionTemplate;
 
@@ -119,7 +119,7 @@ public class SagaCommandHandler {
             log.error("Could not detect document type for saga {} document {}",
                     command.getSagaId(), command.getDocumentId());
             transactionTemplate.execute(s -> {
-                sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                sagaReplyPort.publishFailure(command.getSagaId(), command.getSagaStep(),
                         command.getCorrelationId(), "Document type detection failed");
                 return null;
             });
@@ -133,7 +133,7 @@ public class SagaCommandHandler {
             log.warn("Document {} already signed, sending SUCCESS reply", command.getDocumentId());
             SignedXmlDocument completedDoc = existing.get();
             transactionTemplate.execute(s -> {
-                sagaReplyPublisher.publishSuccess(command.getSagaId(), command.getSagaStep(),
+                sagaReplyPort.publishSuccess(command.getSagaId(), command.getSagaStep(),
                         command.getCorrelationId(),
                         completedDoc.getSignedXmlUrl(), completedDoc.getSignedXmlSize());
                 return null;
@@ -154,7 +154,7 @@ public class SagaCommandHandler {
                 log.error("Failed to upload original XML for saga {} document {}: {}",
                         command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
                 transactionTemplate.execute(s -> {
-                    sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                    sagaReplyPort.publishFailure(command.getSagaId(), command.getSagaStep(),
                             command.getCorrelationId(),
                             "Failed to store original XML: " + e.getMessage());
                     return null;
@@ -184,7 +184,7 @@ public class SagaCommandHandler {
                             command.getSagaId(), command.getDocumentId());
                     doc.markFailed("Maximum retry attempts exceeded");
                     documentRepository.save(doc);
-                    sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                    sagaReplyPort.publishFailure(command.getSagaId(), command.getSagaStep(),
                             command.getCorrelationId(), "Maximum retry attempts exceeded");
                     return null; // signals caller to stop
                 }
@@ -196,7 +196,7 @@ public class SagaCommandHandler {
             log.error("Failed to persist SIGNING state for saga {} document {}: {}",
                     command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
             transactionTemplate.execute(s -> {
-                sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                sagaReplyPort.publishFailure(command.getSagaId(), command.getSagaStep(),
                         command.getCorrelationId(), e.getMessage());
                 return null;
             });
@@ -233,7 +233,7 @@ public class SagaCommandHandler {
                 failedDoc.markFailed(e.getMessage());
                 failedDoc.incrementRetryCount();
                 documentRepository.save(failedDoc);
-                sagaReplyPublisher.publishFailure(command.getSagaId(), command.getSagaStep(),
+                sagaReplyPort.publishFailure(command.getSagaId(), command.getSagaStep(),
                         command.getCorrelationId(), e.getMessage());
                 return null;
             });
@@ -248,11 +248,11 @@ public class SagaCommandHandler {
                     transactionId, certificate, "XAdES-BASELINE-T");
             documentRepository.save(completedDoc);
 
-            eventPublisher.publishXmlSigned(new XmlSignedEvent(
+            xmlSignedEventPort.publishXmlSigned(new XmlSignedEvent(
                     command.getDocumentId(), command.getInvoiceNumber(),
                     finalDocumentType.name(), command.getCorrelationId()));
 
-            sagaReplyPublisher.publishSuccess(command.getSagaId(), command.getSagaStep(),
+            sagaReplyPort.publishSuccess(command.getSagaId(), command.getSagaStep(),
                     command.getCorrelationId(), signedXmlUrl, signedXmlSize);
             return null;
         });
@@ -289,7 +289,7 @@ public class SagaCommandHandler {
                     command.getDocumentId());
             // Still publish compensated (idempotent)
             transactionTemplate.execute(s -> {
-                sagaReplyPublisher.publishCompensated(
+                sagaReplyPort.publishCompensated(
                         command.getSagaId(), command.getSagaStep(), command.getCorrelationId());
                 return null;
             });
@@ -327,7 +327,7 @@ public class SagaCommandHandler {
         try {
             transactionTemplate.execute(s -> {
                 documentRepository.deleteById(doc.getId());
-                sagaReplyPublisher.publishCompensated(
+                sagaReplyPort.publishCompensated(
                         command.getSagaId(), command.getSagaStep(), command.getCorrelationId());
                 return null;
             });
@@ -341,7 +341,7 @@ public class SagaCommandHandler {
 
     private void publishCompensationFailure(CompensateXmlSigningCommand command, String errorMessage) {
         transactionTemplate.execute(s -> {
-            sagaReplyPublisher.publishFailure(
+            sagaReplyPort.publishFailure(
                     command.getSagaId(), command.getSagaStep(), command.getCorrelationId(),
                     "Compensation failed: " + errorMessage);
             return null;

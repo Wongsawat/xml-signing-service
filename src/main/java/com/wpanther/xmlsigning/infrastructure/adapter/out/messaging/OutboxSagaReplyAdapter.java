@@ -1,26 +1,26 @@
-package com.wpanther.xmlsigning.infrastructure.messaging;
+package com.wpanther.xmlsigning.infrastructure.adapter.out.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wpanther.saga.domain.enums.SagaStep;
-import com.wpanther.xmlsigning.domain.event.XmlSigningReplyEvent;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
+import com.wpanther.xmlsigning.domain.event.XmlSigningReplyEvent;
+import com.wpanther.xmlsigning.domain.port.out.SagaReplyPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
 /**
- * Publishes saga reply events via outbox pattern.
+ * Outbox-based adapter for publishing saga replies.
+ * Implements SagaReplyPort by writing replies to the transactional outbox.
  * Replies are sent to orchestrator via saga.reply.xml-signing topic.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class SagaReplyPublisher {
+public class OutboxSagaReplyAdapter implements SagaReplyPort {
 
     private static final String REPLY_TOPIC = "saga.reply.xml-signing";
     private static final String AGGREGATE_TYPE = "SignedXmlDocument";
@@ -28,7 +28,7 @@ public class SagaReplyPublisher {
     private final OutboxService outboxService;
     private final ObjectMapper objectMapper;
 
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Override
     public void publishSuccess(String sagaId, SagaStep sagaStep, String correlationId,
                                String signedXmlUrl, Long signedXmlSize) {
         XmlSigningReplyEvent reply = XmlSigningReplyEvent.success(sagaId, sagaStep, correlationId,
@@ -53,7 +53,7 @@ public class SagaReplyPublisher {
                 sagaId, sagaStep, signedXmlUrl);
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Override
     public void publishFailure(String sagaId, SagaStep sagaStep, String correlationId, String errorMessage) {
         XmlSigningReplyEvent reply = XmlSigningReplyEvent.failure(sagaId, sagaStep, correlationId, errorMessage);
 
@@ -75,7 +75,7 @@ public class SagaReplyPublisher {
         log.info("Published FAILURE saga reply for saga {} step {}: {}", sagaId, sagaStep, errorMessage);
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Override
     public void publishCompensated(String sagaId, SagaStep sagaStep, String correlationId) {
         XmlSigningReplyEvent reply = XmlSigningReplyEvent.compensated(sagaId, sagaStep, correlationId);
 

@@ -1,9 +1,10 @@
-package com.wpanther.xmlsigning.infrastructure.messaging;
+package com.wpanther.xmlsigning.infrastructure.adapter.out.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
 import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
+import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,9 +17,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@DisplayName("EventPublisher Tests")
+@DisplayName("OutboxXmlSignedEventAdapter Tests")
 @ExtendWith(MockitoExtension.class)
-class EventPublisherTest {
+class OutboxXmlSignedEventAdapterTest {
 
     @Mock
     private OutboxService outboxService;
@@ -26,11 +27,11 @@ class EventPublisherTest {
     @Mock
     private ObjectMapper objectMapper;
 
-    private EventPublisher eventPublisher;
+    private XmlSignedEventPort adapter;
 
     @BeforeEach
     void setUp() {
-        eventPublisher = new EventPublisher(outboxService, objectMapper);
+        adapter = new OutboxXmlSignedEventAdapter(outboxService, objectMapper);
     }
 
     @Test
@@ -42,7 +43,7 @@ class EventPublisherTest {
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"invoiceNumber\":\"INV-001\"}");
 
-        eventPublisher.publishXmlSigned(event);
+        adapter.publishXmlSigned(event);
 
         verify(outboxService).saveWithRouting(
             eq(event),
@@ -63,7 +64,7 @@ class EventPublisherTest {
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"invoiceNumber\":\"INV-001\"}");
 
-        eventPublisher.publishXmlSigned(event);
+        adapter.publishXmlSigned(event);
 
         ArgumentCaptor<String> headersCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(
@@ -87,7 +88,7 @@ class EventPublisherTest {
 
         // Should throw IllegalStateException when JSON serialization fails
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            eventPublisher.publishXmlSigned(event);
+            adapter.publishXmlSigned(event);
         });
 
         assertTrue(exception.getMessage().contains("Cannot serialize outbox headers"));
@@ -107,7 +108,7 @@ class EventPublisherTest {
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        eventPublisher.publishXmlSigned(event);
+        adapter.publishXmlSigned(event);
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), any(), any(), topicCaptor.capture(), any(), any());
@@ -123,7 +124,7 @@ class EventPublisherTest {
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
-        eventPublisher.publishXmlSigned(event);
+        adapter.publishXmlSigned(event);
 
         ArgumentCaptor<String> partitionKeyCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxService).saveWithRouting(any(), any(), any(), any(), partitionKeyCaptor.capture(), any());
