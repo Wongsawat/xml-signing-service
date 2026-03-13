@@ -58,6 +58,13 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
      */
     @Deprecated
     public String embedSignature(String originalXml, String documentDigest, String rawSignature, String certificate) {
+        return embedSignatureInternal(originalXml, documentDigest, rawSignature, certificate);
+    }
+
+    /**
+     * Internal implementation for embedding a raw signature into an XML document.
+     */
+    private String embedSignatureInternal(String originalXml, String documentDigest, String rawSignature, String certificate) {
         try {
             log.debug("Embedding XAdES signature into XML document");
 
