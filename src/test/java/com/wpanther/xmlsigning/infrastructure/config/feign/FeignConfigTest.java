@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.infrastructure.config;
+package com.wpanther.xmlsigning.infrastructure.config.feign;
 
 import feign.Logger;
 import feign.Retryer;

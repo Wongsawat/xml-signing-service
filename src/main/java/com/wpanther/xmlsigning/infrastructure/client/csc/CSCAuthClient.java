@@ -23,12 +23,12 @@ import org.springframework.web.bind.annotation.RequestBody;
  * </ul>
  *
  * @see com.wpanther.xmlsigning.infrastructure.adapter.out.csc.CscAuthorizationAdapter
- * @see com.wpanther.xmlsigning.infrastructure.config.FeignConfig
+ * @see com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig
  */
 @FeignClient(
     name = "csc-auth-client",
     url = "${app.csc.service-url}",
-    configuration = com.wpanther.xmlsigning.infrastructure.config.FeignConfig.class
+    configuration = com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig.class
 )
 public interface CSCAuthClient {
 

@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.infrastructure.config;
+package com.wpanther.xmlsigning.infrastructure.config.feign;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;

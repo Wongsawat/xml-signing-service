@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.infrastructure.config;
+package com.wpanther.xmlsigning.infrastructure.config.outbox;
 
 import com.wpanther.saga.domain.outbox.OutboxEventRepository;
 import com.wpanther.xmlsigning.infrastructure.persistence.outbox.JpaOutboxEventRepository;

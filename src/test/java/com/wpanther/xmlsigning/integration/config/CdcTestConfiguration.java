@@ -40,6 +40,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         "com.wpanther.xmlsigning.infrastructure.persistence",
         "com.wpanther.xmlsigning.infrastructure.messaging",
         "com.wpanther.xmlsigning.infrastructure.config",
+        "com.wpanther.xmlsigning.infrastructure.config.feign",
+        "com.wpanther.xmlsigning.infrastructure.config.minio",
+        "com.wpanther.xmlsigning.infrastructure.config.outbox",
         "com.wpanther.saga.infrastructure"
     },
     excludeFilters = {

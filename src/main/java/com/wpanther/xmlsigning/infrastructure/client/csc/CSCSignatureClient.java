@@ -25,14 +25,14 @@ import org.springframework.web.bind.annotation.RequestBody;
  *   <li>Full request/response logging for debugging</li>
  * </ul>
  *
- * @see com.wpanther.xmlsigning.infrastructure.config.FeignConfig
+ * @see com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig
  * @see <a href="https://cloudsignatureconsortium.org/wp-content/uploads/2022/10/CSC-API-v2.0.2-Final.pdf">CSC API v2.0 Specification</a>
  */
 @FeignClient(
     name = "cscSignatureClient",
     url = "${app.csc.service-url:http://localhost:9000}",
     path = "/csc/v2/signatures",
-    configuration = com.wpanther.xmlsigning.infrastructure.config.FeignConfig.class
+    configuration = com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig.class
 )
 public interface CSCSignatureClient {
 
