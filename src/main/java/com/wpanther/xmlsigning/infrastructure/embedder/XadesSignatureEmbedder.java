@@ -54,7 +54,9 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
      * @param rawSignature  The base64-encoded raw signature from CSC signHash
      * @param certificate   The base64-encoded X.509 certificate chain from CSC
      * @return The signed XML document with embedded signature
+     * @deprecated Use {@link #embedSignature(byte[], byte[], String, String)} instead for better type safety
      */
+    @Deprecated
     public String embedSignature(String originalXml, String documentDigest, String rawSignature, String certificate) {
         try {
             log.debug("Embedding XAdES signature into XML document");
