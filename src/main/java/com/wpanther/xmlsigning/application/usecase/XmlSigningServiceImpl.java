@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.application.service;
+package com.wpanther.xmlsigning.application.usecase;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
@@ -6,11 +6,11 @@ import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeCommand;
 import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeResult;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashCommand;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashResult;
-import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
-import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
-import com.wpanther.xmlsigning.domain.service.SigningResult;
-import com.wpanther.xmlsigning.domain.service.XmlSigningService;
-import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
+import com.wpanther.xmlsigning.application.port.out.CscAuthorizationPort;
+import com.wpanther.xmlsigning.application.port.out.CscSignaturePort;
+import com.wpanther.xmlsigning.application.port.out.XadesEmbeddingPort;
+import com.wpanther.xmlsigning.application.usecase.SigningResult;
+import com.wpanther.xmlsigning.application.usecase.XmlSigningService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,7 +45,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
 
     private final CscSignaturePort signaturePort;
     private final CscAuthorizationPort authorizationPort;
-    private final XadesSignatureEmbedder signatureEmbedder;
+    private final XadesEmbeddingPort xadesEmbeddingPort; // Also implements XadesEmbeddingPort
 
     @Value("${app.csc.client-id}")
     private String clientId;
@@ -79,8 +79,14 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             String rawSignature = apiResponse.signHashResult().signatures().get(0);
             String certificate = apiResponse.signHashResult().certificate();
 
-            // Step 4: Embed signature into XML locally (XAdES-BASELINE-T)
-            String signedXml = signatureEmbedder.embedSignature(xmlContent, documentDigest, rawSignature, certificate);
+            // Step 4: Embed signature into XML locally (XAdES-BASELINE-T) via port
+            byte[] signedXmlBytes = xadesEmbeddingPort.embedSignature(
+                    xmlContent.getBytes(StandardCharsets.UTF_8),
+                    rawSignature.getBytes(StandardCharsets.UTF_8),
+                    certificate,
+                    documentId
+            );
+            String signedXml = new String(signedXmlBytes, StandardCharsets.UTF_8);
 
             return new SigningResult(signedXml, certificate, apiResponse.transactionId());
 

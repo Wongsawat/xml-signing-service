@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
 import com.wpanther.xmlsigning.application.dto.event.XmlSignedEvent;
-import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
+import com.wpanther.xmlsigning.application.port.out.XmlSignedEventPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

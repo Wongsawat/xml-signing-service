@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * This is a raw HTTP client in the infrastructure layer. It is wrapped by
  * {@link com.wpanther.xmlsigning.infrastructure.adapter.out.csc.CscSignatureAdapter},
  * which implements the domain port
- * {@link com.wpanther.xmlsigning.domain.port.CscSignaturePort}.
+ * {@link com.wpanther.xmlsigning.application.port.out.CscSignaturePort}.
  * <p>
  * The signHash endpoint signs one or more document hashes using the specified
  * credential. The actual cryptographic signing happens in the RSSP's HSM.

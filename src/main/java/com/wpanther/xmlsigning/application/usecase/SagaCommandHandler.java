@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.application.service;
+package com.wpanther.xmlsigning.application.usecase;
 
 import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
@@ -6,14 +6,13 @@ import com.wpanther.xmlsigning.application.dto.event.XmlSignedEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
-import com.wpanther.xmlsigning.domain.port.out.SignedXmlDocumentRepository;
+import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
-import com.wpanther.xmlsigning.domain.service.SigningResult;
-import com.wpanther.xmlsigning.domain.service.XmlSigningService;
-import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
-import com.wpanther.xmlsigning.domain.port.out.SagaReplyPort;
-import com.wpanther.xmlsigning.domain.port.out.XmlStoragePort;
-import com.wpanther.xmlsigning.domain.port.in.SagaCommandPort;
+import com.wpanther.xmlsigning.application.usecase.SigningResult;
+import com.wpanther.xmlsigning.application.usecase.XmlSigningService;
+import com.wpanther.xmlsigning.application.port.out.XmlSignedEventPort;
+import com.wpanther.xmlsigning.application.port.out.SagaReplyPort;
+import com.wpanther.xmlsigning.application.port.out.XmlStoragePort;
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;

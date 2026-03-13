@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.wpanther.xmlsigning.domain.service.XmlSigningService;
+import com.wpanther.xmlsigning.application.usecase.XmlSigningService;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
 import com.wpanther.xmlsigning.integration.config.CdcTestConfiguration;

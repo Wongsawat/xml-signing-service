@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.port.in;
+package com.wpanther.xmlsigning.application.usecase;
 
 import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;

@@ -6,10 +6,11 @@ import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeCommand;
 import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeResult;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashCommand;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashResult;
-import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
-import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
-import com.wpanther.xmlsigning.domain.service.SigningResult;
-import com.wpanther.xmlsigning.infrastructure.embedder.XadesSignatureEmbedder;
+import com.wpanther.xmlsigning.application.port.out.CscAuthorizationPort;
+import com.wpanther.xmlsigning.application.port.out.CscSignaturePort;
+import com.wpanther.xmlsigning.application.usecase.SigningResult;
+import com.wpanther.xmlsigning.application.port.out.XadesEmbeddingPort;
+import com.wpanther.xmlsigning.application.usecase.XmlSigningServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,6 +30,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +53,7 @@ class XmlSigningServiceImplTest {
     private CscAuthorizationPort authorizationPort;
 
     @Mock
-    private XadesSignatureEmbedder signatureEmbedder;
+    private XadesEmbeddingPort xadesEmbeddingPort;
 
     @InjectMocks
     private XmlSigningServiceImpl signingService;
@@ -63,7 +65,7 @@ class XmlSigningServiceImplTest {
         ReflectionTestUtils.setField(signingService, "hashAlgorithm", "SHA256");
         ReflectionTestUtils.setField(signingService, "signatureLevel", "XAdES-BASELINE-T");
         ReflectionTestUtils.setField(signingService, "digestAlgorithm", "SHA256");
-        ReflectionTestUtils.setField(signingService, "signatureEmbedder", signatureEmbedder);
+        ReflectionTestUtils.setField(signingService, "xadesEmbeddingPort", xadesEmbeddingPort);
     }
 
     @Nested
@@ -81,10 +83,10 @@ class XmlSigningServiceImplTest {
             String certificate = "base64-encoded-certificate";
             CscSignHashResult signResult = new CscSignHashResult(List.of(rawSignature), certificate);
 
-            when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
-                .thenReturn("<signed><ds:Signature>test</ds:Signature></signed>");
+            when(authorizationPort.authorize(any(CscAuthorizeCommand.class))).thenReturn(authResult);
+            when(signaturePort.signHash(any(CscSignHashCommand.class))).thenReturn(signResult);
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+                .thenReturn("<signed><ds:Signature>test</ds:Signature></signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
             String originalXml = "<xml>test</xml>";
@@ -140,8 +142,8 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
-                .thenReturn("<signed>xml</signed>");
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
             signingService.signXml(xmlContent, "doc-1");
@@ -183,8 +185,8 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
-                .thenReturn("<signed>xml</signed>");
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
             signingService.signXml(xmlContent, "doc-1");
@@ -221,8 +223,8 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
-                .thenReturn("<signed>xml</signed>");
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
             signingService.signXml(xmlContent, "doc-1");
@@ -262,8 +264,8 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(signatureEmbedder.embedSignature(any(), any(), any(), any()))
-                .thenReturn("<signed>xml</signed>");
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
             signingService.signXml("<xml/>", "doc-1");

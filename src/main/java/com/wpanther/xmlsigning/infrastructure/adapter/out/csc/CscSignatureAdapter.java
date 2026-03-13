@@ -3,7 +3,7 @@ package com.wpanther.xmlsigning.infrastructure.adapter.out.csc;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashCommand;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashResult;
-import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
+import com.wpanther.xmlsigning.application.port.out.CscSignaturePort;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureRequest;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCSignatureResponse;

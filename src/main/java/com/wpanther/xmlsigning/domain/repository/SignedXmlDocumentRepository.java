@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.port.out;
+package com.wpanther.xmlsigning.domain.repository;
 
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;

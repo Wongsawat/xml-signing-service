@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.port.out;
+package com.wpanther.xmlsigning.application.port.out;
 
 import com.wpanther.xmlsigning.domain.exception.DocumentStorageException;
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;

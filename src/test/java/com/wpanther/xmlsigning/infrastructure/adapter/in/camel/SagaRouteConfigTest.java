@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
-import com.wpanther.xmlsigning.domain.port.in.SagaCommandPort;
+import com.wpanther.xmlsigning.application.usecase.SagaCommandPort;
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.Route;

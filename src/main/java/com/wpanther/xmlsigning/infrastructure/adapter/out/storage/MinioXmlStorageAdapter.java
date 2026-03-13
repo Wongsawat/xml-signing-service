@@ -1,7 +1,7 @@
 package com.wpanther.xmlsigning.infrastructure.adapter.out.storage;
 
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
-import com.wpanther.xmlsigning.domain.port.out.XmlStoragePort;
+import com.wpanther.xmlsigning.application.port.out.XmlStoragePort;
 import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

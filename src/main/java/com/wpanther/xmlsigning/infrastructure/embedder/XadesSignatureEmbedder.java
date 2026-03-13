@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.infrastructure.embedder;
 
+import com.wpanther.xmlsigning.application.port.out.XadesEmbeddingPort;
 import com.wpanther.xmlsigning.domain.exception.XmlValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -40,7 +41,7 @@ import java.util.Base64;
  */
 @Component
 @Slf4j
-public class XadesSignatureEmbedder {
+public class XadesSignatureEmbedder implements XadesEmbeddingPort {
 
     private static final String XMLDSIG_NAMESPACE = "http://www.w3.org/2000/09/xmldsig#";
     private static final String XADES_NAMESPACE = "http://uri.etsi.org/01903/v1.3.2#";
@@ -82,6 +83,25 @@ public class XadesSignatureEmbedder {
             );
         }
     }
+
+    /**
+     * Implementation of XadesEmbeddingPort interface.
+     * Embeds a raw signature into an XML document.
+     */
+    @Override
+    public byte[] embedSignature(byte[] xmlContent, byte[] signatureBytes, String certificate, String documentId) {
+        try {
+            String xmlString = new String(xmlContent, StandardCharsets.UTF_8);
+            // Compute digest from signature bytes for compatibility
+            String signatureDigest = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(signatureBytes));
+            String signedXml = embedSignature(xmlString, signatureDigest, Base64.getEncoder().encodeToString(signatureBytes), certificate);
+            return signedXml.getBytes(StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Failed to embed signature for document: {}", documentId, e);
+            throw new XmlValidationException("Failed to embed signature: " + e.getMessage(), e, "embed-signature");
+        }
+    }
+
 
     /**
      * Create a XAdES-BASELINE-T signature element.

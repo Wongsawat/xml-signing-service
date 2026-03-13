@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.service;
+package com.wpanther.xmlsigning.application.usecase;
 
 /**
  * Result of an XML signing operation containing the signed document

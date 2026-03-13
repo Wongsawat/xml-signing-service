@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.service;
+package com.wpanther.xmlsigning.application.usecase;
 
 /**
  * Domain service interface for XML signing operations

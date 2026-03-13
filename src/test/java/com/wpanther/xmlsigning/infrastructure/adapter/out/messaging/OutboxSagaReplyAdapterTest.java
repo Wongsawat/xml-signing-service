@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
 import com.wpanther.xmlsigning.application.dto.event.XmlSigningReplyEvent;
-import com.wpanther.xmlsigning.domain.port.out.SagaReplyPort;
+import com.wpanther.xmlsigning.application.port.out.SagaReplyPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

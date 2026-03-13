@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.port;
+package com.wpanther.xmlsigning.application.port.out;
 
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashCommand;
