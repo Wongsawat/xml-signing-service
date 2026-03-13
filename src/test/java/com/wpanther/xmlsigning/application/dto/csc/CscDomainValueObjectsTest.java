@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.model.csc;
+package com.wpanther.xmlsigning.application.dto.csc;
 
 import org.junit.jupiter.api.Test;
 import java.util.List;

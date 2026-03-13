@@ -1,7 +1,7 @@
 package com.wpanther.xmlsigning.domain.port.in;
 
-import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
-import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
 
 /**
  * Inbound port for handling saga commands from the orchestrator.

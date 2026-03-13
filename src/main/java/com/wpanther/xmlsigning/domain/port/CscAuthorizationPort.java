@@ -1,8 +1,8 @@
 package com.wpanther.xmlsigning.domain.port;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
-import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
-import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
+import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeCommand;
+import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeResult;
 
 /**
  * Port for CSC (Cloud Signature Consortium) authorization operations.

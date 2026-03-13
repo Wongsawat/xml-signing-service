@@ -3,7 +3,7 @@ package com.wpanther.xmlsigning.infrastructure.adapter.out.messaging;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wpanther.saga.infrastructure.outbox.OutboxService;
-import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
+import com.wpanther.xmlsigning.application.dto.event.XmlSignedEvent;
 import com.wpanther.xmlsigning.domain.port.out.XmlSignedEventPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

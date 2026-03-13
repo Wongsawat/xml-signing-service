@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.event;
+package com.wpanther.xmlsigning.application.dto.event;
 
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import org.junit.jupiter.api.DisplayName;

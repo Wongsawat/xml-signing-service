@@ -3,7 +3,7 @@ package com.wpanther.xmlsigning.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.wpanther.xmlsigning.domain.event.XmlSigningRequestedEvent;
+import com.wpanther.xmlsigning.application.dto.event.XmlSigningRequestedEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;

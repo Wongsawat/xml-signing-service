@@ -1,7 +1,7 @@
 package com.wpanther.xmlsigning.infrastructure.adapter.in.camel;
 
-import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
-import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.port.in.SagaCommandPort;
 import com.wpanther.xmlsigning.infrastructure.messaging.CommandValidator;
 import lombok.extern.slf4j.Slf4j;

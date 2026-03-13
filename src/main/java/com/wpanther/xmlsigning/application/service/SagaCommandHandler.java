@@ -1,8 +1,8 @@
 package com.wpanther.xmlsigning.application.service;
 
-import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
-import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
-import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
+import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.XmlSignedEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;

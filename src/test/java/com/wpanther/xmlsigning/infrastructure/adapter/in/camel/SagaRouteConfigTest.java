@@ -2,8 +2,8 @@ package com.wpanther.xmlsigning.infrastructure.adapter.in.camel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.wpanther.xmlsigning.domain.event.CompensateXmlSigningCommand;
-import com.wpanther.xmlsigning.domain.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.port.in.SagaCommandPort;
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;

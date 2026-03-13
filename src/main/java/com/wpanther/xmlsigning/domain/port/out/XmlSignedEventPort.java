@@ -1,6 +1,6 @@
 package com.wpanther.xmlsigning.domain.port.out;
 
-import com.wpanther.xmlsigning.domain.event.XmlSignedEvent;
+import com.wpanther.xmlsigning.application.dto.event.XmlSignedEvent;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 

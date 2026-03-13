@@ -1,7 +1,7 @@
 package com.wpanther.xmlsigning.infrastructure.adapter.out.csc;
 
-import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
-import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
+import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeCommand;
+import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeResult;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeRequest;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;

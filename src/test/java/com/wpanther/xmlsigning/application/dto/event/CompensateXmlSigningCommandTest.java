@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.event;
+package com.wpanther.xmlsigning.application.dto.event;
 
 import com.wpanther.saga.domain.enums.SagaStep;
 import org.junit.jupiter.api.DisplayName;

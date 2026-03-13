@@ -2,10 +2,10 @@ package com.wpanther.xmlsigning.application.service;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
-import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeCommand;
-import com.wpanther.xmlsigning.domain.model.csc.CscAuthorizeResult;
-import com.wpanther.xmlsigning.domain.model.csc.CscSignHashCommand;
-import com.wpanther.xmlsigning.domain.model.csc.CscSignHashResult;
+import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeCommand;
+import com.wpanther.xmlsigning.application.dto.csc.CscAuthorizeResult;
+import com.wpanther.xmlsigning.application.dto.csc.CscSignHashCommand;
+import com.wpanther.xmlsigning.application.dto.csc.CscSignHashResult;
 import com.wpanther.xmlsigning.domain.port.CscAuthorizationPort;
 import com.wpanther.xmlsigning.domain.port.CscSignaturePort;
 import com.wpanther.xmlsigning.domain.service.SigningResult;

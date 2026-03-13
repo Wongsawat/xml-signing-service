@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.domain.event;
+package com.wpanther.xmlsigning.application.dto.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
