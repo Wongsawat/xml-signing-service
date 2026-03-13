@@ -45,7 +45,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
 
     private final CscSignaturePort signaturePort;
     private final CscAuthorizationPort authorizationPort;
-    private final XadesEmbeddingPort xadesEmbeddingPort; // Also implements XadesEmbeddingPort
+    private final XadesEmbeddingPort xadesEmbeddingPort; // Infrastructure adapter for XAdES embedding
 
     @Value("${app.csc.client-id}")
     private String clientId;
