@@ -49,6 +49,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
     private static final String SHA256_HASH_ALGORITHM = "SHA-256";
     private static final String EXC_C14N_CANONICALIZATION_ALGORITHM = "http://www.w3.org/2001/10/xml-exc-c14n#";
     private static final String ENVELOPED_SIGNATURE_TRANSFORM_ALGORITHM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
+    private static final String XADES_SIGNATURE_ID = "XAdES-BASELINE-T";
 
     /**
      * Embed a raw signature into an XML document as an XAdES-BASELINE-T enveloped signature.
@@ -138,7 +139,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
     private Element createSignatureElement(Document doc, String documentDigest, String rawSignature, String certificate) {
         // Create ds:Signature element
         Element signatureElement = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:Signature");
-        signatureElement.setAttribute("Id", "XAdES-BASELINE-T");
+        signatureElement.setAttribute("Id", XADES_SIGNATURE_ID);
 
         // Create ds:SignedInfo
         Element signedInfo = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:SignedInfo");
@@ -193,7 +194,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
         // Create ds:Object with XAdES QualifyingProperties
         Element objectElement = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:Object");
         Element qualifyingProperties = doc.createElementNS(XADES_NAMESPACE, "xades:QualifyingProperties");
-        qualifyingProperties.setAttribute("Target", "#XAdES-BASELINE-T");
+        qualifyingProperties.setAttribute("Target", "#" + XADES_SIGNATURE_ID);
 
         Element signedProperties = doc.createElementNS(XADES_NAMESPACE, "xades:SignedProperties");
         signedProperties.setAttribute("Id", "SignedProperties");
