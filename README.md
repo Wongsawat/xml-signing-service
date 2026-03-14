@@ -129,44 +129,86 @@ Activate with: `--spring.profiles.active=prod`
 
 ## Architecture
 
-### Hexagonal Ports (Domain-Driven Design)
+### Hexagonal Architecture (Domain-Driven Design)
 
-The service uses hexagonal architecture to isolate domain logic from infrastructure:
+The service uses hexagonal architecture (ports and adapters) to isolate domain logic from infrastructure:
 
 ```
 domain/
-├── port/                    # Domain ports (interfaces)
-│   ├── CscAuthorizationPort     # CSC authorize endpoint
-│   └── CscSignaturePort        # CSC signHash endpoint
 ├── model/                    # Aggregate roots, value objects
 │   ├── SignedXmlDocument       # Aggregate root with manual Builder
 │   ├── SignedXmlDocumentId     # Value object (Java record)
 │   ├── DocumentType            # Enum of 6 Thai e-Tax document types
-│   └── SigningStatus           # State machine enum
+│   ├── SigningStatus           # State machine enum
+│   └── XmlStorageKey           # MinIO storage key value object
 ├── repository/               # Repository interfaces
+│   └── SignedXmlDocumentRepository
 ├── service/                  # Domain service interfaces
-└── event/                    # Integration events
-    ├── ProcessXmlSigningCommand
-    ├── CompensateXmlSigningCommand
-    ├── XmlSigningReplyEvent
-    └── XmlSignedEvent
+│   ├── DocumentTypeDetectionService
+│   └── XmlSigningService
+└── exception/                # Domain exceptions
+    ├── CscAuthorizationException
+    ├── CscSignatureException
+    └── XmlValidationException
+
+application/
+├── port/out/                 # Outbound ports (interfaces for infrastructure)
+│   ├── CscAuthorizationPort     # CSC authorize endpoint
+│   ├── CscSignaturePort        # CSC signHash endpoint
+│   ├── XadesEmbeddingPort       # XAdES signature embedding
+│   ├── XmlStoragePort           # MinIO/S3 storage operations
+│   ├── SagaReplyPort            # Saga reply publisher
+│   └── XmlSignedEventPort       # Notification event publisher
+├── usecase/                  # Use case orchestration (application services)
+│   ├── XmlSigningService        # Signing use case implementation
+│   ├── XmlSigningServiceImpl
+│   ├── SagaCommandHandler       # Saga command/compensation handler
+│   ├── SagaCommandPort          # Input port interface
+│   └── SigningResult            # Result value object
+└── dto/                      # Data transfer objects
+    ├── csc/                     # CSC command/result DTOs
+    │   ├── CscAuthorizeCommand
+    │   ├── CscAuthorizeResult
+    │   ├── CscSignHashCommand
+    │   └── CscSignHashResult
+    └── event/                   # Kafka event DTOs
+        ├── ProcessXmlSigningCommand
+        ├── CompensateXmlSigningCommand
+        ├── XmlSigningReplyEvent
+        ├── XmlSignedEvent
+        └── XmlSigningRequestedEvent
 
 infrastructure/
-├── client/csc/              # Hexagonal port implementations
+├── adapter/                  # Port implementations (hexagonal adapters)
+│   ├── in/camel/               # Input adapters (Camel routes)
+│   │   └── SagaRouteConfig
+│   └── out/                    # Output adapters
+│       ├── csc/                # CSC API Feign clients
+│       │   ├── CscAuthorizationAdapter
+│       │   └── CscSignatureAdapter
+│       ├── messaging/          # Outbox pattern publishers
+│       │   ├── OutboxSagaReplyAdapter
+│       │   └── OutboxXmlSignedEventAdapter
+│       └── storage/            # MinIO storage adapter
+│           └── MinioXmlStorageAdapter
+├── client/csc/              # Feign client interfaces (low-level)
 │   ├── CSCAuthClient         # Feign client for authorize endpoint
 │   └── CSCSignatureClient     # Feign client for signHash endpoint
 ├── embedder/                 # XAdES-BASELINE-T signature embedding
-│   └── XadesSignatureEmbedder # Apache Santuario 4.0.4
-├── messaging/                # Outbox pattern publishers
-│   ├── SagaReplyPublisher    # saga.reply.xml-signing
-│   └── EventPublisher        # xml.signed events
-├── persistence/              # JPA entities, mappers
-├── storage/                  # MinIO integration
-└── config/                   # Camel routes, Feign, circuit breaker
-
-application/
-└── service/                  # Use case orchestration
-    └── SagaCommandHandler    # Handles saga commands
+│   └── XadesSignatureEmbedder # Apache Santuario 4.0.4 (implements XadesEmbeddingPort)
+├── persistence/              # JPA entities, Spring Data repositories
+│   ├── SignedXmlDocumentEntity
+│   ├── SignedXmlDocumentRepositoryAdapter
+│   └── outbox/                # Outbox event entity
+├── config/                   # Configuration classes
+│   ├── feign/                 # Feign + circuit breaker config
+│   │   ├── FeignConfig
+│   │   └── CSCErrorDecoder
+│   ├── minio/                 # MinIO S3 client config
+│   │   └── MinioConfig
+│   └── outbox/                # Outbox pattern config
+│       └── OutboxConfig
+└── storage/                  # Storage utility classes
 ```
 
 ### Domain Model
@@ -186,11 +228,13 @@ application/
 **Authentication Flow:**
 1. **Authorize** - `POST /csc/v2/credentials/authorize` → returns SAD token (~15 min validity)
 2. **Sign Hash** - `POST /csc/v2/signatures/signHash` with SAD token → returns raw signature
+3. **Embed Signature** - XAdES-BASELINE-T signature embedded into XML document
 
 **Hexagonal Ports:**
 - `CscAuthorizationPort` - Domain interface for authorize operations
 - `CscSignaturePort` - Domain interface for signHash operations
-- Implemented by `CSCAuthClient` and `CSCSignatureClient` (Feign clients)
+- `XadesEmbeddingPort` - Domain interface for XAdES signature embedding
+- Implemented by `CSCAuthClient`, `CSCSignatureClient` (Feign clients), and `XadesSignatureEmbedder`
 
 **Error Handling:**
 - `CscAuthorizationException` - Authorization failures (includes clientId, credentialId for debugging)
@@ -449,23 +493,31 @@ Minimum coverage requirement: 80% per package
 ### Code Organization
 
 ```
-domain/
+domain/                    # Core business logic (framework-independent)
 ├── model/       # Aggregate roots, value objects, enums
-├── port/        # Hexagonal ports (domain interfaces)
 ├── repository/  # Repository interfaces
 ├── service/     # Domain service interfaces
-└── event/       # Saga commands, replies, XmlSignedEvent
+└── exception/   # Domain exceptions
 
-application/
-└── service/     # Saga command handler, use cases
+application/               # Use case orchestration (application services)
+├── port/out/    # Outbound ports (interfaces for infrastructure adapters)
+├── usecase/      # Application service implementations
+└── dto/          # Data transfer objects
+    ├── csc/       # CSC command/result DTOs
+    └── event/     # Kafka event DTOs
 
-infrastructure/
-├── client/      # Hexagonal port implementations (CSC Feign clients)
-├── embedder/    # XAdES-BASELINE-T signature embedding
-├── messaging/   # Outbox pattern publishers
-├── persistence/  # JPA entities, repositories, MapStruct mappers
-├── storage/     # MinIO S3 storage adapter
-└── config/      # Camel routes, Feign configuration, circuit breaker
+infrastructure/            # Framework and external technology
+├── adapter/      # Port implementations (hexagonal adapters)
+│   ├── in/camel/  # Input adapters (Camel Kafka consumers)
+│   └── out/       # Output adapters (CSC, messaging, storage)
+├── client/       # Feign client interfaces (low-level HTTP clients)
+├── embedder/     # XAdES signature embedding (Apache Santuario)
+├── persistence/  # JPA entities, Spring Data repositories
+├── config/       # Spring configuration classes
+│   ├── feign/    # Feign + circuit breaker
+│   ├── minio/    # MinIO S3 client
+│   └── outbox/   # Outbox pattern
+└── storage/      # Storage utility classes
 ```
 
 ### Development Notes
@@ -473,12 +525,13 @@ infrastructure/
 - **Domain changes**: Update `SignedXmlDocument` aggregate first (uses manual Builder, not Lombok)
 - **Saga commands**: Extend `IntegrationEvent`, use `@JsonCreator` with two constructors
 - **Saga replies**: Extend `SagaReply`, use factory methods (`success()`, `failure()`, `compensated()`)
-- **CSC API changes**: Update DTOs in `infrastructure/client/csc/dto/` and `XmlSigningServiceImpl`
-  - Uses SAD token authentication: `CSCAuthClient.authorize()` → `CSCSignatureClient.signHash(SAD)`
-- **Signature embedding**: `XadesSignatureEmbedder` handles XAdES-BASELINE-T signature embedding with XXS protection
+- **CSC API changes**: Update DTOs in `application/dto/csc/` and `XmlSigningServiceImpl`
+  - Uses SAD token authentication: `CscAuthorizationPort.authorize()` → `CscSignaturePort.signHash(SAD)`
+- **Signature embedding**: `XadesEmbeddingPort` interface + `XadesSignatureEmbedder` implementation
 - **New document types**: Add to `DocumentType` enum with namespace URI
 - **Compensation**: Implement delete logic in `SagaCommandHandler.handleCompensation()`, ensure idempotency
 - **Feign timeout changes**: Update `spring.cloud.openfeign.client.config.default` in `application.yml`
+- **Unit tests**: Located in `src/test/java/com/wpanther/xmlsigning/application/usecase/`
 
 ## Migration Notes
 
@@ -497,7 +550,7 @@ CSCApiClient.signDocument(document) → returns signed XML
 // New: Hash-only upload with SAD token
 CSCAuthClient.authorize() → SAD token
 CSCSignatureClient.signHash(SAD, hash) → raw signature
-XadesSignatureEmbedder.embedSignature() → signed XML
+XadesEmbeddingPort.embedSignature() → signed XML (via XadesSignatureEmbedder)
 ```
 
 Benefits:
