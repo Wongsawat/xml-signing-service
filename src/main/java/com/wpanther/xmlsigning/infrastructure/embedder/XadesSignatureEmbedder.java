@@ -16,7 +16,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.cert.CertificateFactory;
@@ -45,6 +44,9 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
 
     private static final String XMLDSIG_NAMESPACE = "http://www.w3.org/2000/09/xmldsig#";
     private static final String XADES_NAMESPACE = "http://uri.etsi.org/01903/v1.3.2#";
+    private static final String RSA_SHA256_SIGNATURE_ALGORITHM = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
+    private static final String SHA256_DIGEST_ALGORITHM = "http://www.w3.org/2001/04/xmlenc#sha256";
+    private static final String SHA256_HASH_ALGORITHM = "SHA-256";
 
     /**
      * Embed a raw signature into an XML document as an XAdES-BASELINE-T enveloped signature.
@@ -146,7 +148,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
 
         // Create ds:SignatureMethod
         Element signatureMethod = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:SignatureMethod");
-        signatureMethod.setAttribute("Algorithm", "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256");
+        signatureMethod.setAttribute("Algorithm", RSA_SHA256_SIGNATURE_ALGORITHM);
         signedInfo.appendChild(signatureMethod);
 
         // Create ds:Reference (reference to the document root)
@@ -160,7 +162,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
         reference.appendChild(transforms);
 
         Element digestMethod = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:DigestMethod");
-        digestMethod.setAttribute("Algorithm", "http://www.w3.org/2001/04/xmlenc#sha256");
+        digestMethod.setAttribute("Algorithm", SHA256_DIGEST_ALGORITHM);
         reference.appendChild(digestMethod);
 
         Element digestValue = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:DigestValue");
@@ -236,12 +238,12 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
             Element certDigestElement = doc.createElementNS(XADES_NAMESPACE, "xades:CertDigest");
 
             Element digestMethod = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:DigestMethod");
-            digestMethod.setAttribute("Algorithm", "http://www.w3.org/2001/04/xmlenc#sha256");
+            digestMethod.setAttribute("Algorithm", SHA256_DIGEST_ALGORITHM);
             certDigestElement.appendChild(digestMethod);
 
             Element digestValue = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:DigestValue");
             // Calculate SHA-256 digest of the certificate
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            MessageDigest md = MessageDigest.getInstance(SHA256_HASH_ALGORITHM);
             byte[] certDigestBytes = md.digest(x509Cert.getEncoded());
             String base64Digest = Base64.getEncoder().encodeToString(certDigestBytes);
             digestValue.setTextContent(base64Digest);

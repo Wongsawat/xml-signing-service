@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.application.service;
+package com.wpanther.xmlsigning.application.usecase;
 
 import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;

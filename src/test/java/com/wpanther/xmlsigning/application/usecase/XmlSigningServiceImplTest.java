@@ -1,4 +1,4 @@
-package com.wpanther.xmlsigning.application.service;
+package com.wpanther.xmlsigning.application.usecase;
 
 import com.wpanther.xmlsigning.domain.exception.CscAuthorizationException;
 import com.wpanther.xmlsigning.domain.exception.CscSignatureException;
