@@ -47,6 +47,8 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
     private static final String RSA_SHA256_SIGNATURE_ALGORITHM = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
     private static final String SHA256_DIGEST_ALGORITHM = "http://www.w3.org/2001/04/xmlenc#sha256";
     private static final String SHA256_HASH_ALGORITHM = "SHA-256";
+    private static final String EXC_C14N_CANONICALIZATION_ALGORITHM = "http://www.w3.org/2001/10/xml-exc-c14n#";
+    private static final String ENVELOPED_SIGNATURE_TRANSFORM_ALGORITHM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
 
     /**
      * Embed a raw signature into an XML document as an XAdES-BASELINE-T enveloped signature.
@@ -143,7 +145,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
 
         // Create ds:CanonicalizationMethod
         Element canonicalizationMethod = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:CanonicalizationMethod");
-        canonicalizationMethod.setAttribute("Algorithm", "http://www.w3.org/2001/10/xml-exc-c14n#");
+        canonicalizationMethod.setAttribute("Algorithm", EXC_C14N_CANONICALIZATION_ALGORITHM);
         signedInfo.appendChild(canonicalizationMethod);
 
         // Create ds:SignatureMethod
@@ -157,7 +159,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
 
         Element transforms = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:Transforms");
         Element transform = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:Transform");
-        transform.setAttribute("Algorithm", "http://www.w3.org/2000/09/xmldsig#enveloped-signature");
+        transform.setAttribute("Algorithm", ENVELOPED_SIGNATURE_TRANSFORM_ALGORITHM);
         transforms.appendChild(transform);
         reference.appendChild(transforms);
 
