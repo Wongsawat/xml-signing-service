@@ -80,9 +80,11 @@ public class XmlSigningServiceImpl implements XmlSigningService {
             String certificate = apiResponse.signHashResult().certificate();
 
             // Step 4: Embed signature into XML locally (XAdES-BASELINE-T) via port
+            // Pass the document digest so XAdES Reference/DigestValue contains the actual document digest
             byte[] signedXmlBytes = xadesEmbeddingPort.embedSignature(
                     xmlContent.getBytes(StandardCharsets.UTF_8),
                     rawSignature.getBytes(StandardCharsets.UTF_8),
+                    documentDigest,
                     certificate,
                     documentId
             );

@@ -12,10 +12,11 @@ public interface XadesEmbeddingPort {
      *
      * @param xmlContent the original XML content
      * @param signatureBytes the raw signature bytes to embed
+     * @param documentDigest the base64url-encoded SHA-256 digest of the XML content (NOT the signature digest)
      * @param certificate the X.509 certificate used for signing
      * @param documentId the document identifier for logging/tracing
      * @return the XML content with embedded signature
      */
-    byte[] embedSignature(byte[] xmlContent, byte[] signatureBytes,
+    byte[] embedSignature(byte[] xmlContent, byte[] signatureBytes, String documentDigest,
                           String certificate, String documentId);
 }

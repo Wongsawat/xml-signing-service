@@ -85,7 +85,7 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any(CscAuthorizeCommand.class))).thenReturn(authResult);
             when(signaturePort.signHash(any(CscSignHashCommand.class))).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn("<signed><ds:Signature>test</ds:Signature></signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
@@ -142,7 +142,7 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
@@ -185,7 +185,7 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
@@ -223,7 +223,7 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute
@@ -264,7 +264,7 @@ class XmlSigningServiceImplTest {
 
             when(authorizationPort.authorize(any())).thenReturn(authResult);
             when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString()))
+            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
 
             // Execute

@@ -96,14 +96,21 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
     /**
      * Implementation of XadesEmbeddingPort interface.
      * Embeds a raw signature into an XML document.
+     *
+     * @param xmlContent the original XML content bytes
+     * @param signatureBytes the raw signature bytes to embed
+     * @param documentDigest the base64url-encoded SHA-256 digest of the XML content (NOT the signature digest)
+     * @param certificate the X.509 certificate used for signing
+     * @param documentId the document identifier for logging/tracing
+     * @return the XML content with embedded signature
      */
     @Override
-    public byte[] embedSignature(byte[] xmlContent, byte[] signatureBytes, String certificate, String documentId) {
+    public byte[] embedSignature(byte[] xmlContent, byte[] signatureBytes, String documentDigest, String certificate, String documentId) {
         try {
             String xmlString = new String(xmlContent, StandardCharsets.UTF_8);
-            // Compute digest from signature bytes for compatibility
-            String signatureDigest = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(signatureBytes));
-            String signedXml = embedSignature(xmlString, signatureDigest, Base64.getEncoder().encodeToString(signatureBytes), certificate);
+            // Use the actual document digest - not signature digest - for XAdES Reference
+            String signedXml = embedSignature(xmlString, documentDigest,
+                    Base64.getEncoder().encodeToString(signatureBytes), certificate);
             return signedXml.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("Failed to embed signature for document: {}", documentId, e);
