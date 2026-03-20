@@ -68,6 +68,9 @@ public class SagaCommandHandler implements SagaCommandPort {
     @Value("${app.signing.min-allowed-timeout-seconds:5}")
     private int minAllowedTimeoutSeconds;
 
+    @Value("${app.csc.signature-level:XAdES-BASELINE-T}")
+    private String signatureLevel;
+
     /**
      * Validate configuration values after bean construction.
      * Ensures maxRetries and timeoutSeconds are within acceptable bounds.
@@ -259,7 +262,7 @@ public class SagaCommandHandler implements SagaCommandPort {
         transactionTemplate.execute(s -> {
             completedDoc.markCompleted(
                     signedXmlPath, signedXmlUrl, signedXmlSize,
-                    transactionId, certificate, "XAdES-BASELINE-T");
+                    transactionId, certificate, signatureLevel);
             documentRepository.save(completedDoc);
 
             xmlSignedEventPort.publishXmlSigned(new XmlSignedEvent(
