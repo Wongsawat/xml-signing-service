@@ -10,8 +10,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.lang.reflect.Field;
 
@@ -135,5 +138,116 @@ class MinioStorageServiceTest {
         assertThatThrownBy(() -> service.delete(key))
                 .isExactlyInstanceOf(com.wpanther.xmlsigning.domain.exception.DocumentStorageException.class)
                 .hasMessageContaining("Failed to delete from MinIO");
+    }
+
+    @Test
+    @DisplayName("uploadOriginalXml() calls s3Client.putObject with correct bucket and content type")
+    void testUploadOriginalXmlCallsPutObject() {
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+
+        String key = service.uploadOriginalXml("inv-001", "INVOICE", "<original>xml</original>");
+
+        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
+
+        PutObjectRequest req = captor.getValue();
+        assertThat(req.bucket()).isEqualTo(BUCKET);
+        assertThat(req.contentType()).isEqualTo("application/xml");
+        assertThat(req.key()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("uploadOriginalXml() returns an S3 key containing the document type")
+    void testUploadOriginalXmlReturnsKeyWithDocumentType() {
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+
+        String key = service.uploadOriginalXml("inv-001", "TAX_INVOICE", "<original/>");
+
+        assertThat(key).contains("TAX_INVOICE");
+        assertThat(key).contains("original-xml-");
+    }
+
+    @Test
+    @DisplayName("uploadOriginalXml() wraps S3 exception in DocumentStorageException")
+    void testUploadOriginalXmlWrapsException() {
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenThrow(new RuntimeException("S3 error"));
+
+        assertThatThrownBy(() -> service.uploadOriginalXml("inv-001", "INVOICE", "<original/>"))
+                .isExactlyInstanceOf(com.wpanther.xmlsigning.domain.exception.DocumentStorageException.class)
+                .hasMessageContaining("Failed to upload original XML to MinIO");
+    }
+
+    @Test
+    @DisplayName("upload() wraps DocumentStorageException as-is")
+    void testUploadWrapsDocumentStorageExceptionAsIs() {
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenThrow(new RuntimeException("S3 error"));
+
+        assertThatThrownBy(() -> service.upload("inv-001", "INVOICE", "<signed/>"))
+                .isExactlyInstanceOf(com.wpanther.xmlsigning.domain.exception.DocumentStorageException.class)
+                .hasMessageContaining("Failed to upload signed XML to MinIO");
+    }
+
+    @Test
+    @DisplayName("listAllObjectKeys() returns all object keys from bucket")
+    void testListAllObjectKeys() {
+        ListObjectsV2Response response = ListObjectsV2Response.builder()
+                .contents(java.util.Arrays.asList(
+                        S3Object.builder().key("2024/01/15/INVOICE/signed-xml-1.xml").build(),
+                        S3Object.builder().key("2024/01/15/INVOICE/signed-xml-2.xml").build()
+                ))
+                .build();
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
+
+        var keys = service.listAllObjectKeys();
+
+        assertThat(keys).containsExactly(
+                "2024/01/15/INVOICE/signed-xml-1.xml",
+                "2024/01/15/INVOICE/signed-xml-2.xml"
+        );
+    }
+
+    @Test
+    @DisplayName("listAllObjectKeys() handles pagination with continuation token")
+    void testListAllObjectKeysWithPagination() {
+        ListObjectsV2Response page1 = ListObjectsV2Response.builder()
+                .contents(java.util.Arrays.asList(S3Object.builder().key("key-1.xml").build()))
+                .nextContinuationToken("token-abc")
+                .build();
+        ListObjectsV2Response page2 = ListObjectsV2Response.builder()
+                .contents(java.util.Arrays.asList(S3Object.builder().key("key-2.xml").build()))
+                .build();
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenReturn(page1)
+                .thenReturn(page2);
+
+        var keys = service.listAllObjectKeys();
+
+        assertThat(keys).containsExactly("key-1.xml", "key-2.xml");
+    }
+
+    @Test
+    @DisplayName("listAllObjectKeys() returns empty list when bucket is empty")
+    void testListAllObjectKeysEmpty() {
+        ListObjectsV2Response response = ListObjectsV2Response.builder().contents(java.util.Collections.emptyList()).build();
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
+
+        var keys = service.listAllObjectKeys();
+
+        assertThat(keys).isEmpty();
+    }
+
+    @Test
+    @DisplayName("listAllObjectKeys() wraps S3 exception in DocumentStorageException")
+    void testListAllObjectKeysWrapsException() {
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenThrow(new RuntimeException("S3 error"));
+
+        assertThatThrownBy(() -> service.listAllObjectKeys())
+                .isExactlyInstanceOf(com.wpanther.xmlsigning.domain.exception.DocumentStorageException.class)
+                .hasMessageContaining("Failed to list objects from MinIO");
     }
 }

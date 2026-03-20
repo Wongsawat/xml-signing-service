@@ -5,6 +5,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -19,6 +21,47 @@ class XadesSignatureEmbedderTest {
     @BeforeEach
     void setUp() {
         embedder = new XadesSignatureEmbedder();
+    }
+
+    @Nested
+    @DisplayName("embedSignature(byte[], byte[], String, String, String) Method")
+    class EmbedSignatureByteArrayMethod {
+
+        @Test
+        @DisplayName("Embeds signature into XML document from byte arrays")
+        void testEmbedSignatureFromBytes() {
+            // Setup
+            String originalXml = "<root><data>test content</data></root>";
+            String documentDigest = "dGVzdC1kaWdlc3QtYmFzZTY0";
+            String rawSignature = "c2lnbmF0dXJlLXZhbHVlLWJhc2U2NA==";
+            String certificate = "Y2VydGlmaWNhdGUtYmFzZTY0";
+            byte[] xmlBytes = originalXml.getBytes(StandardCharsets.UTF_8);
+            byte[] sigBytes = rawSignature.getBytes(StandardCharsets.UTF_8);
+
+            // Execute
+            byte[] signedXmlBytes = embedder.embedSignature(xmlBytes, sigBytes, documentDigest, certificate, "doc-123");
+            String signedXml = new String(signedXmlBytes, StandardCharsets.UTF_8);
+
+            // Verify
+            assertThat(signedXmlBytes).isNotNull();
+            assertThat(signedXml).contains("<ds:Signature");
+            assertThat(signedXml).contains("ds:SignedInfo");
+            assertThat(signedXml).contains("ds:SignatureValue");
+        }
+
+        @Test
+        @DisplayName("Throws XmlValidationException for invalid XML bytes")
+        void testInvalidXmlBytes() {
+            String invalidXml = "<root><unclosed>";
+            byte[] xmlBytes = invalidXml.getBytes(StandardCharsets.UTF_8);
+            byte[] sigBytes = "sig".getBytes(StandardCharsets.UTF_8);
+
+            assertThatThrownBy(() ->
+                embedder.embedSignature(xmlBytes, sigBytes, "digest", "cert", "doc-123")
+            )
+            .isInstanceOf(com.wpanther.xmlsigning.domain.exception.XmlValidationException.class)
+            .hasMessageContaining("Failed to embed signature");
+        }
     }
 
     @Nested
