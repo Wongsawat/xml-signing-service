@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -74,11 +75,15 @@ class XadesSignatureEmbedderTest {
             // Setup
             String originalXml = "<root><data>test content</data></root>";
             String documentDigest = "dGVzdC1kaWdlc3QtYmFzZTY0"; // base64 encoded digest
-            String rawSignature = "c2lnbmF0dXJlLXZhbHVlLWJhc2U2NA=="; // base64 encoded signature
+            String rawSignatureB64 = "c2lnbmF0dXJlLXZhbHVlLWJhc2U2NA=="; // base64 encoded signature
             String certificate = "Y2VydGlmaWNhdGUtYmFzZTY0"; // base64 encoded certificate
 
-            // Execute
-            String signedXml = embedder.embedSignature(originalXml, documentDigest, rawSignature, certificate);
+            // Execute - decode base64 to get raw bytes for the byte[] API
+            byte[] rawSignatureBytes = Base64.getDecoder().decode(rawSignatureB64);
+            String signedXml = new String(embedder.embedSignature(
+                    originalXml.getBytes(StandardCharsets.UTF_8),
+                    rawSignatureBytes,
+                    documentDigest, certificate, "doc-001"), StandardCharsets.UTF_8);
 
             // Verify
             assertThat(signedXml).isNotNull();
@@ -92,7 +97,8 @@ class XadesSignatureEmbedderTest {
 
             // Verify the actual digest value is embedded (not placeholder)
             assertThat(signedXml).contains(documentDigest);
-            assertThat(signedXml).contains(rawSignature);
+            // Signature value is the base64-encoded raw signature
+            assertThat(signedXml).contains(rawSignatureB64);
             assertThat(signedXml).contains(certificate);
         }
 
@@ -106,7 +112,10 @@ class XadesSignatureEmbedderTest {
             String certificate = "Y2VydA";
 
             // Execute
-            String signedXml = embedder.embedSignature(originalXml, actualDigest, rawSignature, certificate);
+            String signedXml = new String(embedder.embedSignature(
+                    originalXml.getBytes(StandardCharsets.UTF_8),
+                    rawSignature.getBytes(StandardCharsets.UTF_8),
+                    actualDigest, certificate, "doc-002"), StandardCharsets.UTF_8);
 
             // Verify - contains actual digest, not placeholder
             assertThat(signedXml).contains(actualDigest);
@@ -123,7 +132,10 @@ class XadesSignatureEmbedderTest {
             String certificate = "Y2VydA";
 
             // Execute
-            String signedXml = embedder.embedSignature(originalXml, documentDigest, rawSignature, certificate);
+            String signedXml = new String(embedder.embedSignature(
+                    originalXml.getBytes(StandardCharsets.UTF_8),
+                    rawSignature.getBytes(StandardCharsets.UTF_8),
+                    documentDigest, certificate, "doc-003"), StandardCharsets.UTF_8);
 
             // Verify RSA-SHA256 is used
             assertThat(signedXml).contains("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256");
@@ -140,7 +152,10 @@ class XadesSignatureEmbedderTest {
             String certificate = "Y2VydA";
 
             // Execute
-            String signedXml = embedder.embedSignature(originalXml, documentDigest, rawSignature, certificate);
+            String signedXml = new String(embedder.embedSignature(
+                    originalXml.getBytes(StandardCharsets.UTF_8),
+                    rawSignature.getBytes(StandardCharsets.UTF_8),
+                    documentDigest, certificate, "doc-004"), StandardCharsets.UTF_8);
 
             // Verify XAdES elements
             assertThat(signedXml).contains("xades:SignedProperties");
@@ -156,7 +171,8 @@ class XadesSignatureEmbedderTest {
 
             // Execute & Verify
             assertThatThrownBy(() ->
-                embedder.embedSignature(invalidXml, "digest", "sig", "cert")
+                embedder.embedSignature(invalidXml.getBytes(StandardCharsets.UTF_8),
+                        "sig".getBytes(StandardCharsets.UTF_8), "digest", "cert", "doc-005")
             )
             .isInstanceOf(RuntimeException.class)
             .hasMessageContaining("Failed to embed XAdES signature");
@@ -172,7 +188,10 @@ class XadesSignatureEmbedderTest {
             String certificate = "Y2VydA";
 
             // Execute
-            String signedXml = embedder.embedSignature(originalXml, documentDigest, rawSignature, certificate);
+            String signedXml = new String(embedder.embedSignature(
+                    originalXml.getBytes(StandardCharsets.UTF_8),
+                    rawSignature.getBytes(StandardCharsets.UTF_8),
+                    documentDigest, certificate, "doc-006"), StandardCharsets.UTF_8);
 
             // Verify signature is after root content but before closing root tag
             int rootIndex = signedXml.indexOf("<root>");

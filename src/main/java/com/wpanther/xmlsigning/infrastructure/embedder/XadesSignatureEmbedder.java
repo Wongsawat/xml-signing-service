@@ -58,21 +58,6 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
     }
 
     /**
-     * Embed a raw signature into an XML document as an XAdES-BASELINE-T enveloped signature.
-     *
-     * @param originalXml   The original XML document as a string
-     * @param documentDigest The base64-encoded SHA-256 digest of the document
-     * @param rawSignature  The base64-encoded raw signature from CSC signHash
-     * @param certificate   The base64-encoded X.509 certificate chain from CSC
-     * @return The signed XML document with embedded signature
-     * @deprecated Use {@link #embedSignature(byte[], byte[], String, String)} instead for better type safety
-     */
-    @Deprecated
-    public String embedSignature(String originalXml, String documentDigest, String rawSignature, String certificate) {
-        return embedSignatureInternal(originalXml, documentDigest, rawSignature, certificate);
-    }
-
-    /**
      * Internal implementation for embedding a raw signature into an XML document.
      */
     private String embedSignatureInternal(String originalXml, String documentDigest, String rawSignature, String certificate) {
@@ -120,7 +105,7 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
         try {
             String xmlString = new String(xmlContent, StandardCharsets.UTF_8);
             // Use the actual document digest - not signature digest - for XAdES Reference
-            String signedXml = embedSignature(xmlString, documentDigest,
+            String signedXml = embedSignatureInternal(xmlString, documentDigest,
                     Base64.getEncoder().encodeToString(signatureBytes), certificate);
             return signedXml.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
