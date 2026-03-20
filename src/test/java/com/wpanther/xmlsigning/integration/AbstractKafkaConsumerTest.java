@@ -112,9 +112,9 @@ public abstract class AbstractKafkaConsumerTest {
 
     protected XmlSigningRequestedEvent createSigningRequestEvent(
             String invoiceId, String invoiceNumber, String xmlContent,
-            String correlationId, DocumentType documentType) {
+            String sagaId, String correlationId, DocumentType documentType) {
         return new XmlSigningRequestedEvent(
-            invoiceId, invoiceNumber, xmlContent, "{}", correlationId, documentType
+            invoiceId, invoiceNumber, xmlContent, "{}", sagaId, correlationId, documentType
         );
     }
 

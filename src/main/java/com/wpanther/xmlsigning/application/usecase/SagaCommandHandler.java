@@ -253,7 +253,7 @@ public class SagaCommandHandler implements SagaCommandPort {
 
             xmlSignedEventPort.publishXmlSigned(new XmlSignedEvent(
                     command.getDocumentId(), command.getInvoiceNumber(),
-                    finalDocumentType.name(), command.getCorrelationId()));
+                    finalDocumentType.name(), command.getSagaId(), command.getCorrelationId()));
 
             sagaReplyPort.publishSuccess(command.getSagaId(), command.getSagaStep(),
                     command.getCorrelationId(), signedXmlUrl, signedXmlSize);

@@ -25,12 +25,13 @@ class XmlSigningRequestedEventTest {
         @DisplayName("Simple constructor sets all fields and generates metadata")
         void testSimpleConstructor() {
             XmlSigningRequestedEvent event = new XmlSigningRequestedEvent(
-                    "inv-001", "T001", "<xml>test</xml>", "{}", "corr-1", DocumentType.TAX_INVOICE);
+                    "inv-001", "T001", "<xml>test</xml>", "{}", "saga-1", "corr-1", DocumentType.TAX_INVOICE);
 
             assertThat(event.getInvoiceId()).isEqualTo("inv-001");
             assertThat(event.getInvoiceNumber()).isEqualTo("T001");
             assertThat(event.getXmlContent()).isEqualTo("<xml>test</xml>");
             assertThat(event.getInvoiceDataJson()).isEqualTo("{}");
+            assertThat(event.getSagaId()).isEqualTo("saga-1");
             assertThat(event.getCorrelationId()).isEqualTo("corr-1");
             assertThat(event.getDocumentType()).isEqualTo(DocumentType.TAX_INVOICE);
             assertThat(event.getEventId()).isNotNull();
@@ -47,10 +48,11 @@ class XmlSigningRequestedEventTest {
 
             XmlSigningRequestedEvent event = new XmlSigningRequestedEvent(
                     eventId, occurredAt, "custom", 2,
-                    "corr-2",              // sagaId (stores correlationId)
-                    "xml-signing-service", // source
+                    "saga-2",               // sagaId
+                    "corr-2",               // correlationId
+                    "xml-signing-service",  // source
                     "XML_SIGNING_REQUESTED", // traceType
-                    null,                  // context
+                    null,                   // context
                     "inv-002", "T002", "<xml>test2</xml>", "{}", null);
 
             assertThat(event.getEventId()).isEqualTo(eventId);
@@ -61,6 +63,7 @@ class XmlSigningRequestedEventTest {
             assertThat(event.getInvoiceNumber()).isEqualTo("T002");
             assertThat(event.getXmlContent()).isEqualTo("<xml>test2</xml>");
             assertThat(event.getInvoiceDataJson()).isEqualTo("{}");
+            assertThat(event.getSagaId()).isEqualTo("saga-2");
             assertThat(event.getCorrelationId()).isEqualTo("corr-2");
             assertThat(event.getDocumentType()).isNull();
             assertThat(event.getEventId()).isEqualTo(eventId);
@@ -70,7 +73,7 @@ class XmlSigningRequestedEventTest {
         @DisplayName("EventId uniqueness - two events have different IDs")
         void testEventIdUniqueness() {
             XmlSigningRequestedEvent event1 = new XmlSigningRequestedEvent(
-                    "inv-001", "T001", "<xml>test</xml>", "{}", "corr-1", DocumentType.TAX_INVOICE);
+                    "inv-001", "T001", "<xml>test</xml>", "{}", "saga-1", "corr-1", DocumentType.TAX_INVOICE);
 
             // Wait to ensure different timestamps
             try {
@@ -80,7 +83,7 @@ class XmlSigningRequestedEventTest {
             }
 
             XmlSigningRequestedEvent event2 = new XmlSigningRequestedEvent(
-                    "inv-001", "T001", "<xml>test</xml>", "{}", "corr-1", DocumentType.TAX_INVOICE);
+                    "inv-001", "T001", "<xml>test</xml>", "{}", "saga-1", "corr-1", DocumentType.TAX_INVOICE);
 
             assertThat(event1.getEventId()).isNotEqualTo(event2.getEventId());
         }

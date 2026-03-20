@@ -29,7 +29,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             String xmlContent = loadTestXml("tax-invoice-sample.xml");
 
             var event = createSigningRequestEvent(
-                invoiceId, invoiceNumber, xmlContent, correlationId, DocumentType.TAX_INVOICE);
+                invoiceId, invoiceNumber, xmlContent, invoiceId, correlationId, DocumentType.TAX_INVOICE);
 
             // When
             sendEvent(INPUT_TOPIC, invoiceId, event);
@@ -71,7 +71,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             String xmlContent = loadTestXml("invoice-sample.xml");
 
             var event = createSigningRequestEvent(
-                invoiceId, invoiceNumber, xmlContent, correlationId, DocumentType.INVOICE);
+                invoiceId, invoiceNumber, xmlContent, invoiceId, correlationId, DocumentType.INVOICE);
 
             // When
             sendEvent(INPUT_TOPIC, invoiceId, event);
@@ -95,7 +95,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             String xmlContent = loadTestXml("tax-invoice-sample.xml");
 
             var event = createSigningRequestEvent(
-                invoiceId, invoiceNumber, xmlContent, correlationId, null);
+                invoiceId, invoiceNumber, xmlContent, invoiceId, correlationId, null);
 
             // When
             sendEvent(INPUT_TOPIC, invoiceId, event);
@@ -118,7 +118,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             String xmlContent = loadTestXml("tax-invoice-sample.xml");
 
             var event = createSigningRequestEvent(
-                invoiceId, "TINV-DUP-001", xmlContent, UUID.randomUUID().toString(), DocumentType.TAX_INVOICE);
+                invoiceId, "TINV-DUP-001", xmlContent, invoiceId, UUID.randomUUID().toString(), DocumentType.TAX_INVOICE);
 
             sendEvent(INPUT_TOPIC, invoiceId, event);
             awaitDocumentStatus(invoiceId, "COMPLETED");
@@ -149,7 +149,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             String xmlContent = loadTestXml("tax-invoice-sample.xml");
 
             var event = createSigningRequestEvent(
-                invoiceId, "TINV-FAIL-001", xmlContent, UUID.randomUUID().toString(), DocumentType.TAX_INVOICE);
+                invoiceId, "TINV-FAIL-001", xmlContent, invoiceId, UUID.randomUUID().toString(), DocumentType.TAX_INVOICE);
 
             // When
             sendEvent(INPUT_TOPIC, invoiceId, event);
@@ -175,7 +175,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
             String xmlContent = loadTestXml("tax-invoice-sample.xml");
 
             var event = createSigningRequestEvent(
-                invoiceId, invoiceNumber, xmlContent, correlationId, DocumentType.TAX_INVOICE);
+                invoiceId, invoiceNumber, xmlContent, invoiceId, correlationId, DocumentType.TAX_INVOICE);
 
             // When
             sendEvent(INPUT_TOPIC, invoiceId, event);

@@ -1,7 +1,6 @@
 package com.wpanther.xmlsigning.application.dto.event;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.wpanther.saga.domain.model.TraceEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
@@ -35,24 +34,25 @@ public class XmlSigningRequestedEvent extends TraceEvent {
     private final DocumentType documentType;
 
     /**
-     * Convenience constructor. correlationId is stored as sagaId in TraceEvent.
+     * Convenience constructor for creating the event.
+     *
+     * @param invoiceId      the document ID to sign
+     * @param invoiceNumber  the invoice number
+     * @param xmlContent     the XML content to sign
+     * @param invoiceDataJson additional invoice data as JSON
+     * @param sagaId         the saga orchestration instance ID
+     * @param correlationId  the end-to-end correlation ID from the originating request
+     * @param documentType    the type of document
      */
     public XmlSigningRequestedEvent(String invoiceId, String invoiceNumber, String xmlContent,
-                                    String invoiceDataJson, String correlationId, DocumentType documentType) {
-        super(correlationId, SOURCE, TRACE_TYPE, null);
+                                    String invoiceDataJson, String sagaId, String correlationId,
+                                    DocumentType documentType) {
+        super(sagaId, correlationId, SOURCE, TRACE_TYPE, null);
         this.invoiceId = invoiceId;
         this.invoiceNumber = invoiceNumber;
         this.xmlContent = xmlContent;
         this.invoiceDataJson = invoiceDataJson;
         this.documentType = documentType;
-    }
-
-    /**
-     * Returns the correlation ID (stored as sagaId in TraceEvent).
-     */
-    @JsonIgnore
-    public String getCorrelationId() {
-        return getSagaId();
     }
 
     @JsonCreator
@@ -62,6 +62,7 @@ public class XmlSigningRequestedEvent extends TraceEvent {
         @JsonProperty("eventType") String eventType,
         @JsonProperty("version") int version,
         @JsonProperty("sagaId") String sagaId,
+        @JsonProperty("correlationId") String correlationId,
         @JsonProperty("source") String source,
         @JsonProperty("traceType") String traceType,
         @JsonProperty("context") String context,
@@ -71,7 +72,7 @@ public class XmlSigningRequestedEvent extends TraceEvent {
         @JsonProperty("invoiceDataJson") String invoiceDataJson,
         @JsonProperty("documentType") DocumentType documentType
     ) {
-        super(eventId, occurredAt, eventType, version, sagaId, source, traceType, context);
+        super(eventId, occurredAt, eventType, version, sagaId, correlationId, source, traceType, context);
         this.invoiceId = invoiceId;
         this.invoiceNumber = invoiceNumber;
         this.xmlContent = xmlContent;

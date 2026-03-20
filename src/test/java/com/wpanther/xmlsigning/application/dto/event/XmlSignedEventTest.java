@@ -26,12 +26,13 @@ class XmlSignedEventTest {
     @DisplayName("Should create event with convenience constructor")
     void shouldCreateEventWithConvenienceConstructor() {
         XmlSignedEvent event = new XmlSignedEvent(
-            "doc-123", "INV-001", "INVOICE", "corr-456"
+            "doc-123", "INV-001", "INVOICE", "saga-456", "corr-456"
         );
 
         assertThat(event.getInvoiceId()).isEqualTo("doc-123");
         assertThat(event.getInvoiceNumber()).isEqualTo("INV-001");
         assertThat(event.getDocumentType()).isEqualTo("INVOICE");
+        assertThat(event.getSagaId()).isEqualTo("saga-456");
         assertThat(event.getCorrelationId()).isEqualTo("corr-456");
         assertThat(event.getEventId()).isNotNull();
         assertThat(event.getOccurredAt()).isNotNull();
@@ -47,7 +48,8 @@ class XmlSignedEventTest {
 
         XmlSignedEvent event = new XmlSignedEvent(
             eventId, occurredAt, "xml.signed", 1,
-            "corr-456",             // sagaId (stores correlationId)
+            "saga-456",             // sagaId
+            "corr-456",             // correlationId
             "xml-signing-service",  // source
             "XML_SIGNED",           // traceType
             null,                   // context
@@ -59,6 +61,7 @@ class XmlSignedEventTest {
         assertThat(event.getInvoiceId()).isEqualTo("doc-123");
         assertThat(event.getInvoiceNumber()).isEqualTo("INV-001");
         assertThat(event.getDocumentType()).isEqualTo("TAX_INVOICE");
+        assertThat(event.getSagaId()).isEqualTo("saga-456");
         assertThat(event.getCorrelationId()).isEqualTo("corr-456");
     }
 
@@ -66,7 +69,7 @@ class XmlSignedEventTest {
     @DisplayName("Should serialize and deserialize via JSON round-trip")
     void shouldSerializeAndDeserializeViaJsonRoundTrip() throws Exception {
         XmlSignedEvent original = new XmlSignedEvent(
-            "doc-789", "INV-002", "RECEIPT", "corr-101"
+            "doc-789", "INV-002", "RECEIPT", "saga-101", "corr-101"
         );
 
         String json = objectMapper.writeValueAsString(original);
@@ -76,6 +79,7 @@ class XmlSignedEventTest {
         assertThat(deserialized.getInvoiceId()).isEqualTo("doc-789");
         assertThat(deserialized.getInvoiceNumber()).isEqualTo("INV-002");
         assertThat(deserialized.getDocumentType()).isEqualTo("RECEIPT");
+        assertThat(deserialized.getSagaId()).isEqualTo("saga-101");
         assertThat(deserialized.getCorrelationId()).isEqualTo("corr-101");
     }
 
@@ -88,7 +92,8 @@ class XmlSignedEventTest {
                 "occurredAt": "2024-01-15T10:30:00Z",
                 "eventType": "xml.signed",
                 "version": 1,
-                "sagaId": "corr-xyz",
+                "sagaId": "saga-xyz",
+                "correlationId": "corr-xyz",
                 "source": "xml-signing-service",
                 "traceType": "XML_SIGNED",
                 "context": null,
@@ -104,6 +109,7 @@ class XmlSignedEventTest {
         assertThat(event.getInvoiceId()).isEqualTo("doc-abc");
         assertThat(event.getInvoiceNumber()).isEqualTo("INV-100");
         assertThat(event.getDocumentType()).isEqualTo("INVOICE");
+        assertThat(event.getSagaId()).isEqualTo("saga-xyz");
         assertThat(event.getCorrelationId()).isEqualTo("corr-xyz");
     }
 }

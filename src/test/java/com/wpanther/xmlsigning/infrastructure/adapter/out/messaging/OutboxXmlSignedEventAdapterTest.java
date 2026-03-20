@@ -38,7 +38,7 @@ class OutboxXmlSignedEventAdapterTest {
     @DisplayName("Should publish XmlSignedEvent with correct arguments")
     void testPublishXmlSignedSuccess() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
-            "doc-123", "INV-001", "INVOICE", "corr-123"
+            "doc-123", "INV-001", "INVOICE", "saga-123", "corr-123"
         );
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"invoiceNumber\":\"INV-001\"}");
@@ -59,7 +59,7 @@ class OutboxXmlSignedEventAdapterTest {
     @DisplayName("Should include correlationId and invoiceNumber in headers")
     void testPublishXmlSignedHeaderContent() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
-            "doc-123", "INV-001", "TAX_INVOICE", "corr-123"
+            "doc-123", "INV-001", "TAX_INVOICE", "saga-123", "corr-123"
         );
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"invoiceNumber\":\"INV-001\"}");
@@ -80,7 +80,7 @@ class OutboxXmlSignedEventAdapterTest {
     @DisplayName("Should throw IllegalStateException on JSON serialization error")
     void testToJsonError() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
-            "doc-123", "INV-001", "INVOICE", "corr-123"
+            "doc-123", "INV-001", "INVOICE", "saga-123", "corr-123"
         );
 
         when(objectMapper.writeValueAsString(any()))
@@ -103,7 +103,7 @@ class OutboxXmlSignedEventAdapterTest {
     @DisplayName("Should use correct topic 'xml.signed'")
     void testPublishUsesCorrectTopic() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
-            "doc-123", "INV-001", "INVOICE", "corr-123"
+            "doc-123", "INV-001", "INVOICE", "saga-123", "corr-123"
         );
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
@@ -119,7 +119,7 @@ class OutboxXmlSignedEventAdapterTest {
     @DisplayName("Should use invoiceId as partition key")
     void testPublishUsesInvoiceIdAsPartitionKey() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
-            "doc-456", "INV-002", "TAX_INVOICE", "corr-456"
+            "doc-456", "INV-002", "TAX_INVOICE", "saga-456", "corr-456"
         );
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
