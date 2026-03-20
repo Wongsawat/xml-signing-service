@@ -20,7 +20,7 @@ class XadesSignatureEmbedderTest {
 
     @BeforeEach
     void setUp() {
-        embedder = new XadesSignatureEmbedder();
+        embedder = new XadesSignatureEmbedder("XAdES-BASELINE-T");
     }
 
     @Nested
