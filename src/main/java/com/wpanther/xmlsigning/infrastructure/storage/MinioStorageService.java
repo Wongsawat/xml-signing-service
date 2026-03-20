@@ -8,10 +8,15 @@ import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -133,6 +138,52 @@ public class MinioStorageService {
                     e,
                     "delete",
                     s3Key
+            );
+        }
+    }
+
+    /**
+     * List all object keys in the bucket.
+     * Used for reconciliation to detect orphaned files.
+     *
+     * @return list of S3 keys in the bucket
+     */
+    public List<String> listAllObjectKeys() {
+        List<String> keys = new ArrayList<>();
+        try {
+            ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+                    .bucket(bucketName)
+                    .maxKeys(1000);
+
+            ListObjectsV2Response response = s3Client.listObjectsV2(requestBuilder.build());
+            for (S3Object obj : response.contents()) {
+                keys.add(obj.key());
+            }
+
+            // Handle pagination if there are more objects
+            String continuationToken = response.nextContinuationToken();
+            while (continuationToken != null) {
+                ListObjectsV2Request nextRequest = ListObjectsV2Request.builder()
+                        .bucket(bucketName)
+                        .maxKeys(1000)
+                        .continuationToken(continuationToken)
+                        .build();
+                response = s3Client.listObjectsV2(nextRequest);
+                for (S3Object obj : response.contents()) {
+                    keys.add(obj.key());
+                }
+                continuationToken = response.nextContinuationToken();
+            }
+
+            log.debug("Listed {} objects from MinIO bucket {}", keys.size(), bucketName);
+            return keys;
+        } catch (Exception e) {
+            log.error("Failed to list objects from MinIO bucket {}", bucketName, e);
+            throw new DocumentStorageException(
+                    "Failed to list objects from MinIO: " + e.getMessage(),
+                    e,
+                    "list-objects",
+                    bucketName
             );
         }
     }

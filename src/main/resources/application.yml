@@ -106,6 +106,14 @@ app:
     region: ${MINIO_REGION:us-east-1}
     base-url: ${MINIO_BASE_URL:http://localhost:9001/signed-xml-documents}
     path-style-access: ${MINIO_PATH_STYLE_ACCESS:true}
+    # Orphaned file cleanup configuration
+    cleanup:
+      # Enable/disable the orphaned file cleanup scheduler
+      enabled: ${MINIO_CLEANUP_ENABLED:true}
+      # How many hours a document must be stuck in SIGNING state before cleanup
+      stuck-threshold-hours: ${MINIO_CLEANUP_STUCK_THRESHOLD_HOURS:1}
+      # Cron expression for cleanup job (default: 2 AM daily)
+      cron: ${MINIO_CLEANUP_CRON:0 0 2 * * *}
 
 # Eureka client configuration
 eureka:
