@@ -1,5 +1,7 @@
 package com.wpanther.xmlsigning.domain.model;
 
+import jakarta.annotation.Nonnull;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -244,27 +246,27 @@ public class SignedXmlDocument {
         private LocalDateTime createdAt;
         private LocalDateTime completedAt;
 
-        public Builder id(SignedXmlDocumentId id) {
+        public Builder id(@Nonnull SignedXmlDocumentId id) {
             this.id = id;
             return this;
         }
 
-        public Builder invoiceId(String invoiceId) {
+        public Builder invoiceId(@Nonnull String invoiceId) {
             this.invoiceId = invoiceId;
             return this;
         }
 
-        public Builder invoiceNumber(String invoiceNumber) {
+        public Builder invoiceNumber(@Nonnull String invoiceNumber) {
             this.invoiceNumber = invoiceNumber;
             return this;
         }
 
-        public Builder documentType(DocumentType documentType) {
+        public Builder documentType(@Nonnull DocumentType documentType) {
             this.documentType = documentType;
             return this;
         }
 
-        public Builder originalXmlPath(String originalXmlPath) {
+        public Builder originalXmlPath(@Nonnull String originalXmlPath) {
             this.originalXmlPath = originalXmlPath;
             return this;
         }
