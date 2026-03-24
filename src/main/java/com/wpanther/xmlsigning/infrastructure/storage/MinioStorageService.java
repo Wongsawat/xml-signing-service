@@ -41,12 +41,13 @@ public class MinioStorageService {
      * @throws DocumentStorageException if upload fails
      */
     public String uploadOriginalXml(String invoiceId, String documentType, String xmlContent) {
+        String s3Key = "unknown";
         try {
             byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
             LocalDate now = LocalDate.now();
             String sanitizedInvoiceId = invoiceId.replaceAll("[^a-zA-Z0-9\\-_]", "_");
             String fileName = String.format("original-xml-%s-%s.xml", sanitizedInvoiceId, UUID.randomUUID());
-            String s3Key = String.format("%04d/%02d/%02d/%s/%s",
+            s3Key = String.format("%04d/%02d/%02d/%s/%s",
                     now.getYear(), now.getMonthValue(), now.getDayOfMonth(), documentType, fileName);
 
             PutObjectRequest putRequest = PutObjectRequest.builder()
@@ -60,7 +61,6 @@ public class MinioStorageService {
             log.info("Uploaded original XML to MinIO: bucket={}, key={}", bucketName, s3Key);
             return s3Key;
         } catch (Exception e) {
-            String s3Key = "unknown";
             log.error("Failed to upload original XML to MinIO: invoiceId={}, documentType={}",
                     invoiceId, documentType, e);
             throw new DocumentStorageException(
@@ -79,12 +79,13 @@ public class MinioStorageService {
      * @throws DocumentStorageException if upload fails
      */
     public StorageResult upload(String invoiceId, String documentType, String xmlContent) {
+        String s3Key = "unknown";
         try {
             byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
             LocalDate now = LocalDate.now();
             String sanitizedInvoiceId = invoiceId.replaceAll("[^a-zA-Z0-9\\-_]", "_");
             String fileName = String.format("signed-xml-%s-%s.xml", sanitizedInvoiceId, UUID.randomUUID());
-            String s3Key = String.format("%04d/%02d/%02d/%s/%s",
+            s3Key = String.format("%04d/%02d/%02d/%s/%s",
                     now.getYear(), now.getMonthValue(), now.getDayOfMonth(), documentType, fileName);
 
             PutObjectRequest putRequest = PutObjectRequest.builder()
@@ -101,7 +102,6 @@ public class MinioStorageService {
         } catch (DocumentStorageException e) {
             throw e;
         } catch (Exception e) {
-            String s3Key = "unknown";
             log.error("Failed to upload signed XML to MinIO: invoiceId={}, documentType={}",
                     invoiceId, documentType, e);
             throw new DocumentStorageException(
