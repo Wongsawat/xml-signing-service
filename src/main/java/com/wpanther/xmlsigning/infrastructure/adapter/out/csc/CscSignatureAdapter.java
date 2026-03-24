@@ -72,6 +72,7 @@ public class CscSignatureAdapter implements CscSignaturePort {
 
         try {
             CSCSignatureResponse response = feignClient.signHash(request);
+            validateResponse(response);
             return new CscSignHashResult(
                     Arrays.asList(response.getSignatures()),   // String[] → List<String>
                     response.getCertificate()
@@ -82,6 +83,17 @@ public class CscSignatureAdapter implements CscSignaturePort {
             log.error("CSC signHash failed for clientId={} credentialId={}",
                     command.clientId(), command.credentialId(), e);
             throw new CscSignatureException("CSC signHash failed: " + e.getMessage(), e);
+        }
+    }
+
+    private void validateResponse(CSCSignatureResponse response) {
+        if (response.getSignatures() == null || response.getSignatures().length == 0) {
+            throw new CscSignatureException(
+                    "CSC signHash response missing signatures");
+        }
+        if (response.getCertificate() == null || response.getCertificate().isBlank()) {
+            throw new CscSignatureException(
+                    "CSC signHash response missing certificate");
         }
     }
 }
