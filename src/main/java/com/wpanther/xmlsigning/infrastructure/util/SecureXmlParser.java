@@ -29,7 +29,7 @@ import java.io.StringReader;
  */
 public final class SecureXmlParser {
 
-    private static final XPath XPATH = XPathFactory.newInstance().newXPath();
+    private static final ThreadLocal<XPath> THREAD_XPATH = ThreadLocal.withInitial(() -> XPathFactory.newInstance().newXPath());
 
     private SecureXmlParser() {
         // Utility class - prevent instantiation
@@ -99,7 +99,7 @@ public final class SecureXmlParser {
     public static String evaluateXPath(String xpathExpression, String xmlContent)
             throws ParserConfigurationException, XPathExpressionException, IOException, SAXException {
         Document doc = parse(xmlContent);
-        return XPATH.evaluate(xpathExpression, doc);
+        return THREAD_XPATH.get().evaluate(xpathExpression, doc);
     }
 
     /**
@@ -117,7 +117,7 @@ public final class SecureXmlParser {
     public static Object evaluateXPath(String xpathExpression, String xmlContent, QName returnType)
             throws ParserConfigurationException, XPathExpressionException, IOException, SAXException {
         Document doc = parse(xmlContent);
-        return XPATH.evaluate(xpathExpression, doc, returnType);
+        return THREAD_XPATH.get().evaluate(xpathExpression, doc, returnType);
     }
 
     /**
