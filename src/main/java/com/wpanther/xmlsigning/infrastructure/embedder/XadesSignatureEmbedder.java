@@ -263,7 +263,10 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
             cert.appendChild(issuerSerial);
 
         } catch (Exception e) {
-            log.warn("Failed to create SigningCertificate element, using empty element: {}", e.getMessage());
+            log.error("Failed to create SigningCertificate element with certificate digest and issuer serial. "
+                    + "The signature will be created with an incomplete SigningCertificate element, which may cause "
+                    + "validation issues with some verifiers. Consider investigating the certificate parsing failure: {}",
+                    e.getMessage(), e);
             // If we can't parse the certificate details, still add the empty element
             // This maintains XAdES structure compatibility
         }
