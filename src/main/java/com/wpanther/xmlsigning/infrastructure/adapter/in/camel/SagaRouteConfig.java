@@ -33,6 +33,9 @@ public class SagaRouteConfig extends RouteBuilder {
     @Value("${app.kafka.topics.dlq:xml.signing.dlq}")
     private String dlqTopic;
 
+    @Value("${app.kafka.consumers-count:3}")
+    private int consumersCount;
+
     /**
      * Builds common Kafka consumer URL parameters.
      * Used by both saga command and compensation consumers.
@@ -48,7 +51,7 @@ public class SagaRouteConfig extends RouteBuilder {
                 + "&autoCommitEnable=false"
                 + "&breakOnFirstError=true"
                 + "&maxPollRecords=100"
-                + "&consumersCount=3";
+                + "&consumersCount=" + consumersCount;
     }
 
     public SagaRouteConfig(SagaCommandPort sagaCommandPort, CommandValidator commandValidator) {
