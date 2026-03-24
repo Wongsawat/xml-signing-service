@@ -106,6 +106,8 @@ app:
     region: ${MINIO_REGION:us-east-1}
     base-url: ${MINIO_BASE_URL:http://localhost:9001/signed-xml-documents}
     path-style-access: ${MINIO_PATH_STYLE_ACCESS:true}
+    # Maximum upload size in bytes (default: 100KB) - prevents OOM from oversized payloads
+    max-upload-size-bytes: ${MINIO_MAX_UPLOAD_SIZE_BYTES:102400}
     # Orphaned file cleanup configuration
     cleanup:
       # Enable/disable the orphaned file cleanup scheduler
