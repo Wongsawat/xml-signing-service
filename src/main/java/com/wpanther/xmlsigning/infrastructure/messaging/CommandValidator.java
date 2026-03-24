@@ -48,6 +48,8 @@ public class CommandValidator implements Processor {
                     "Command validation failed: " + errorMessage, violations);
         }
 
-        log.debug("Command validation passed for: {}", body.getClass().getSimpleName());
+        if (log.isDebugEnabled()) {
+            log.debug("Command validation passed for: {}", body.getClass().getSimpleName());
+        }
     }
 }
