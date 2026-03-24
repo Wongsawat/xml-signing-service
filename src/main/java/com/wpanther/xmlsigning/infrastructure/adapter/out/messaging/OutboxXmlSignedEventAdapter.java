@@ -7,6 +7,8 @@ import com.wpanther.xmlsigning.application.dto.event.XmlSignedEvent;
 import com.wpanther.xmlsigning.application.port.out.XmlSignedEventPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -24,6 +26,7 @@ public class OutboxXmlSignedEventAdapter implements XmlSignedEventPort {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void publishXmlSigned(XmlSignedEvent event) {
         Map<String, String> headers = Map.of(
             "correlationId", event.getCorrelationId(),

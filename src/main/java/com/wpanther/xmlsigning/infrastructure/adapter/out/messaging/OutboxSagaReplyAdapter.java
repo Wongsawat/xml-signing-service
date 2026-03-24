@@ -8,6 +8,8 @@ import com.wpanther.xmlsigning.application.dto.event.XmlSigningReplyEvent;
 import com.wpanther.xmlsigning.application.port.out.SagaReplyPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -29,6 +31,7 @@ public class OutboxSagaReplyAdapter implements SagaReplyPort {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void publishSuccess(String sagaId, SagaStep sagaStep, String correlationId,
                                String signedXmlUrl, Long signedXmlSize) {
         XmlSigningReplyEvent reply = XmlSigningReplyEvent.success(sagaId, sagaStep, correlationId,
@@ -54,6 +57,7 @@ public class OutboxSagaReplyAdapter implements SagaReplyPort {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void publishFailure(String sagaId, SagaStep sagaStep, String correlationId, String errorMessage) {
         XmlSigningReplyEvent reply = XmlSigningReplyEvent.failure(sagaId, sagaStep, correlationId, errorMessage);
 
@@ -76,6 +80,7 @@ public class OutboxSagaReplyAdapter implements SagaReplyPort {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void publishCompensated(String sagaId, SagaStep sagaStep, String correlationId) {
         XmlSigningReplyEvent reply = XmlSigningReplyEvent.compensated(sagaId, sagaStep, correlationId);
 
