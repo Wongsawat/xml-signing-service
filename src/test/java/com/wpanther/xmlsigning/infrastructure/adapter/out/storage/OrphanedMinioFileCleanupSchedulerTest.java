@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -171,7 +174,8 @@ class OrphanedMinioFileCleanupSchedulerTest {
         void deletesOrphanedFiles() {
             when(minioStorageService.listAllObjectKeys())
                     .thenReturn(List.of("key-1.xml", "key-2.xml", "key-3.xml"));
-            when(documentRepository.findAll()).thenReturn(Collections.emptyList());
+            when(documentRepository.findAll(any(Pageable.class)))
+                    .thenReturn(Page.empty());
 
             int deleted = scheduler.reconcileMinioFiles();
 
@@ -191,7 +195,8 @@ class OrphanedMinioFileCleanupSchedulerTest {
 
             when(minioStorageService.listAllObjectKeys())
                     .thenReturn(List.of("original-key.xml", "signed-key.xml", "orphan-key.xml"));
-            when(documentRepository.findAll()).thenReturn(List.of(doc));
+            when(documentRepository.findAll(any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(doc)));
 
             int deleted = scheduler.reconcileMinioFiles();
 
@@ -206,7 +211,8 @@ class OrphanedMinioFileCleanupSchedulerTest {
         void incrementsCounter() {
             when(minioStorageService.listAllObjectKeys())
                     .thenReturn(List.of("orphan-1.xml", "orphan-2.xml"));
-            when(documentRepository.findAll()).thenReturn(Collections.emptyList());
+            when(documentRepository.findAll(any(Pageable.class)))
+                    .thenReturn(Page.empty());
 
             scheduler.reconcileMinioFiles();
 

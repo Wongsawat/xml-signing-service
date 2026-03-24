@@ -9,6 +9,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -172,17 +175,26 @@ public class OrphanedMinioFileCleanupScheduler {
             return 0;
         }
 
-        // Get all COMPLETED document paths from DB
+        // Get all COMPLETED document paths from DB using pagination to avoid OOM
         Set<String> validOriginalPaths = new HashSet<>();
         Set<String> validSignedPaths = new HashSet<>();
-        for (SignedXmlDocumentEntity doc : documentRepository.findAll()) {
-            if (doc.getOriginalXmlPath() != null && !doc.getOriginalXmlPath().isBlank()) {
-                validOriginalPaths.add(doc.getOriginalXmlPath());
+        int pageSize = 100;
+        int pageNumber = 0;
+        Page<SignedXmlDocumentEntity> page;
+
+        do {
+            Pageable pageable = PageRequest.of(pageNumber, pageSize);
+            page = documentRepository.findAll(pageable);
+            for (SignedXmlDocumentEntity doc : page.getContent()) {
+                if (doc.getOriginalXmlPath() != null && !doc.getOriginalXmlPath().isBlank()) {
+                    validOriginalPaths.add(doc.getOriginalXmlPath());
+                }
+                if (doc.getSignedXmlPath() != null && !doc.getSignedXmlPath().isBlank()) {
+                    validSignedPaths.add(doc.getSignedXmlPath());
+                }
             }
-            if (doc.getSignedXmlPath() != null && !doc.getSignedXmlPath().isBlank()) {
-                validSignedPaths.add(doc.getSignedXmlPath());
-            }
-        }
+            pageNumber++;
+        } while (page.hasNext());
 
         int deletedCount = 0;
         for (String minioKey : minioKeys) {
