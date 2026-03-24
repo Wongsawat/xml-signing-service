@@ -34,6 +34,9 @@ public class MinioStorageService {
     @Value("${app.minio.base-url}")
     private String baseUrl;
 
+    @Value("${app.minio.max-upload-size-bytes:102400}")
+    private int maxUploadSizeBytes;
+
     /**
      * Upload original (unsigned) XML content to MinIO before signing.
      *
@@ -44,6 +47,14 @@ public class MinioStorageService {
         String s3Key = "unknown";
         try {
             byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
+            if (xmlBytes.length > maxUploadSizeBytes) {
+                throw new DocumentStorageException(
+                        "XML content size " + xmlBytes.length + " exceeds maximum upload size of " + maxUploadSizeBytes + " bytes",
+                        null,
+                        "upload-original",
+                        s3Key
+                );
+            }
             LocalDate now = LocalDate.now();
             String sanitizedInvoiceId = invoiceId.replaceAll("[^a-zA-Z0-9\\-_]", "_");
             String fileName = String.format("original-xml-%s-%s.xml", sanitizedInvoiceId, UUID.randomUUID());
@@ -82,6 +93,14 @@ public class MinioStorageService {
         String s3Key = "unknown";
         try {
             byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
+            if (xmlBytes.length > maxUploadSizeBytes) {
+                throw new DocumentStorageException(
+                        "XML content size " + xmlBytes.length + " exceeds maximum upload size of " + maxUploadSizeBytes + " bytes",
+                        null,
+                        "upload-signed",
+                        s3Key
+                );
+            }
             LocalDate now = LocalDate.now();
             String sanitizedInvoiceId = invoiceId.replaceAll("[^a-zA-Z0-9\\-_]", "_");
             String fileName = String.format("signed-xml-%s-%s.xml", sanitizedInvoiceId, UUID.randomUUID());

@@ -43,9 +43,16 @@ class MinioStorageServiceTest {
         service = new MinioStorageService(s3Client);
         setField("bucketName", BUCKET);
         setField("baseUrl", BASE_URL);
+        setField("maxUploadSizeBytes", 102400);
     }
 
     private void setField(String name, String value) throws Exception {
+        Field f = MinioStorageService.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(service, value);
+    }
+
+    private void setField(String name, int value) throws Exception {
         Field f = MinioStorageService.class.getDeclaredField(name);
         f.setAccessible(true);
         f.set(service, value);
