@@ -7,6 +7,7 @@ import com.wpanther.xmlsigning.application.port.out.CscAuthorizationPort;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeRequest;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -47,7 +48,31 @@ public class CscAuthorizationAdapter implements CscAuthorizationPort {
                 .description(command.description())
                 .build();
 
-        CSCAuthorizeResponse response = feignClient.authorize(request);
-        return new CscAuthorizeResult(response.getSAD(), response.getTransactionID());
+        try {
+            CSCAuthorizeResponse response = feignClient.authorize(request);
+            validateResponse(response, command.clientId(), command.credentialId());
+            return new CscAuthorizeResult(response.getSAD(), response.getTransactionID());
+        } catch (FeignException e) {
+            log.error("CSC authorization failed for clientId={} credentialId={}: {}",
+                    command.clientId(), command.credentialId(), e.getMessage(), e);
+            throw new CscAuthorizationException(
+                    "CSC authorization failed: " + e.getMessage(),
+                    e,
+                    command.clientId(),
+                    command.credentialId());
+        }
+    }
+
+    private void validateResponse(CSCAuthorizeResponse response, String clientId, String credentialId) {
+        if (response.getSAD() == null || response.getSAD().isBlank()) {
+            throw new CscAuthorizationException(
+                    "CSC authorization response missing SAD token",
+                    clientId, credentialId);
+        }
+        if (response.getTransactionID() == null || response.getTransactionID().isBlank()) {
+            throw new CscAuthorizationException(
+                    "CSC authorization response missing transaction ID",
+                    clientId, credentialId);
+        }
     }
 }
