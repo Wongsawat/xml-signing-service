@@ -17,18 +17,21 @@ import org.springframework.web.bind.annotation.RequestBody;
  * The Feign client is configured with:
  * <ul>
  *   <li>Circuit breaker (Resilience4j) for fault tolerance</li>
- *   <li>Retry logic with exponential backoff</li>
+ *   <li>Retry logic with exponential backoff (via {@link AuthFeignConfig})</li>
  *   <li>Custom error decoder for CSC-specific error handling</li>
  *   <li>Full request/response logging for debugging</li>
  * </ul>
  *
+ * <p><strong>Retry Note:</strong> The authorize endpoint is idempotent, so retries
+ * are safe and enabled via {@link AuthFeignConfig}.
+ *
  * @see com.wpanther.xmlsigning.infrastructure.adapter.out.csc.CscAuthorizationAdapter
- * @see com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig
+ * @see com.wpanther.xmlsigning.infrastructure.config.feign.AuthFeignConfig
  */
 @FeignClient(
     name = "csc-auth-client",
     url = "${app.csc.service-url}",
-    configuration = com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig.class
+    configuration = com.wpanther.xmlsigning.infrastructure.config.feign.AuthFeignConfig.class
 )
 public interface CSCAuthClient {
 

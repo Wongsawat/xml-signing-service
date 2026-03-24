@@ -1,7 +1,6 @@
 package com.wpanther.xmlsigning.infrastructure.config.feign;
 
 import feign.Logger;
-import feign.Retryer;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import org.junit.jupiter.api.DisplayName;
@@ -11,7 +10,6 @@ import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuit
 import org.springframework.cloud.client.circuitbreaker.Customizer;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link FeignConfig}.
@@ -36,15 +34,6 @@ class FeignConfigTest {
         // Note: Request.Options is now configured via application.yml
         // (spring.cloud.openfeign.client.config.default.connectTimeout/readTimeout)
         // The options() bean was removed to allow YAML configuration to take effect
-
-        @Test
-        @DisplayName("retryer returns configured Retryer")
-        void testRetryer() {
-            Retryer retryer = config.retryer();
-
-            assertThat(retryer).isNotNull();
-            assertThat(retryer).isInstanceOf(Retryer.Default.class);
-        }
 
         // Note: CSCErrorDecoder is now a @Component and tested separately in CSCErrorDecoderTest
         // The errorDecoder() bean method was removed from FeignConfig
@@ -99,16 +88,4 @@ class FeignConfigTest {
         }
     }
 
-    @Nested
-    @DisplayName("Retry Configuration")
-    class RetryConfigTests {
-
-        @Test
-        @DisplayName("Retryer is instance of Default")
-        void testRetryerIsDefault() {
-            Retryer retryer = config.retryer();
-
-            assertThat(retryer).isInstanceOf(Retryer.Default.class);
-        }
-    }
 }

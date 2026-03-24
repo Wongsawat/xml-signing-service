@@ -20,10 +20,15 @@ import org.springframework.web.bind.annotation.RequestBody;
  * The Feign client is configured with:
  * <ul>
  *   <li>Circuit breaker (Resilience4j) for fault tolerance</li>
- *   <li>Limited retry logic (SAD tokens are single-use)</li>
+ *   <li>No retry logic (SAD tokens are single-use — retries handled at application layer)</li>
  *   <li>Custom error decoder for CSC-specific error handling</li>
  *   <li>Full request/response logging for debugging</li>
  * </ul>
+ *
+ * <p><strong>Retry Note:</strong> Feign-level retries are intentionally disabled because
+ * the signHash endpoint is NOT idempotent. SAD tokens are single-use, so a failed
+ * signHash requires obtaining a new SAD token via re-authorization before retrying.
+ * This is handled at the application layer in {@link CscSignatureAdapter}.
  *
  * @see com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig
  * @see <a href="https://cloudsignatureconsortium.org/wp-content/uploads/2022/10/CSC-API-v2.0.2-Final.pdf">CSC API v2.0 Specification</a>
@@ -31,8 +36,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(
     name = "cscSignatureClient",
     url = "${app.csc.service-url:http://localhost:9000}",
-    path = "/csc/v2/signatures",
-    configuration = com.wpanther.xmlsigning.infrastructure.config.feign.FeignConfig.class
+    path = "/csc/v2/signatures"
 )
 public interface CSCSignatureClient {
 
