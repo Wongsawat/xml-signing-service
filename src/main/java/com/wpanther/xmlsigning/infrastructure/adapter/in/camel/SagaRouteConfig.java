@@ -51,7 +51,7 @@ public class SagaRouteConfig extends RouteBuilder {
                 + "&autoCommitEnable=false"
                 + "&breakOnFirstError=true"
                 + "&maxPollRecords=100"
-                + "&consumersCount=" + consumersCount;
+                + "&concurrentConsumers=" + consumersCount;
     }
 
     public SagaRouteConfig(SagaCommandPort sagaCommandPort, CommandValidator commandValidator) {
