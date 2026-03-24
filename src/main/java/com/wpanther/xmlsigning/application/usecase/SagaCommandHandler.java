@@ -22,7 +22,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
@@ -237,11 +236,11 @@ public class SagaCommandHandler implements SagaCommandPort {
             certificate = signingResult.certificate();
             transactionId = signingResult.transactionId();
 
-            XmlStorageKey signedXmlKey = xmlStoragePort.storeSignedXml(
+            var storageResult = xmlStoragePort.storeSignedXml(
                     command.getDocumentId(), finalDocumentType.name(), signedXml);
-            signedXmlPath = signedXmlKey.value();
-            signedXmlUrl = xmlStoragePort.buildUrl(signedXmlKey);
-            signedXmlSize = signedXml.getBytes(StandardCharsets.UTF_8).length;
+            signedXmlPath = storageResult.key().value();
+            signedXmlUrl = xmlStoragePort.buildUrl(storageResult.key());
+            signedXmlSize = storageResult.sizeBytes();
         } catch (Exception e) {
             log.error("Failed to sign XML for saga {} document {}: {}",
                     command.getSagaId(), command.getDocumentId(), e.getMessage(), e);

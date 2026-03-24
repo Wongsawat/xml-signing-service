@@ -1,6 +1,8 @@
 package com.wpanther.xmlsigning.infrastructure.storage;
 
 import com.wpanther.xmlsigning.domain.exception.DocumentStorageException;
+import com.wpanther.xmlsigning.domain.model.StorageResult;
+import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,10 +75,10 @@ public class MinioStorageService {
     /**
      * Upload signed XML content to MinIO.
      *
-     * @return the S3 key — store this in the signed_xml_path column
+     * @return {@link StorageResult} containing the S3 key and content size in bytes
      * @throws DocumentStorageException if upload fails
      */
-    public String upload(String invoiceId, String documentType, String xmlContent) {
+    public StorageResult upload(String invoiceId, String documentType, String xmlContent) {
         try {
             byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
             LocalDate now = LocalDate.now();
@@ -93,10 +95,10 @@ public class MinioStorageService {
                     .build();
 
             s3Client.putObject(putRequest, RequestBody.fromBytes(xmlBytes));
-            log.info("Uploaded signed XML to MinIO: bucket={}, key={}", bucketName, s3Key);
-            return s3Key;
+            log.info("Uploaded signed XML to MinIO: bucket={}, key={}, size={}",
+                    bucketName, s3Key, xmlBytes.length);
+            return new StorageResult(new XmlStorageKey(s3Key), xmlBytes.length);
         } catch (DocumentStorageException e) {
-            // Re-throw our specific exceptions as-is
             throw e;
         } catch (Exception e) {
             String s3Key = "unknown";

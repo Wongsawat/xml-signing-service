@@ -6,6 +6,7 @@ import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SigningStatus;
+import com.wpanther.xmlsigning.domain.model.StorageResult;
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import com.wpanther.xmlsigning.domain.repository.SignedXmlDocumentRepository;
 import com.wpanther.xmlsigning.domain.service.DocumentTypeDetectionService;
@@ -96,7 +97,7 @@ class SagaCommandHandlerTest {
                 new SigningResult("<signed>xml</signed>", "FAKE-CERT", "CSC-TXN-123"));
         when(documentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(xmlStoragePort.storeOriginalXml(any(), any(), any())).thenReturn(new XmlStorageKey(FAKE_ORIGINAL_S3_KEY));
-        when(xmlStoragePort.storeSignedXml(any(), any(), any())).thenReturn(new XmlStorageKey(FAKE_S3_KEY));
+        when(xmlStoragePort.storeSignedXml(any(), any(), any())).thenReturn(new StorageResult(new XmlStorageKey(FAKE_S3_KEY), 1024L));
         when(xmlStoragePort.buildUrl(any())).thenReturn(FAKE_URL);
 
         handler.handleProcessCommand(command);

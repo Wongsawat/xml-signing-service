@@ -18,6 +18,9 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.lang.reflect.Field;
 
+import com.wpanther.xmlsigning.domain.model.StorageResult;
+import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,7 +57,7 @@ class MinioStorageServiceTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
 
-        String key = service.upload("inv-001", "INVOICE", "<signed>xml</signed>");
+        StorageResult result = service.upload("inv-001", "INVOICE", "<signed>xml</signed>");
 
         ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
         verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
@@ -63,6 +66,7 @@ class MinioStorageServiceTest {
         assertThat(req.bucket()).isEqualTo(BUCKET);
         assertThat(req.contentType()).isEqualTo("application/xml");
         assertThat(req.key()).isNotBlank();
+        assertThat(result.sizeBytes()).isEqualTo((long) "<signed>xml</signed>".getBytes().length);
     }
 
     @Test
@@ -71,9 +75,9 @@ class MinioStorageServiceTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
 
-        String key = service.upload("inv-001", "TAX_INVOICE", "<signed/>");
+        StorageResult result = service.upload("inv-001", "TAX_INVOICE", "<signed/>");
 
-        assertThat(key).contains("TAX_INVOICE");
+        assertThat(result.key().value()).contains("TAX_INVOICE");
     }
 
     @Test

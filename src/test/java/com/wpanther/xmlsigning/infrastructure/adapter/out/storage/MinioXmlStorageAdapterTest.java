@@ -1,6 +1,7 @@
 package com.wpanther.xmlsigning.infrastructure.adapter.out.storage;
 
 import com.wpanther.xmlsigning.domain.exception.DocumentStorageException;
+import com.wpanther.xmlsigning.domain.model.StorageResult;
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
 import org.junit.jupiter.api.Test;
@@ -48,15 +49,17 @@ class MinioXmlStorageAdapterTest {
         String documentType = "INVOICE";
         String xmlContent = "<signed>xml</signed>";
         String expectedS3Key = "2025/03/05/INVOICE/signed-xml-INV-002-67890.xml";
+        StorageResult storageResult = new StorageResult(new XmlStorageKey(expectedS3Key), 1024L);
         when(storageService.upload(invoiceId, documentType, xmlContent))
-                .thenReturn(expectedS3Key);
+                .thenReturn(storageResult);
 
         // When
-        XmlStorageKey result = adapter.storeSignedXml(invoiceId, documentType, xmlContent);
+        StorageResult result = adapter.storeSignedXml(invoiceId, documentType, xmlContent);
 
         // Then
         assertNotNull(result);
-        assertEquals(expectedS3Key, result.value());
+        assertEquals(expectedS3Key, result.key().value());
+        assertEquals(1024L, result.sizeBytes());
         verify(storageService).upload(invoiceId, documentType, xmlContent);
     }
 

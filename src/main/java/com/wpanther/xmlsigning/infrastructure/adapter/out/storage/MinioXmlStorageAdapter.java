@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.infrastructure.adapter.out.storage;
 
+import com.wpanther.xmlsigning.domain.model.StorageResult;
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import com.wpanther.xmlsigning.application.port.out.XmlStoragePort;
 import com.wpanther.xmlsigning.infrastructure.storage.MinioStorageService;
@@ -26,9 +27,8 @@ public class MinioXmlStorageAdapter implements XmlStoragePort {
     }
 
     @Override
-    public XmlStorageKey storeSignedXml(String invoiceId, String documentType, String xmlContent) {
-        String s3Key = storageService.upload(invoiceId, documentType, xmlContent);
-        return new XmlStorageKey(s3Key);
+    public StorageResult storeSignedXml(String invoiceId, String documentType, String xmlContent) {
+        return storageService.upload(invoiceId, documentType, xmlContent);
     }
 
     @Override

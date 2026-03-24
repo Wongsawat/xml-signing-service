@@ -1,6 +1,7 @@
 package com.wpanther.xmlsigning.application.port.out;
 
 import com.wpanther.xmlsigning.domain.exception.DocumentStorageException;
+import com.wpanther.xmlsigning.domain.model.StorageResult;
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 
 /**
@@ -20,10 +21,10 @@ public interface XmlStoragePort {
     /**
      * Store a signed XML document.
      *
-     * @return storage key identifying the stored object
+     * @return storage result containing key and size of the stored object
      * @throws DocumentStorageException if storage fails
      */
-    XmlStorageKey storeSignedXml(String invoiceId, String documentType, String xmlContent);
+    StorageResult storeSignedXml(String invoiceId, String documentType, String xmlContent);
 
     /**
      * Build the full access URL for a stored document.
