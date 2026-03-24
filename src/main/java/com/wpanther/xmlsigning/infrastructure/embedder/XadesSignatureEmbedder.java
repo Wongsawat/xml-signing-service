@@ -122,7 +122,9 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
      * document digest, signature value, and certificate from the CSC service.
      *
      * @param doc            The document
-     * @param documentDigest The base64-encoded SHA-256 digest of the document
+     * @param documentDigest The base64url-encoded SHA-256 digest of the document (no padding).
+     *                       Must be produced by {@link com.wpanther.xmlsigning.application.usecase.XmlSigningServiceImpl#calculateDigest(String)}
+     *                       to ensure encoding compatibility with XAdES verification.
      * @param rawSignature   Base64-encoded raw signature from CSC
      * @param certificate    Base64-encoded certificate from CSC
      * @return The signature element
@@ -160,7 +162,9 @@ public class XadesSignatureEmbedder implements XadesEmbeddingPort {
         reference.appendChild(digestMethod);
 
         Element digestValue = doc.createElementNS(XMLDSIG_NAMESPACE, "ds:DigestValue");
-        // Use the actual document digest computed during signing
+        // documentDigest must be base64url-encoded (no padding) per XAdES spec.
+        // This value is computed locally in XmlSigningServiceImpl.calculateDigest()
+        // and must match exactly what was signed by the CSC HSM.
         digestValue.setTextContent(documentDigest);
         reference.appendChild(digestValue);
 
