@@ -182,14 +182,13 @@ public class SagaCommandHandler implements SagaCommandPort {
         }
 
         // --- TX1: persist SIGNING state (short-lived DB connection) ---
-        final DocumentType finalDocumentType = documentType;
         SignedXmlDocument document;
         try {
             document = transactionTemplate.execute(s -> {
                 SignedXmlDocument doc = existing.orElseGet(() -> SignedXmlDocument.builder()
                         .invoiceId(command.getDocumentId())
                         .invoiceNumber(command.getInvoiceNumber())
-                        .documentType(finalDocumentType)
+                        .documentType(documentType)
                         .originalXmlPath(originalXmlPath)
                         .originalXmlUrl(originalXmlUrl)
                         .build());
@@ -237,7 +236,7 @@ public class SagaCommandHandler implements SagaCommandPort {
             transactionId = signingResult.transactionId();
 
             var storageResult = xmlStoragePort.storeSignedXml(
-                    command.getDocumentId(), finalDocumentType.name(), signedXml);
+                    command.getDocumentId(), documentType.name(), signedXml);
             signedXmlPath = storageResult.key().value();
             signedXmlUrl = xmlStoragePort.buildUrl(storageResult.key());
             signedXmlSize = storageResult.sizeBytes();
@@ -266,7 +265,7 @@ public class SagaCommandHandler implements SagaCommandPort {
 
             xmlSignedEventPort.publishXmlSigned(new XmlSignedEvent(
                     command.getDocumentId(), command.getInvoiceNumber(),
-                    finalDocumentType.name(), command.getSagaId(), command.getCorrelationId()));
+                    documentType.name(), command.getSagaId(), command.getCorrelationId()));
 
             sagaReplyPort.publishSuccess(command.getSagaId(), command.getSagaStep(),
                     command.getCorrelationId(), signedXmlUrl, signedXmlSize);
