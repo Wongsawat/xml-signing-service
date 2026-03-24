@@ -63,7 +63,12 @@ public class SagaRouteConfig extends RouteBuilder {
     public void configure() throws Exception {
 
         // Global error handler - Dead Letter Channel with retries
-        errorHandler(deadLetterChannel("kafka:" + dlqTopic + "?brokers=" + kafkaBrokers)
+        // DLQ uses Kafka producer configuration with explicit serializers to ensure
+        // proper serialization and header preservation for debugging
+        errorHandler(deadLetterChannel("kafka:" + dlqTopic
+                        + "?brokers=" + kafkaBrokers
+                        + "&keySerializer=org.apache.kafka.common.serialization.StringSerializer"
+                        + "&valueSerializer=org.apache.kafka.common.serialization.StringSerializer")
                         .maximumRedeliveries(3)
                         .redeliveryDelay(1000)
                         .useExponentialBackOff()
