@@ -15,8 +15,8 @@ public class SignedXmlDocument {
 
     // Identity
     private final SignedXmlDocumentId id;
-    private final String invoiceId;
-    private final String invoiceNumber;
+    private final String documentId;
+    private final String documentNumber;
     private final DocumentType documentType;
 
     // Original XML stored in MinIO (uploaded before signing)
@@ -44,8 +44,8 @@ public class SignedXmlDocument {
 
     private SignedXmlDocument(Builder builder) {
         this.id = builder.id != null ? builder.id : SignedXmlDocumentId.create();
-        this.invoiceId = Objects.requireNonNull(builder.invoiceId, "Invoice ID is required");
-        this.invoiceNumber = Objects.requireNonNull(builder.invoiceNumber, "Invoice number is required");
+        this.documentId = Objects.requireNonNull(builder.documentId, "Document ID is required");
+        this.documentNumber = Objects.requireNonNull(builder.documentNumber, "Document number is required");
         this.documentType = Objects.requireNonNull(builder.documentType, "Document type is required");
         this.originalXmlPath = Objects.requireNonNull(builder.originalXmlPath, "Original XML path is required");
         this.originalXmlUrl = builder.originalXmlUrl;
@@ -68,12 +68,12 @@ public class SignedXmlDocument {
      * Validate business invariants
      */
     private void validateInvariant() {
-        if (invoiceId.isBlank()) {
-            throw new IllegalStateException("Invoice ID cannot be blank");
+        if (documentId.isBlank()) {
+            throw new IllegalStateException("Document ID cannot be blank");
         }
 
-        if (invoiceNumber.isBlank()) {
-            throw new IllegalStateException("Invoice number cannot be blank");
+        if (documentNumber.isBlank()) {
+            throw new IllegalStateException("Document number cannot be blank");
         }
 
         if (documentType == null) {
@@ -160,12 +160,12 @@ public class SignedXmlDocument {
         return id;
     }
 
-    public String getInvoiceId() {
-        return invoiceId;
+    public String getDocumentId() {
+        return documentId;
     }
 
-    public String getInvoiceNumber() {
-        return invoiceNumber;
+    public String getDocumentNumber() {
+        return documentNumber;
     }
 
     public DocumentType getDocumentType() {
@@ -229,8 +229,8 @@ public class SignedXmlDocument {
      */
     public static class Builder {
         private SignedXmlDocumentId id;
-        private String invoiceId;
-        private String invoiceNumber;
+        private String documentId;
+        private String documentNumber;
         private DocumentType documentType;
         private String originalXmlPath;
         private String originalXmlUrl;
@@ -251,13 +251,13 @@ public class SignedXmlDocument {
             return this;
         }
 
-        public Builder invoiceId(@Nonnull String invoiceId) {
-            this.invoiceId = invoiceId;
+        public Builder documentId(@Nonnull String documentId) {
+            this.documentId = documentId;
             return this;
         }
 
-        public Builder invoiceNumber(@Nonnull String invoiceNumber) {
-            this.invoiceNumber = invoiceNumber;
+        public Builder documentNumber(@Nonnull String documentNumber) {
+            this.documentNumber = documentNumber;
             return this;
         }
 

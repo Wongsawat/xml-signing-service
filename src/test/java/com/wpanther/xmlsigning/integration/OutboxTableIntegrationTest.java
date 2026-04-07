@@ -77,7 +77,7 @@ class OutboxTableIntegrationTest extends AbstractCdcIntegrationTest {
             String aggregateType = "SignedXmlDocument";
             String aggregateId = UUID.randomUUID().toString();
             String eventType = "XmlSignedEvent";
-            String payload = "{\"invoiceId\":\"" + aggregateId + "\",\"documentType\":\"TAX_INVOICE\"}";
+            String payload = "{\"documentId\":\"" + aggregateId + "\",\"documentType\":\"TAX_INVOICE\"}";
             String topic = "xml.signed";
             String partitionKey = UUID.randomUUID().toString();
             String headers = "{\"correlationId\":\"" + partitionKey + "\",\"documentType\":\"TAX_INVOICE\"}";

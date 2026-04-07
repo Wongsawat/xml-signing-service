@@ -72,14 +72,49 @@ app:
 
   signing:
     max-retries: 3
+    timeout-seconds: 30
+    max-allowed-retries: 10
+    max-allowed-timeout-seconds: 300
+    min-allowed-timeout-seconds: 5
+
+  # MinIO config (mocked via @MockBean XmlStoragePort in tests)
+  minio:
+    endpoint: http://localhost:9001
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket-name: signed-xml-documents
+    region: us-east-1
+    base-url: http://localhost:9001/signed-xml-documents
+    path-style-access: true
+    max-upload-size-bytes: 102400
+    cleanup:
+      enabled: false
+
+# Disable Resilience4j circuit breaker health indicator (avoids StatusAggregator bean requirement)
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+    instances:
+      cscAuthClient:
+        base-config: default
+      cscSignatureClient:
+        base-config: default
+  timelimiter:
+    instances:
+      cscAuthClient:
+        timeout-duration: 30s
+      cscSignatureClient:
+        timeout-duration: 30s
 
 # Actuator (minimal for tests)
 management:
-  endpoints:
-    enabled-by-default: false
-    web:
-      exposure:
-        include: health
+  health:
+    circuitbreakers:
+      enabled: false
 
 # Logging
 logging:

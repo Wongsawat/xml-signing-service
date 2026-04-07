@@ -29,8 +29,8 @@ class XmlSignedEventTest {
             "doc-123", "INV-001", "INVOICE", "saga-456", "corr-456"
         );
 
-        assertThat(event.getInvoiceId()).isEqualTo("doc-123");
-        assertThat(event.getInvoiceNumber()).isEqualTo("INV-001");
+        assertThat(event.getDocumentId()).isEqualTo("doc-123");
+        assertThat(event.getDocumentNumber()).isEqualTo("INV-001");
         assertThat(event.getDocumentType()).isEqualTo("INVOICE");
         assertThat(event.getSagaId()).isEqualTo("saga-456");
         assertThat(event.getCorrelationId()).isEqualTo("corr-456");
@@ -58,8 +58,8 @@ class XmlSignedEventTest {
 
         assertThat(event.getEventId()).isEqualTo(eventId);
         assertThat(event.getOccurredAt()).isEqualTo(occurredAt);
-        assertThat(event.getInvoiceId()).isEqualTo("doc-123");
-        assertThat(event.getInvoiceNumber()).isEqualTo("INV-001");
+        assertThat(event.getDocumentId()).isEqualTo("doc-123");
+        assertThat(event.getDocumentNumber()).isEqualTo("INV-001");
         assertThat(event.getDocumentType()).isEqualTo("TAX_INVOICE");
         assertThat(event.getSagaId()).isEqualTo("saga-456");
         assertThat(event.getCorrelationId()).isEqualTo("corr-456");
@@ -76,8 +76,8 @@ class XmlSignedEventTest {
         XmlSignedEvent deserialized = objectMapper.readValue(json, XmlSignedEvent.class);
 
         assertThat(deserialized.getEventId()).isEqualTo(original.getEventId());
-        assertThat(deserialized.getInvoiceId()).isEqualTo("doc-789");
-        assertThat(deserialized.getInvoiceNumber()).isEqualTo("INV-002");
+        assertThat(deserialized.getDocumentId()).isEqualTo("doc-789");
+        assertThat(deserialized.getDocumentNumber()).isEqualTo("INV-002");
         assertThat(deserialized.getDocumentType()).isEqualTo("RECEIPT");
         assertThat(deserialized.getSagaId()).isEqualTo("saga-101");
         assertThat(deserialized.getCorrelationId()).isEqualTo("corr-101");
@@ -97,8 +97,8 @@ class XmlSignedEventTest {
                 "source": "xml-signing-service",
                 "traceType": "XML_SIGNED",
                 "context": null,
-                "invoiceId": "doc-abc",
-                "invoiceNumber": "INV-100",
+                "documentId": "doc-abc",
+                "documentNumber": "INV-100",
                 "documentType": "INVOICE"
             }
             """;
@@ -106,8 +106,8 @@ class XmlSignedEventTest {
         XmlSignedEvent event = objectMapper.readValue(json, XmlSignedEvent.class);
 
         assertThat(event.getEventId()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
-        assertThat(event.getInvoiceId()).isEqualTo("doc-abc");
-        assertThat(event.getInvoiceNumber()).isEqualTo("INV-100");
+        assertThat(event.getDocumentId()).isEqualTo("doc-abc");
+        assertThat(event.getDocumentNumber()).isEqualTo("INV-100");
         assertThat(event.getDocumentType()).isEqualTo("INVOICE");
         assertThat(event.getSagaId()).isEqualTo("saga-xyz");
         assertThat(event.getCorrelationId()).isEqualTo("corr-xyz");

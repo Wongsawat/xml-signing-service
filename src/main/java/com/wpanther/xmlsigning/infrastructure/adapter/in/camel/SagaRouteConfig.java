@@ -51,7 +51,7 @@ public class SagaRouteConfig extends RouteBuilder {
                 + "&autoCommitEnable=false"
                 + "&breakOnFirstError=true"
                 + "&maxPollRecords=100"
-                + "&concurrentConsumers=" + consumersCount;
+                + "&consumersCount=" + consumersCount;
     }
 
     public SagaRouteConfig(SagaCommandPort sagaCommandPort, CommandValidator commandValidator) {
@@ -87,8 +87,8 @@ public class SagaRouteConfig extends RouteBuilder {
                         .process(commandValidator)  // Validate command before processing
                         .process(exchange -> {
                                 ProcessXmlSigningCommand cmd = exchange.getIn().getBody(ProcessXmlSigningCommand.class);
-                                log.info("Processing saga command for saga: {}, invoice: {}",
-                                                cmd.getSagaId(), cmd.getInvoiceNumber());
+                                log.info("Processing saga command for saga: {}, document: {}",
+                                                cmd.getSagaId(), cmd.getDocumentNumber());
                                 sagaCommandPort.handleProcessCommand(cmd);
                         })
                         .log("Successfully processed saga command");

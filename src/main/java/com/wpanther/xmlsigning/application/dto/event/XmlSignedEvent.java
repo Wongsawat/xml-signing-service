@@ -19,11 +19,11 @@ public class XmlSignedEvent extends TraceEvent {
     private static final String SOURCE = "xml-signing-service";
     private static final String TRACE_TYPE = "XML_SIGNED";
 
-    @JsonProperty("invoiceId")
-    private final String invoiceId;
+    @JsonProperty("documentId")
+    private final String documentId;
 
-    @JsonProperty("invoiceNumber")
-    private final String invoiceNumber;
+    @JsonProperty("documentNumber")
+    private final String documentNumber;
 
     @JsonProperty("documentType")
     private final String documentType;
@@ -31,17 +31,17 @@ public class XmlSignedEvent extends TraceEvent {
     /**
      * Convenience constructor for creating the event.
      *
-     * @param invoiceId     the signed document ID
-     * @param invoiceNumber the invoice number
+     * @param documentId    the signed document ID
+     * @param documentNumber the document number
      * @param documentType  the type of document
      * @param sagaId        the saga orchestration instance ID
      * @param correlationId the end-to-end correlation ID from the originating request
      */
-    public XmlSignedEvent(String invoiceId, String invoiceNumber, String documentType,
+    public XmlSignedEvent(String documentId, String documentNumber, String documentType,
                           String sagaId, String correlationId) {
         super(sagaId, correlationId, SOURCE, TRACE_TYPE, null);
-        this.invoiceId = invoiceId;
-        this.invoiceNumber = invoiceNumber;
+        this.documentId = documentId;
+        this.documentNumber = documentNumber;
         this.documentType = documentType;
     }
 
@@ -61,13 +61,13 @@ public class XmlSignedEvent extends TraceEvent {
         @JsonProperty("source") String source,
         @JsonProperty("traceType") String traceType,
         @JsonProperty("context") String context,
-        @JsonProperty("invoiceId") String invoiceId,
-        @JsonProperty("invoiceNumber") String invoiceNumber,
+        @JsonProperty("documentId") String documentId,
+        @JsonProperty("documentNumber") String documentNumber,
         @JsonProperty("documentType") String documentType
     ) {
         super(eventId, occurredAt, eventType, version, sagaId, correlationId, source, traceType, context);
-        this.invoiceId = invoiceId;
-        this.invoiceNumber = invoiceNumber;
+        this.documentId = documentId;
+        this.documentNumber = documentNumber;
         this.documentType = documentType;
     }
 }

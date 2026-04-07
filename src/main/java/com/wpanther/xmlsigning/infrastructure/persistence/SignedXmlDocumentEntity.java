@@ -18,8 +18,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "signed_xml_documents", indexes = {
-    @Index(name = "idx_signed_xml_invoice_id", columnList = "invoice_id"),
-    @Index(name = "idx_signed_xml_invoice_number", columnList = "invoice_number"),
+    @Index(name = "idx_signed_xml_document_id", columnList = "document_id"),
+    @Index(name = "idx_signed_xml_document_number", columnList = "document_number"),
     @Index(name = "idx_signed_xml_status", columnList = "status"),
     @Index(name = "idx_signed_xml_transaction_id", columnList = "transaction_id"),
     @Index(name = "idx_signed_xml_document_type", columnList = "document_type")
@@ -35,11 +35,11 @@ public class SignedXmlDocumentEntity {
     @Column(columnDefinition = "UUID")
     private UUID id;
 
-    @Column(name = "invoice_id", nullable = false, unique = true, length = 100)
-    private String invoiceId;
+    @Column(name = "document_id", nullable = false, unique = true, length = 100)
+    private String documentId;
 
-    @Column(name = "invoice_number", nullable = false, length = 50)
-    private String invoiceNumber;
+    @Column(name = "document_number", nullable = false, length = 50)
+    private String documentNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "document_type", nullable = false, length = 50)

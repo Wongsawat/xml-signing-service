@@ -19,19 +19,19 @@ import java.util.UUID;
 public interface JpaSignedXmlDocumentRepository extends JpaRepository<SignedXmlDocumentEntity, UUID> {
 
     /**
-     * Find entity by invoice ID
+     * Find entity by document ID
      */
-    Optional<SignedXmlDocumentEntity> findByInvoiceId(String invoiceId);
+    Optional<SignedXmlDocumentEntity> findByDocumentId(String documentId);
 
     /**
-     * Find entity by invoice number
+     * Find entity by document number
      */
-    Optional<SignedXmlDocumentEntity> findByInvoiceNumber(String invoiceNumber);
+    Optional<SignedXmlDocumentEntity> findByDocumentNumber(String documentNumber);
 
     /**
-     * Check if entity exists by invoice ID
+     * Check if entity exists by document ID
      */
-    boolean existsByInvoiceId(String invoiceId);
+    boolean existsByDocumentId(String documentId);
 
     /**
      * Delete a signed XML document by ID (for compensation)

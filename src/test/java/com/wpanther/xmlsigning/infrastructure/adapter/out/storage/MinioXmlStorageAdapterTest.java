@@ -26,41 +26,41 @@ class MinioXmlStorageAdapterTest {
     @Test
     void storeOriginalXml_delegatesAndWrapsKey() {
         // Given
-        String invoiceId = "INV-001";
+        String documentId = "INV-001";
         String documentType = "TAX_INVOICE";
         String xmlContent = "<xml>content</xml>";
         String expectedS3Key = "2025/03/05/TAX_INVOICE/original-xml-INV-001-12345.xml";
-        when(storageService.uploadOriginalXml(invoiceId, documentType, xmlContent))
+        when(storageService.uploadOriginalXml(documentId, documentType, xmlContent))
                 .thenReturn(expectedS3Key);
 
         // When
-        XmlStorageKey result = adapter.storeOriginalXml(invoiceId, documentType, xmlContent);
+        XmlStorageKey result = adapter.storeOriginalXml(documentId, documentType, xmlContent);
 
         // Then
         assertNotNull(result);
         assertEquals(expectedS3Key, result.value());
-        verify(storageService).uploadOriginalXml(invoiceId, documentType, xmlContent);
+        verify(storageService).uploadOriginalXml(documentId, documentType, xmlContent);
     }
 
     @Test
     void storeSignedXml_delegatesAndWrapsKey() {
         // Given
-        String invoiceId = "INV-002";
+        String documentId = "INV-002";
         String documentType = "INVOICE";
         String xmlContent = "<signed>xml</signed>";
         String expectedS3Key = "2025/03/05/INVOICE/signed-xml-INV-002-67890.xml";
         StorageResult storageResult = new StorageResult(new XmlStorageKey(expectedS3Key), 1024L);
-        when(storageService.upload(invoiceId, documentType, xmlContent))
+        when(storageService.upload(documentId, documentType, xmlContent))
                 .thenReturn(storageResult);
 
         // When
-        StorageResult result = adapter.storeSignedXml(invoiceId, documentType, xmlContent);
+        StorageResult result = adapter.storeSignedXml(documentId, documentType, xmlContent);
 
         // Then
         assertNotNull(result);
         assertEquals(expectedS3Key, result.key().value());
         assertEquals(1024L, result.sizeBytes());
-        verify(storageService).upload(invoiceId, documentType, xmlContent);
+        verify(storageService).upload(documentId, documentType, xmlContent);
     }
 
     @Test
@@ -94,7 +94,7 @@ class MinioXmlStorageAdapterTest {
     @Test
     void storeOriginalXml_propagatesDocumentStorageException() {
         // Given
-        String invoiceId = "INV-003";
+        String documentId = "INV-003";
         String documentType = "RECEIPT";
         String xmlContent = "<xml>error</xml>";
         DocumentStorageException expectedException = new DocumentStorageException(
@@ -102,15 +102,15 @@ class MinioXmlStorageAdapterTest {
                 "upload-original",
                 "unknown"
         );
-        when(storageService.uploadOriginalXml(invoiceId, documentType, xmlContent))
+        when(storageService.uploadOriginalXml(documentId, documentType, xmlContent))
                 .thenThrow(expectedException);
 
         // When/Then
         DocumentStorageException thrown = assertThrows(
                 DocumentStorageException.class,
-                () -> adapter.storeOriginalXml(invoiceId, documentType, xmlContent)
+                () -> adapter.storeOriginalXml(documentId, documentType, xmlContent)
         );
         assertSame(expectedException, thrown);
-        verify(storageService).uploadOriginalXml(invoiceId, documentType, xmlContent);
+        verify(storageService).uploadOriginalXml(documentId, documentType, xmlContent);
     }
 }

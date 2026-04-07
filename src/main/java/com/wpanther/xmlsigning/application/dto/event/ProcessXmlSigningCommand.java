@@ -44,13 +44,13 @@ public class ProcessXmlSigningCommand extends SagaCommand {
     private final String xmlContent;
 
     /**
-     * Invoice number for the document.
+     * Document number for the document.
      * Must be non-blank and maximum 50 characters.
      */
-    @JsonProperty("invoiceNumber")
-    @NotBlank(message = "invoiceNumber is required")
-    @Size(max = 50, message = "invoiceNumber exceeds maximum length of 50 characters")
-    private final String invoiceNumber;
+    @JsonProperty("documentNumber")
+    @NotBlank(message = "documentNumber is required")
+    @Size(max = 50, message = "documentNumber exceeds maximum length of 50 characters")
+    private final String documentNumber;
 
     /**
      * Document type hint (optional).
@@ -72,12 +72,12 @@ public class ProcessXmlSigningCommand extends SagaCommand {
             @JsonProperty("correlationId") String correlationId,
             @JsonProperty("documentId") String documentId,
             @JsonProperty("xmlContent") String xmlContent,
-            @JsonProperty("invoiceNumber") String invoiceNumber,
+            @JsonProperty("documentNumber") String documentNumber,
             @JsonProperty("documentType") String documentType) {
         super(eventId, occurredAt, eventType, version, sagaId, sagaStep, correlationId);
         this.documentId = documentId;
         this.xmlContent = xmlContent;
-        this.invoiceNumber = invoiceNumber;
+        this.documentNumber = documentNumber;
         this.documentType = documentType;
     }
 
@@ -86,11 +86,11 @@ public class ProcessXmlSigningCommand extends SagaCommand {
      */
     public ProcessXmlSigningCommand(String sagaId, SagaStep sagaStep, String correlationId,
                                     String documentId, String xmlContent,
-                                    String invoiceNumber, String documentType) {
+                                    String documentNumber, String documentType) {
         super(sagaId, sagaStep, correlationId);
         this.documentId = documentId;
         this.xmlContent = xmlContent;
-        this.invoiceNumber = invoiceNumber;
+        this.documentNumber = documentNumber;
         this.documentType = documentType;
     }
 }

@@ -21,7 +21,7 @@ class ProcessXmlSigningCommandTest {
         String correlationId = "corr-456";
         String documentId = "doc-789";
         String xmlContent = "<xml>content</xml>";
-        String invoiceNumber = "INV-001";
+        String documentNumber = "INV-001";
         String documentType = DocumentType.TAX_INVOICE.name();
 
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
@@ -34,7 +34,7 @@ class ProcessXmlSigningCommandTest {
                         correlationId,
                         documentId,
                         xmlContent,
-                        invoiceNumber,
+                        documentNumber,
                         documentType
         );
 
@@ -43,7 +43,7 @@ class ProcessXmlSigningCommandTest {
         assertThat(command.getCorrelationId()).isEqualTo(correlationId);
         assertThat(command.getDocumentId()).isEqualTo(documentId);
         assertThat(command.getXmlContent()).isEqualTo(xmlContent);
-        assertThat(command.getInvoiceNumber()).isEqualTo(invoiceNumber);
+        assertThat(command.getDocumentNumber()).isEqualTo(documentNumber);
         assertThat(command.getDocumentType()).isEqualTo(documentType);
     }
 
@@ -55,7 +55,7 @@ class ProcessXmlSigningCommandTest {
         String correlationId = "corr-456";
         String documentId = "doc-789";
         String xmlContent = "<xml>content</xml>";
-        String invoiceNumber = "INV-001";
+        String documentNumber = "INV-001";
         String documentType = DocumentType.TAX_INVOICE.name();
 
         ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
@@ -64,7 +64,7 @@ class ProcessXmlSigningCommandTest {
                         correlationId,
                         documentId,
                         xmlContent,
-                        invoiceNumber,
+                        documentNumber,
                         documentType
         );
 
@@ -73,7 +73,7 @@ class ProcessXmlSigningCommandTest {
         assertThat(command.getCorrelationId()).isEqualTo(correlationId);
         assertThat(command.getDocumentId()).isEqualTo(documentId);
         assertThat(command.getXmlContent()).isEqualTo(xmlContent);
-        assertThat(command.getInvoiceNumber()).isEqualTo(invoiceNumber);
+        assertThat(command.getDocumentNumber()).isEqualTo(documentNumber);
         assertThat(command.getDocumentType()).isEqualTo(documentType);
     }
 
@@ -95,7 +95,7 @@ class ProcessXmlSigningCommandTest {
         assertThat(command.getCorrelationId()).isNotNull();
         assertThat(command.getDocumentId()).isNotNull();
         assertThat(command.getXmlContent()).isNotNull();
-        assertThat(command.getInvoiceNumber()).isNotNull();
+        assertThat(command.getDocumentNumber()).isNotNull();
         assertThat(command.getDocumentType()).isNotNull();
     }
 }

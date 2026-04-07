@@ -19,8 +19,8 @@ $$ language 'plpgsql';
 -- ----------------------------------------------------------------------------
 CREATE TABLE signed_xml_documents (
     id UUID PRIMARY KEY,
-    invoice_id VARCHAR(100) NOT NULL,
-    invoice_number VARCHAR(50) NOT NULL,
+    document_id VARCHAR(100) NOT NULL,
+    document_number VARCHAR(50) NOT NULL,
 
     -- Original XML stored in MinIO (uploaded before signing)
     original_xml_path VARCHAR(500) NOT NULL,
@@ -47,21 +47,24 @@ CREATE TABLE signed_xml_documents (
     -- Timestamps
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Optimistic locking
+    version BIGINT DEFAULT 0 NOT NULL
 );
 
 -- ----------------------------------------------------------------------------
 -- Indexes for signed_xml_documents
 -- ----------------------------------------------------------------------------
-CREATE INDEX idx_signed_xml_invoice_id ON signed_xml_documents(invoice_id);
-CREATE INDEX idx_signed_xml_invoice_number ON signed_xml_documents(invoice_number);
+CREATE INDEX idx_signed_xml_document_id ON signed_xml_documents(document_id);
+CREATE INDEX idx_signed_xml_document_number ON signed_xml_documents(document_number);
 CREATE INDEX idx_signed_xml_status ON signed_xml_documents(status);
 CREATE INDEX idx_signed_xml_transaction_id ON signed_xml_documents(transaction_id);
 CREATE INDEX idx_signed_xml_document_type ON signed_xml_documents(document_type);
 CREATE INDEX idx_signed_xml_updated_at ON signed_xml_documents(updated_at);
 
--- Unique constraint on invoice_id (one document per invoice)
-CREATE UNIQUE INDEX idx_signed_xml_invoice_id_unique ON signed_xml_documents(invoice_id);
+-- Unique constraint on document_id (one signed document per source document)
+CREATE UNIQUE INDEX idx_signed_xml_document_id_unique ON signed_xml_documents(document_id);
 
 -- ----------------------------------------------------------------------------
 -- Check constraint for valid document types
@@ -115,6 +118,9 @@ CREATE INDEX idx_outbox_aggregate ON outbox_events(aggregate_id, aggregate_type)
 -- ----------------------------------------------------------------------------
 -- Column comments for documentation
 -- ----------------------------------------------------------------------------
+COMMENT ON COLUMN signed_xml_documents.document_id IS 'Source document ID (from intake service)';
+COMMENT ON COLUMN signed_xml_documents.document_number IS 'Document number (e.g. invoice number, tax invoice number)';
+COMMENT ON COLUMN signed_xml_documents.version IS 'Optimistic lock version, auto-incremented on each update';
 COMMENT ON COLUMN signed_xml_documents.original_xml_path IS 'S3 key for original (unsigned) XML stored in MinIO';
 COMMENT ON COLUMN signed_xml_documents.original_xml_url IS 'Full URL for original XML in MinIO';
 COMMENT ON COLUMN signed_xml_documents.signed_xml_path IS 'S3 key for signed XML stored in MinIO';

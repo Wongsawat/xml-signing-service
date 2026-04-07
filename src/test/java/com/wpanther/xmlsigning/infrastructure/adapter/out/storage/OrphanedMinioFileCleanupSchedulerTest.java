@@ -139,11 +139,11 @@ class OrphanedMinioFileCleanupSchedulerTest {
             verify(documentRepository, times(1)).save(any(SignedXmlDocumentEntity.class));
         }
 
-        private SignedXmlDocumentEntity createStuckDocument(String invoiceId, String originalXmlPath) {
+        private SignedXmlDocumentEntity createStuckDocument(String documentId, String originalXmlPath) {
             return SignedXmlDocumentEntity.builder()
                     .id(UUID.randomUUID())
-                    .invoiceId(invoiceId)
-                    .invoiceNumber("INV-001")
+                    .documentId(documentId)
+                    .documentNumber("INV-001")
                     .documentType(DocumentType.INVOICE)
                     .originalXmlPath(originalXmlPath)
                     .status(SigningStatus.SIGNING)
@@ -187,7 +187,7 @@ class OrphanedMinioFileCleanupSchedulerTest {
         @DisplayName("preserves files referenced by COMPLETED documents")
         void preservesReferencedFiles() {
             SignedXmlDocumentEntity doc = SignedXmlDocumentEntity.builder()
-                    .invoiceId("inv-001")
+                    .documentId("inv-001")
                     .originalXmlPath("original-key.xml")
                     .signedXmlPath("signed-key.xml")
                     .status(SigningStatus.COMPLETED)

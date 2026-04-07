@@ -128,7 +128,7 @@ public abstract class AbstractCdcIntegrationTest {
      * <p>
      * Debezium delivers TEXT column values as JSON-quoted strings. When the outbox
      * payload column is TEXT (not JSONB), the value arrives double-encoded:
-     * e.g. {@code "{\"invoiceId\":\"...\"}"} instead of {@code {"invoiceId":"..."}}.
+     * e.g. {@code "{\"documentId\":\"...\"}"} instead of {@code {"documentId":"..."}}.
      * This method detects and unwraps that encoding.
      */
     protected JsonNode parseDebeziumPayload(String rawValue) throws Exception {

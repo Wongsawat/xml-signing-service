@@ -38,8 +38,8 @@ class SignedXmlDocumentEntityTest {
 
             SignedXmlDocumentEntity entity = SignedXmlDocumentEntity.builder()
                     .id(id)
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .originalXmlUrl(FAKE_ORIGINAL_URL)
@@ -58,8 +58,8 @@ class SignedXmlDocumentEntityTest {
                     .build();
 
             assertThat(entity.getId()).isEqualTo(id);
-            assertThat(entity.getInvoiceId()).isEqualTo("INV-001");
-            assertThat(entity.getInvoiceNumber()).isEqualTo("T001");
+            assertThat(entity.getDocumentId()).isEqualTo("INV-001");
+            assertThat(entity.getDocumentNumber()).isEqualTo("T001");
             assertThat(entity.getDocumentType()).isEqualTo(DocumentType.TAX_INVOICE);
             assertThat(entity.getOriginalXmlPath()).isEqualTo(FAKE_ORIGINAL_S3_KEY);
             assertThat(entity.getOriginalXmlUrl()).isEqualTo(FAKE_ORIGINAL_URL);
@@ -81,8 +81,8 @@ class SignedXmlDocumentEntityTest {
         @DisplayName("Builder with default retryCount uses 0")
         void testBuilderDefaultRetryCount() {
             SignedXmlDocumentEntity entity = SignedXmlDocumentEntity.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.RECEIPT)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)
@@ -104,8 +104,8 @@ class SignedXmlDocumentEntityTest {
             SignedXmlDocumentEntity entity = new SignedXmlDocumentEntity();
 
             assertThat(entity.getId()).isNull();
-            assertThat(entity.getInvoiceId()).isNull();
-            assertThat(entity.getInvoiceNumber()).isNull();
+            assertThat(entity.getDocumentId()).isNull();
+            assertThat(entity.getDocumentNumber()).isNull();
             assertThat(entity.getDocumentType()).isNull();
             assertThat(entity.getOriginalXmlPath()).isNull();
             assertThat(entity.getOriginalXmlUrl()).isNull();
@@ -131,8 +131,8 @@ class SignedXmlDocumentEntityTest {
             LocalDateTime now = LocalDateTime.now();
 
             entity.setId(id);
-            entity.setInvoiceId("INV-002");
-            entity.setInvoiceNumber("T002");
+            entity.setDocumentId("INV-002");
+            entity.setDocumentNumber("T002");
             entity.setDocumentType(DocumentType.INVOICE);
             entity.setOriginalXmlPath(FAKE_ORIGINAL_S3_KEY);
             entity.setOriginalXmlUrl(FAKE_ORIGINAL_URL);
@@ -150,8 +150,8 @@ class SignedXmlDocumentEntityTest {
             entity.setUpdatedAt(now);
 
             assertThat(entity.getId()).isEqualTo(id);
-            assertThat(entity.getInvoiceId()).isEqualTo("INV-002");
-            assertThat(entity.getInvoiceNumber()).isEqualTo("T002");
+            assertThat(entity.getDocumentId()).isEqualTo("INV-002");
+            assertThat(entity.getDocumentNumber()).isEqualTo("T002");
             assertThat(entity.getDocumentType()).isEqualTo(DocumentType.INVOICE);
             assertThat(entity.getOriginalXmlPath()).isEqualTo(FAKE_ORIGINAL_S3_KEY);
             assertThat(entity.getOriginalXmlUrl()).isEqualTo(FAKE_ORIGINAL_URL);
@@ -178,8 +178,8 @@ class SignedXmlDocumentEntityTest {
         @DisplayName("@PrePersist sets createdAt and updatedAt")
         void testOnCreate() {
             SignedXmlDocumentEntity entity = SignedXmlDocumentEntity.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)
@@ -197,8 +197,8 @@ class SignedXmlDocumentEntityTest {
             LocalDateTime originalCreatedAt = LocalDateTime.of(2024, 1, 1, 12, 0);
 
             SignedXmlDocumentEntity entity = SignedXmlDocumentEntity.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)
@@ -216,8 +216,8 @@ class SignedXmlDocumentEntityTest {
         @DisplayName("@PreUpdate updates updatedAt")
         void testOnUpdate() {
             SignedXmlDocumentEntity entity = SignedXmlDocumentEntity.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.PENDING)

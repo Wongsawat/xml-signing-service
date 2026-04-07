@@ -88,7 +88,7 @@ class MinioStorageServiceTest {
     }
 
     @Test
-    @DisplayName("upload() sanitizes special characters in invoiceId for the filename")
+    @DisplayName("upload() sanitizes special characters in documentId for the filename")
     void testUploadSanitizesInvoiceId() {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
@@ -97,7 +97,7 @@ class MinioStorageServiceTest {
         service.upload("inv/001?foo", "INVOICE", "<signed/>");
         verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
 
-        // Key must not contain '/' or '?' from the invoiceId part (only date/type separators)
+        // Key must not contain '/' or '?' from the documentId part (only date/type separators)
         String key = captor.getValue().key();
         // The filename part (last segment) should not contain / or ?
         String filename = key.substring(key.lastIndexOf('/') + 1);

@@ -41,20 +41,20 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
     void shouldProcessValidTaxInvoiceSagaCommandEndToEnd() throws Exception {
         // Given — unique identifiers per test run
         String documentId = "DOC-" + UUID.randomUUID();
-        String invoiceNumber = "TINV-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber = "TINV-" + UUID.randomUUID().toString().substring(0, 8);
         String correlationId = UUID.randomUUID().toString();
         String xmlContent = getSampleTaxInvoiceXml();
 
         var command = createProcessCommand(
-            documentId, invoiceNumber, xmlContent, correlationId, "TAX_INVOICE");
+            documentId, documentNumber, xmlContent, correlationId, "TAX_INVOICE");
 
         // When
         sendEvent(SAGA_COMMAND_TOPIC, documentId, command);
 
         // Then — await COMPLETED status in database
         Map<String, Object> doc = awaitDocumentStatus(documentId, "COMPLETED");
-        assertThat(doc.get("invoice_id")).isEqualTo(documentId);
-        assertThat(doc.get("invoice_number")).isEqualTo(invoiceNumber);
+        assertThat(doc.get("document_id")).isEqualTo(documentId);
+        assertThat(doc.get("document_number")).isEqualTo(documentNumber);
         assertThat(doc.get("status")).isEqualTo("COMPLETED");
         assertThat(doc.get("document_type")).isEqualTo("TAX_INVOICE");
         assertThat(doc.get("transaction_id")).isNotNull();
@@ -90,12 +90,12 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
     void shouldSignInvoiceDocumentType() throws Exception {
         // Given
         String documentId = "DOC-" + UUID.randomUUID();
-        String invoiceNumber = "INV-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber = "INV-" + UUID.randomUUID().toString().substring(0, 8);
         String correlationId = UUID.randomUUID().toString();
         String xmlContent = getSampleInvoiceXml();
 
         var command = createProcessCommand(
-            documentId, invoiceNumber, xmlContent, correlationId, "INVOICE");
+            documentId, documentNumber, xmlContent, correlationId, "INVOICE");
 
         // When
         sendEvent(SAGA_COMMAND_TOPIC, documentId, command);
@@ -117,12 +117,12 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
     void shouldDetectDocumentTypeFromXmlNamespace() throws Exception {
         // Given — no documentType in command, should detect from XML namespace
         String documentId = "DOC-" + UUID.randomUUID();
-        String invoiceNumber = "TINV-DETECT-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber = "TINV-DETECT-" + UUID.randomUUID().toString().substring(0, 8);
         String correlationId = UUID.randomUUID().toString();
         String xmlContent = getSampleTaxInvoiceXml();
 
         var command = createProcessCommand(
-            documentId, invoiceNumber, xmlContent, correlationId, null);
+            documentId, documentNumber, xmlContent, correlationId, null);
 
         // When
         sendEvent(SAGA_COMMAND_TOPIC, documentId, command);
@@ -139,12 +139,12 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
     void shouldWriteCorrectOutboxPayloads() throws Exception {
         // Given
         String documentId = "DOC-" + UUID.randomUUID();
-        String invoiceNumber = "TINV-OUTBOX-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber = "TINV-OUTBOX-" + UUID.randomUUID().toString().substring(0, 8);
         String correlationId = UUID.randomUUID().toString();
         String xmlContent = getSampleTaxInvoiceXml();
 
         var command = createProcessCommand(
-            documentId, invoiceNumber, xmlContent, correlationId, "TAX_INVOICE");
+            documentId, documentNumber, xmlContent, correlationId, "TAX_INVOICE");
 
         // When
         sendEvent(SAGA_COMMAND_TOPIC, documentId, command);
@@ -166,17 +166,17 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
         String payloadJson = xmlSignedEvent.get("payload").toString();
         JsonNode payload = objectMapper.readTree(payloadJson);
 
-        assertThat(payload.get("invoiceId").asText()).isEqualTo(documentId);
-        assertThat(payload.get("invoiceNumber").asText()).isEqualTo(invoiceNumber);
+        assertThat(payload.get("documentId").asText()).isEqualTo(documentId);
+        assertThat(payload.get("documentNumber").asText()).isEqualTo(documentNumber);
         assertThat(payload.get("documentType").asText()).isEqualTo("TAX_INVOICE");
         assertThat(payload.get("correlationId").asText()).isEqualTo(correlationId);
 
-        // Verify headers contain correlationId and invoiceNumber
+        // Verify headers contain correlationId and documentNumber
         String headersJson = (String) xmlSignedEvent.get("headers");
         if (headersJson != null) {
             JsonNode headers = objectMapper.readTree(headersJson);
             assertThat(headers.get("correlationId").asText()).isEqualTo(correlationId);
-            assertThat(headers.get("invoiceNumber").asText()).isEqualTo(invoiceNumber);
+            assertThat(headers.get("documentNumber").asText()).isEqualTo(documentNumber);
         }
     }
 
@@ -185,12 +185,12 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
     void shouldWriteSagaReplySuccessToOutbox() throws Exception {
         // Given
         String documentId = "DOC-" + UUID.randomUUID();
-        String invoiceNumber = "TINV-REPLY-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber = "TINV-REPLY-" + UUID.randomUUID().toString().substring(0, 8);
         String correlationId = UUID.randomUUID().toString();
         String xmlContent = getSampleTaxInvoiceXml();
 
         var command = createProcessCommand(
-            documentId, invoiceNumber, xmlContent, correlationId, "TAX_INVOICE");
+            documentId, documentNumber, xmlContent, correlationId, "TAX_INVOICE");
 
         // When
         sendEvent(SAGA_COMMAND_TOPIC, documentId, command);
@@ -248,7 +248,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
         // Then — only 1 record exists
         Thread.sleep(5000);
         Integer count = testJdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM signed_xml_documents WHERE invoice_id = ?",
+            "SELECT COUNT(*) FROM signed_xml_documents WHERE document_id = ?",
             Integer.class, documentId);
         assertThat(count).isEqualTo(1);
 
@@ -327,15 +327,15 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
         // Given
         String documentId1 = "DOC-" + UUID.randomUUID();
         String documentId2 = "DOC-" + UUID.randomUUID();
-        String invoiceNumber1 = "TINV-M1-" + UUID.randomUUID().toString().substring(0, 8);
-        String invoiceNumber2 = "TINV-M2-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber1 = "TINV-M1-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber2 = "TINV-M2-" + UUID.randomUUID().toString().substring(0, 8);
         String correlationId1 = UUID.randomUUID().toString();
         String correlationId2 = UUID.randomUUID().toString();
 
         var command1 = createProcessCommand(
-            documentId1, invoiceNumber1, getSampleTaxInvoiceXml(), correlationId1, "TAX_INVOICE");
+            documentId1, documentNumber1, getSampleTaxInvoiceXml(), correlationId1, "TAX_INVOICE");
         var command2 = createProcessCommand(
-            documentId2, invoiceNumber2, getSampleInvoiceXml(), correlationId2, "INVOICE");
+            documentId2, documentNumber2, getSampleInvoiceXml(), correlationId2, "INVOICE");
 
         // When — send both commands
         sendEvent(SAGA_COMMAND_TOPIC, documentId1, command1);
@@ -358,11 +358,11 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
     void shouldCompensateSignedDocument() throws Exception {
         // Given — process a document first
         String documentId = "DOC-" + UUID.randomUUID();
-        String invoiceNumber = "TINV-COMP-" + UUID.randomUUID().toString().substring(0, 8);
+        String documentNumber = "TINV-COMP-" + UUID.randomUUID().toString().substring(0, 8);
         String processCorrelationId = UUID.randomUUID().toString();
 
         var processCommand = createProcessCommand(
-            documentId, invoiceNumber, getSampleTaxInvoiceXml(), processCorrelationId, "TAX_INVOICE");
+            documentId, documentNumber, getSampleTaxInvoiceXml(), processCorrelationId, "TAX_INVOICE");
         sendEvent(SAGA_COMMAND_TOPIC, documentId, processCommand);
         awaitDocumentStatus(documentId, "COMPLETED");
 
@@ -374,7 +374,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
 
         // Then — document deleted from DB
         await().atMost(2, TimeUnit.MINUTES).pollInterval(1, TimeUnit.SECONDS)
-               .until(() -> getDocumentByInvoiceId(documentId) == null);
+               .until(() -> getDocumentByDocumentId(documentId) == null);
 
         // COMPENSATED reply written to outbox
         await().atMost(2, TimeUnit.MINUTES).pollInterval(1, TimeUnit.SECONDS)

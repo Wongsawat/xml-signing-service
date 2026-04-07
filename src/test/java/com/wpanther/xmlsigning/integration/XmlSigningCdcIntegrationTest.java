@@ -34,24 +34,24 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
         @DisplayName("Should route outbox event to xml.signed topic")
         void shouldRouteToXmlSignedTopic() throws Exception {
             // Given
-            String invoiceId = UUID.randomUUID().toString();
-            String payload = createXmlSignedEventPayload(invoiceId, "INV-CDC-001",
+            String documentId = UUID.randomUUID().toString();
+            String payload = createXmlSignedEventPayload(documentId, "INV-CDC-001",
                 DocumentType.INVOICE, UUID.randomUUID().toString());
 
             // When
             insertOutboxEvent(
                 "SignedXmlDocument",
-                invoiceId,
+                documentId,
                 "XmlSignedEvent",
                 payload,
                 "xml.signed",
-                invoiceId,
+                documentId,
                 null
             );
 
             // Then
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed", invoiceId, Duration.ofSeconds(30));
+                pollForMessagesOnTopic("xml.signed", documentId, Duration.ofSeconds(30));
 
             assertThat(records)
                 .as("Should receive at least one message on xml.signed")
@@ -59,7 +59,7 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
             ConsumerRecord<String, String> record = records.get(0);
             JsonNode message = parseDebeziumPayload(record.value());
-            assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
+            assertThat(message.get("documentId").asText()).isEqualTo(documentId);
         }
     }
 
@@ -71,15 +71,15 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
         @DisplayName("Should preserve partition key through CDC")
         void shouldPreservePartitionKeyThroughCdc() throws Exception {
             // Given
-            String invoiceId = UUID.randomUUID().toString();
+            String documentId = UUID.randomUUID().toString();
             String correlationId = UUID.randomUUID().toString();
-            String payload = createXmlSignedEventPayload(invoiceId, "TINV-KEY-001",
+            String payload = createXmlSignedEventPayload(documentId, "TINV-KEY-001",
                 DocumentType.TAX_INVOICE, correlationId);
 
             // When
             insertOutboxEvent(
                 "SignedXmlDocument",
-                invoiceId,
+                documentId,
                 "XmlSignedEvent",
                 payload,
                 "xml.signed",
@@ -89,19 +89,19 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
             // Then
             List<ConsumerRecord<String, String>> records =
-                pollForMessagesOnTopic("xml.signed", invoiceId, Duration.ofSeconds(30));
+                pollForMessagesOnTopic("xml.signed", documentId, Duration.ofSeconds(30));
 
             assertThat(records).isNotEmpty();
-            // Verify the payload contains our invoiceId (Debezium may double-encode)
+            // Verify the payload contains our documentId (Debezium may double-encode)
             ConsumerRecord<String, String> record = records.get(0);
             JsonNode message = parseDebeziumPayload(record.value());
-            assertThat(message.get("invoiceId").asText()).isEqualTo(invoiceId);
+            assertThat(message.get("documentId").asText()).isEqualTo(documentId);
         }
     }
 
     // --- Test Data Helpers ---
 
-    private String createXmlSignedEventPayload(String invoiceId, String invoiceNumber,
+    private String createXmlSignedEventPayload(String documentId, String documentNumber,
                                                 DocumentType documentType, String correlationId) {
         try {
             var payload = objectMapper.createObjectNode();
@@ -110,8 +110,8 @@ class XmlSigningCdcIntegrationTest extends AbstractCdcIntegrationTest {
             payload.put("eventType", "XmlSignedEvent");
             payload.put("version", 1);
             payload.put("documentId", UUID.randomUUID().toString());
-            payload.put("invoiceId", invoiceId);
-            payload.put("invoiceNumber", invoiceNumber);
+            payload.put("documentId", documentId);
+            payload.put("documentNumber", documentNumber);
             payload.put("signedXmlContent", "<signed>test</signed>");
             payload.put("invoiceDataJson", "{}");
             payload.put("transactionId", "TXN-" + UUID.randomUUID());

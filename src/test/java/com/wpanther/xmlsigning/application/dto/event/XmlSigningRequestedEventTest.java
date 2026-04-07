@@ -27,8 +27,8 @@ class XmlSigningRequestedEventTest {
             XmlSigningRequestedEvent event = new XmlSigningRequestedEvent(
                     "inv-001", "T001", "<xml>test</xml>", "{}", "saga-1", "corr-1", DocumentType.TAX_INVOICE);
 
-            assertThat(event.getInvoiceId()).isEqualTo("inv-001");
-            assertThat(event.getInvoiceNumber()).isEqualTo("T001");
+            assertThat(event.getDocumentId()).isEqualTo("inv-001");
+            assertThat(event.getDocumentNumber()).isEqualTo("T001");
             assertThat(event.getXmlContent()).isEqualTo("<xml>test</xml>");
             assertThat(event.getInvoiceDataJson()).isEqualTo("{}");
             assertThat(event.getSagaId()).isEqualTo("saga-1");
@@ -59,8 +59,8 @@ class XmlSigningRequestedEventTest {
             assertThat(event.getOccurredAt()).isEqualTo(occurredAt);
             assertThat(event.getEventType()).isEqualTo("custom");
             assertThat(event.getVersion()).isEqualTo(2);
-            assertThat(event.getInvoiceId()).isEqualTo("inv-002");
-            assertThat(event.getInvoiceNumber()).isEqualTo("T002");
+            assertThat(event.getDocumentId()).isEqualTo("inv-002");
+            assertThat(event.getDocumentNumber()).isEqualTo("T002");
             assertThat(event.getXmlContent()).isEqualTo("<xml>test2</xml>");
             assertThat(event.getInvoiceDataJson()).isEqualTo("{}");
             assertThat(event.getSagaId()).isEqualTo("saga-2");

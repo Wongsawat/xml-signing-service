@@ -39,8 +39,8 @@ class SignedXmlDocumentMapperTest {
     private SignedXmlDocument createDomain() {
         return SignedXmlDocument.builder()
                 .id(SignedXmlDocumentId.create())
-                .invoiceId("inv-001")
-                .invoiceNumber("T001")
+                .documentId("inv-001")
+                .documentNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
                 .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                 .originalXmlUrl(FAKE_ORIGINAL_URL)
@@ -61,8 +61,8 @@ class SignedXmlDocumentMapperTest {
     private SignedXmlDocumentEntity createEntity() {
         SignedXmlDocumentEntity entity = new SignedXmlDocumentEntity();
         entity.setId(UUID.randomUUID());
-        entity.setInvoiceId("inv-001");
-        entity.setInvoiceNumber("T001");
+        entity.setDocumentId("inv-001");
+        entity.setDocumentNumber("T001");
         entity.setDocumentType(DocumentType.TAX_INVOICE);
         entity.setOriginalXmlPath(FAKE_ORIGINAL_S3_KEY);
         entity.setOriginalXmlUrl(FAKE_ORIGINAL_URL);
@@ -92,8 +92,8 @@ class SignedXmlDocumentMapperTest {
 
             assertThat(domain).isNotNull();
             assertThat(domain.getId().value()).isEqualTo(entity.getId());
-            assertThat(domain.getInvoiceId()).isEqualTo(entity.getInvoiceId());
-            assertThat(domain.getInvoiceNumber()).isEqualTo(entity.getInvoiceNumber());
+            assertThat(domain.getDocumentId()).isEqualTo(entity.getDocumentId());
+            assertThat(domain.getDocumentNumber()).isEqualTo(entity.getDocumentNumber());
             assertThat(domain.getDocumentType()).isEqualTo(entity.getDocumentType());
             assertThat(domain.getOriginalXmlPath()).isEqualTo(entity.getOriginalXmlPath());
             assertThat(domain.getOriginalXmlUrl()).isEqualTo(entity.getOriginalXmlUrl());
@@ -121,8 +121,8 @@ class SignedXmlDocumentMapperTest {
 
             assertThat(entity).isNotNull();
             assertThat(entity.getId()).isEqualTo(domain.getId().value());
-            assertThat(entity.getInvoiceId()).isEqualTo(domain.getInvoiceId());
-            assertThat(entity.getInvoiceNumber()).isEqualTo(domain.getInvoiceNumber());
+            assertThat(entity.getDocumentId()).isEqualTo(domain.getDocumentId());
+            assertThat(entity.getDocumentNumber()).isEqualTo(domain.getDocumentNumber());
             assertThat(entity.getDocumentType()).isEqualTo(domain.getDocumentType());
             assertThat(entity.getOriginalXmlPath()).isEqualTo(domain.getOriginalXmlPath());
             assertThat(entity.getOriginalXmlUrl()).isEqualTo(domain.getOriginalXmlUrl());
@@ -149,8 +149,8 @@ class SignedXmlDocumentMapperTest {
             SignedXmlDocument domain = mapper.toDomain(original);
             SignedXmlDocumentEntity result = mapper.toEntity(domain);
 
-            assertThat(result.getInvoiceId()).isEqualTo(original.getInvoiceId());
-            assertThat(result.getInvoiceNumber()).isEqualTo(original.getInvoiceNumber());
+            assertThat(result.getDocumentId()).isEqualTo(original.getDocumentId());
+            assertThat(result.getDocumentNumber()).isEqualTo(original.getDocumentNumber());
             assertThat(result.getDocumentType()).isEqualTo(original.getDocumentType());
             assertThat(result.getOriginalXmlPath()).isEqualTo(original.getOriginalXmlPath());
             assertThat(result.getOriginalXmlUrl()).isEqualTo(original.getOriginalXmlUrl());

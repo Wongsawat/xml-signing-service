@@ -21,14 +21,14 @@ public class MinioXmlStorageAdapter implements XmlStoragePort {
     private final MinioStorageService storageService;
 
     @Override
-    public XmlStorageKey storeOriginalXml(String invoiceId, String documentType, String xmlContent) {
-        String s3Key = storageService.uploadOriginalXml(invoiceId, documentType, xmlContent);
+    public XmlStorageKey storeOriginalXml(String documentId, String documentType, String xmlContent) {
+        String s3Key = storageService.uploadOriginalXml(documentId, documentType, xmlContent);
         return new XmlStorageKey(s3Key);
     }
 
     @Override
-    public StorageResult storeSignedXml(String invoiceId, String documentType, String xmlContent) {
-        return storageService.upload(invoiceId, documentType, xmlContent);
+    public StorageResult storeSignedXml(String documentId, String documentType, String xmlContent) {
+        return storageService.upload(documentId, documentType, xmlContent);
     }
 
     @Override

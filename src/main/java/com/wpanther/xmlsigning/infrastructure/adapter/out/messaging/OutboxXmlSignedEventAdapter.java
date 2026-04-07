@@ -30,19 +30,19 @@ public class OutboxXmlSignedEventAdapter implements XmlSignedEventPort {
     public void publishXmlSigned(XmlSignedEvent event) {
         Map<String, String> headers = Map.of(
             "correlationId", event.getCorrelationId(),
-            "invoiceNumber", event.getInvoiceNumber()
+            "documentNumber", event.getDocumentNumber()
         );
 
         outboxService.saveWithRouting(
             event,
             "SignedXmlDocument",
-            event.getInvoiceId(),
+            event.getDocumentId(),
             "xml.signed",
-            event.getInvoiceId(),
+            event.getDocumentId(),
             toJson(headers)
         );
 
-        log.info("Published XmlSignedEvent to outbox: {}", event.getInvoiceNumber());
+        log.info("Published XmlSignedEvent to outbox: {}", event.getDocumentNumber());
     }
 
     /**

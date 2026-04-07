@@ -141,7 +141,7 @@ public class OrphanedMinioFileCleanupScheduler {
                 if (doc.getOriginalXmlPath() != null && !doc.getOriginalXmlPath().isBlank()) {
                     minioStorageService.delete(doc.getOriginalXmlPath());
                     log.info("Deleted orphaned original XML for stuck document {}: {}",
-                            doc.getInvoiceId(), doc.getOriginalXmlPath());
+                            doc.getDocumentId(), doc.getOriginalXmlPath());
                 }
 
                 // Note: signed_xml_path is NOT in DB when TX2 failed, so we can't delete it here.
@@ -154,7 +154,7 @@ public class OrphanedMinioFileCleanupScheduler {
 
                 deletedCount++;
             } catch (Exception e) {
-                log.warn("Failed to cleanup stuck document {}: {}", doc.getInvoiceId(), e.getMessage());
+                log.warn("Failed to cleanup stuck document {}: {}", doc.getDocumentId(), e.getMessage());
                 // Continue with other documents
             }
         }

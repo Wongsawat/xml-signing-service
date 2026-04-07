@@ -92,7 +92,7 @@ class SagaCommandHandlerTest {
             "doc-success", "<xml>test</xml>", "INV-001", "INVOICE"
         );
 
-        when(documentRepository.findByInvoiceId("doc-success")).thenReturn(Optional.empty());
+        when(documentRepository.findByDocumentId("doc-success")).thenReturn(Optional.empty());
         when(signingService.signXml(any(), any())).thenReturn(
                 new SigningResult("<signed>xml</signed>", "FAKE-CERT", "CSC-TXN-123"));
         when(documentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -117,7 +117,7 @@ class SagaCommandHandlerTest {
             "doc-type-fail", "<xml>unknown</xml>", "INV-001", null
         );
 
-        when(documentRepository.findByInvoiceId("doc-type-fail")).thenReturn(Optional.empty());
+        when(documentRepository.findByDocumentId("doc-type-fail")).thenReturn(Optional.empty());
         when(documentTypeDetectionService.detectFromXmlContent(any())).thenReturn(null);
 
         handler.handleProcessCommand(command);
@@ -137,8 +137,8 @@ class SagaCommandHandlerTest {
         );
 
         SignedXmlDocument completedDocument = SignedXmlDocument.builder()
-            .invoiceId("doc-already-signed")
-            .invoiceNumber("INV-001")
+            .documentId("doc-already-signed")
+            .documentNumber("INV-001")
             .documentType(DocumentType.INVOICE)
             .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
             .originalXmlUrl(FAKE_ORIGINAL_URL)
@@ -150,7 +150,7 @@ class SagaCommandHandlerTest {
             .status(SigningStatus.COMPLETED)
             .build();
 
-        when(documentRepository.findByInvoiceId("doc-already-signed")).thenReturn(Optional.of(completedDocument));
+        when(documentRepository.findByDocumentId("doc-already-signed")).thenReturn(Optional.of(completedDocument));
 
         handler.handleProcessCommand(command);
 
@@ -170,8 +170,8 @@ class SagaCommandHandlerTest {
         );
 
         SignedXmlDocument failedDocument = SignedXmlDocument.builder()
-            .invoiceId("doc-max-retries")
-            .invoiceNumber("INV-001")
+            .documentId("doc-max-retries")
+            .documentNumber("INV-001")
             .documentType(DocumentType.INVOICE)
             .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
             .status(SigningStatus.FAILED)
@@ -179,7 +179,7 @@ class SagaCommandHandlerTest {
             .errorMessage("Previous error")
             .build();
 
-        when(documentRepository.findByInvoiceId("doc-max-retries")).thenReturn(Optional.of(failedDocument));
+        when(documentRepository.findByDocumentId("doc-max-retries")).thenReturn(Optional.of(failedDocument));
         when(documentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         handler.handleProcessCommand(command);
@@ -198,7 +198,7 @@ class SagaCommandHandlerTest {
             "doc-sign-fail", "<xml>test</xml>", "INV-001", "INVOICE"
         );
 
-        when(documentRepository.findByInvoiceId("doc-sign-fail")).thenReturn(Optional.empty());
+        when(documentRepository.findByDocumentId("doc-sign-fail")).thenReturn(Optional.empty());
         when(signingService.signXml(any(), any())).thenThrow(new RuntimeException("CSC API error"));
         when(documentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(xmlStoragePort.storeOriginalXml(any(), any(), any())).thenReturn(new XmlStorageKey(FAKE_ORIGINAL_S3_KEY));
@@ -218,8 +218,8 @@ class SagaCommandHandlerTest {
     @Test
     void testHandleCompensationFoundWithSignedXml() {
         SignedXmlDocument document = SignedXmlDocument.builder()
-            .invoiceId("doc-comp-found")
-            .invoiceNumber("INV-001")
+            .documentId("doc-comp-found")
+            .documentNumber("INV-001")
             .documentType(DocumentType.INVOICE)
             .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
             .originalXmlUrl(FAKE_ORIGINAL_URL)
@@ -234,7 +234,7 @@ class SagaCommandHandlerTest {
             "sign-xml", "doc-comp-found", "INVOICE"
         );
 
-        when(documentRepository.findByInvoiceId("doc-comp-found")).thenReturn(Optional.of(document));
+        when(documentRepository.findByDocumentId("doc-comp-found")).thenReturn(Optional.of(document));
 
         handler.handleCompensation(compensateCommand);
 
@@ -249,8 +249,8 @@ class SagaCommandHandlerTest {
     void testHandleCompensationFoundWithoutSignedXml() {
         // Document was created and original XML uploaded, but signing never completed
         SignedXmlDocument document = SignedXmlDocument.builder()
-            .invoiceId("doc-comp-pending")
-            .invoiceNumber("INV-001")
+            .documentId("doc-comp-pending")
+            .documentNumber("INV-001")
             .documentType(DocumentType.INVOICE)
             .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
             .originalXmlUrl(FAKE_ORIGINAL_URL)
@@ -261,7 +261,7 @@ class SagaCommandHandlerTest {
             "sign-xml", "doc-comp-pending", "INVOICE"
         );
 
-        when(documentRepository.findByInvoiceId("doc-comp-pending")).thenReturn(Optional.of(document));
+        when(documentRepository.findByDocumentId("doc-comp-pending")).thenReturn(Optional.of(document));
 
         handler.handleCompensation(compensateCommand);
 
@@ -280,7 +280,7 @@ class SagaCommandHandlerTest {
             "sign-xml", "doc-comp-not-found", "INVOICE"
         );
 
-        when(documentRepository.findByInvoiceId("doc-comp-not-found")).thenReturn(Optional.empty());
+        when(documentRepository.findByDocumentId("doc-comp-not-found")).thenReturn(Optional.empty());
 
         handler.handleCompensation(compensateCommand);
 
@@ -292,8 +292,8 @@ class SagaCommandHandlerTest {
     @Test
     void testHandleCompensationDeleteError() {
         SignedXmlDocument document = SignedXmlDocument.builder()
-            .invoiceId("doc-comp-del-error")
-            .invoiceNumber("INV-001")
+            .documentId("doc-comp-del-error")
+            .documentNumber("INV-001")
             .documentType(DocumentType.INVOICE)
             .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
             .build();
@@ -303,7 +303,7 @@ class SagaCommandHandlerTest {
             "sign-xml", "doc-comp-del-error", "INVOICE"
         );
 
-        when(documentRepository.findByInvoiceId("doc-comp-del-error")).thenReturn(Optional.of(document));
+        when(documentRepository.findByDocumentId("doc-comp-del-error")).thenReturn(Optional.of(document));
         doThrow(new RuntimeException("Delete failed")).when(documentRepository).deleteById(any());
 
         handler.handleCompensation(compensateCommand);

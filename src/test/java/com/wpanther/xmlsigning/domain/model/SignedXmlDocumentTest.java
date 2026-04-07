@@ -33,8 +33,8 @@ class SignedXmlDocumentTest {
      */
     private SignedXmlDocument buildDefault() {
         return SignedXmlDocument.builder()
-                .invoiceId("INV-001")
-                .invoiceNumber("T001")
+                .documentId("INV-001")
+                .documentNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
                 .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                 .build();
@@ -46,8 +46,8 @@ class SignedXmlDocumentTest {
     private SignedXmlDocument buildWithId() {
         return SignedXmlDocument.builder()
                 .id(SignedXmlDocumentId.create())
-                .invoiceId("INV-001")
-                .invoiceNumber("T001")
+                .documentId("INV-001")
+                .documentNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
                 .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                 .build();
@@ -59,8 +59,8 @@ class SignedXmlDocumentTest {
     private SignedXmlDocument buildFailed() {
         return SignedXmlDocument.builder()
                 .id(SignedXmlDocumentId.create())
-                .invoiceId("INV-001")
-                .invoiceNumber("T001")
+                .documentId("INV-001")
+                .documentNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
                 .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                 .status(SigningStatus.FAILED)
@@ -80,15 +80,15 @@ class SignedXmlDocumentTest {
         @DisplayName("Builder with minimum required fields has default values")
         void builderWithDefaults() {
             SignedXmlDocument doc = SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .build();
 
             assertThat(doc.getId()).isNotNull();
-            assertThat(doc.getInvoiceId()).isEqualTo("INV-001");
-            assertThat(doc.getInvoiceNumber()).isEqualTo("T001");
+            assertThat(doc.getDocumentId()).isEqualTo("INV-001");
+            assertThat(doc.getDocumentNumber()).isEqualTo("T001");
             assertThat(doc.getDocumentType()).isEqualTo(DocumentType.TAX_INVOICE);
             assertThat(doc.getOriginalXmlPath()).isEqualTo(FAKE_ORIGINAL_S3_KEY);
             assertThat(doc.getOriginalXmlUrl()).isNull();
@@ -111,8 +111,8 @@ class SignedXmlDocumentTest {
             SignedXmlDocumentId id = SignedXmlDocumentId.create();
             SignedXmlDocument doc = SignedXmlDocument.builder()
                     .id(id)
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .build();
@@ -125,8 +125,8 @@ class SignedXmlDocumentTest {
         void builderWithExplicitStatus() {
             SignedXmlDocument doc = SignedXmlDocument.builder()
                     .id(SignedXmlDocumentId.create())
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .status(SigningStatus.FAILED)
@@ -141,8 +141,8 @@ class SignedXmlDocumentTest {
             LocalDateTime now = LocalDateTime.now();
             SignedXmlDocument doc = SignedXmlDocument.builder()
                     .id(SignedXmlDocumentId.create())
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .originalXmlUrl(FAKE_ORIGINAL_URL)
@@ -176,37 +176,37 @@ class SignedXmlDocumentTest {
     class BuilderNullChecks {
 
         @Test
-        @DisplayName("Builder with null invoiceId throws NullPointerException")
+        @DisplayName("Builder with null documentId throws NullPointerException")
         void builderNullInvoiceId() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId(null)
-                    .invoiceNumber("T001")
+                    .documentId(null)
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .build())
                 .isExactlyInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Invoice ID is required");
+                .hasMessageContaining("Document ID is required");
         }
 
         @Test
-        @DisplayName("Builder with null invoiceNumber throws NullPointerException")
+        @DisplayName("Builder with null documentNumber throws NullPointerException")
         void builderNullInvoiceNumber() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber(null)
+                    .documentId("INV-001")
+                    .documentNumber(null)
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .build())
                 .isExactlyInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Invoice number is required");
+                .hasMessageContaining("Document number is required");
         }
 
         @Test
         @DisplayName("Builder with null documentType throws NullPointerException")
         void builderNullDocumentType() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(null)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .build())
@@ -218,8 +218,8 @@ class SignedXmlDocumentTest {
         @DisplayName("Builder with null originalXmlPath throws NullPointerException")
         void builderNullOriginalXmlPath() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(null)
                     .build())
@@ -233,37 +233,37 @@ class SignedXmlDocumentTest {
     class BuilderBlankChecks {
 
         @Test
-        @DisplayName("Builder with blank invoiceId throws IllegalStateException")
+        @DisplayName("Builder with blank documentId throws IllegalStateException")
         void builderBlankInvoiceId() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId("   ")
-                    .invoiceNumber("T001")
+                    .documentId("   ")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .build())
                 .isExactlyInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Invoice ID cannot be blank");
+                .hasMessageContaining("Document ID cannot be blank");
         }
 
         @Test
-        @DisplayName("Builder with blank invoiceNumber throws IllegalStateException")
+        @DisplayName("Builder with blank documentNumber throws IllegalStateException")
         void builderBlankInvoiceNumber() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("")
+                    .documentId("INV-001")
+                    .documentNumber("")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .build())
                 .isExactlyInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Invoice number cannot be blank");
+                .hasMessageContaining("Document number cannot be blank");
         }
 
         @Test
         @DisplayName("Builder with blank originalXmlPath throws IllegalStateException")
         void builderBlankOriginalXmlPath() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath("   ")
                     .build())
@@ -280,8 +280,8 @@ class SignedXmlDocumentTest {
         @DisplayName("Builder with negative retry count throws IllegalStateException")
         void builderNegativeRetryCount() {
             assertThatThrownBy(() -> SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .retryCount(-1)
@@ -447,8 +447,8 @@ class SignedXmlDocumentTest {
         @DisplayName("isMaxRetriesExceeded() returns true when retryCount >= maxRetries")
         void testIsMaxRetriesExceeded() {
             SignedXmlDocument doc = SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .retryCount(3)
@@ -461,8 +461,8 @@ class SignedXmlDocumentTest {
         @DisplayName("isMaxRetriesExceeded() returns false when retryCount < maxRetries")
         void testIsMaxRetriesNotExceeded() {
             SignedXmlDocument doc = SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .retryCount(2)
@@ -475,8 +475,8 @@ class SignedXmlDocumentTest {
         @DisplayName("isMaxRetriesExceeded() returns false at boundary")
         void testIsMaxRetriesExceededAtBoundary() {
             SignedXmlDocument doc = SignedXmlDocument.builder()
-                    .invoiceId("INV-001")
-                    .invoiceNumber("T001")
+                    .documentId("INV-001")
+                    .documentNumber("T001")
                     .documentType(DocumentType.TAX_INVOICE)
                     .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                     .retryCount(3)
@@ -515,8 +515,8 @@ class SignedXmlDocumentTest {
 
                 SignedXmlDocument doc = SignedXmlDocument.builder()
                         .id(id)
-                        .invoiceId("INV-001")
-                        .invoiceNumber("T001")
+                        .documentId("INV-001")
+                        .documentNumber("T001")
                         .documentType(DocumentType.TAX_INVOICE)
                         .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                         .originalXmlUrl(FAKE_ORIGINAL_URL)
@@ -532,8 +532,8 @@ class SignedXmlDocumentTest {
                         .build();
 
                 assertThat(doc.getId()).isEqualTo(id);
-                assertThat(doc.getInvoiceId()).isEqualTo("INV-001");
-                assertThat(doc.getInvoiceNumber()).isEqualTo("T001");
+                assertThat(doc.getDocumentId()).isEqualTo("INV-001");
+                assertThat(doc.getDocumentNumber()).isEqualTo("T001");
                 assertThat(doc.getDocumentType()).isEqualTo(DocumentType.TAX_INVOICE);
                 assertThat(doc.getOriginalXmlPath()).isEqualTo(FAKE_ORIGINAL_S3_KEY);
                 assertThat(doc.getOriginalXmlUrl()).isEqualTo(FAKE_ORIGINAL_URL);

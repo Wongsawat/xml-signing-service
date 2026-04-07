@@ -21,19 +21,19 @@ public interface SignedXmlDocumentRepository {
     Optional<SignedXmlDocument> findById(SignedXmlDocumentId id);
 
     /**
-     * Find document by invoice ID
+     * Find document by document ID
      */
-    Optional<SignedXmlDocument> findByInvoiceId(String invoiceId);
+    Optional<SignedXmlDocument> findByDocumentId(String documentId);
 
     /**
-     * Find document by invoice number
+     * Find document by document number
      */
-    Optional<SignedXmlDocument> findByInvoiceNumber(String invoiceNumber);
+    Optional<SignedXmlDocument> findByDocumentNumber(String documentNumber);
 
     /**
-     * Check if document exists by invoice ID
+     * Check if document exists by document ID
      */
-    boolean existsByInvoiceId(String invoiceId);
+    boolean existsByDocumentId(String documentId);
 
     /**
      * Delete a signed XML document by ID (for compensation)

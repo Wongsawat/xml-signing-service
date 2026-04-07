@@ -16,7 +16,7 @@ public interface XmlStoragePort {
      * @return storage key identifying the stored object
      * @throws DocumentStorageException if storage fails
      */
-    XmlStorageKey storeOriginalXml(String invoiceId, String documentType, String xmlContent);
+    XmlStorageKey storeOriginalXml(String documentId, String documentType, String xmlContent);
 
     /**
      * Store a signed XML document.
@@ -24,7 +24,7 @@ public interface XmlStoragePort {
      * @return storage result containing key and size of the stored object
      * @throws DocumentStorageException if storage fails
      */
-    StorageResult storeSignedXml(String invoiceId, String documentType, String xmlContent);
+    StorageResult storeSignedXml(String documentId, String documentType, String xmlContent);
 
     /**
      * Build the full access URL for a stored document.

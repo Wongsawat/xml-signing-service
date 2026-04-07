@@ -18,11 +18,11 @@ public class XmlSigningRequestedEvent extends TraceEvent {
     private static final String SOURCE = "xml-signing-service";
     private static final String TRACE_TYPE = "XML_SIGNING_REQUESTED";
 
-    @JsonProperty("invoiceId")
-    private final String invoiceId;
+    @JsonProperty("documentId")
+    private final String documentId;
 
-    @JsonProperty("invoiceNumber")
-    private final String invoiceNumber;
+    @JsonProperty("documentNumber")
+    private final String documentNumber;
 
     @JsonProperty("xmlContent")
     private final String xmlContent;
@@ -36,20 +36,20 @@ public class XmlSigningRequestedEvent extends TraceEvent {
     /**
      * Convenience constructor for creating the event.
      *
-     * @param invoiceId      the document ID to sign
-     * @param invoiceNumber  the invoice number
+     * @param documentId      the document ID to sign
+     * @param documentNumber  the document number
      * @param xmlContent     the XML content to sign
      * @param invoiceDataJson additional invoice data as JSON
      * @param sagaId         the saga orchestration instance ID
      * @param correlationId  the end-to-end correlation ID from the originating request
      * @param documentType    the type of document
      */
-    public XmlSigningRequestedEvent(String invoiceId, String invoiceNumber, String xmlContent,
+    public XmlSigningRequestedEvent(String documentId, String documentNumber, String xmlContent,
                                     String invoiceDataJson, String sagaId, String correlationId,
                                     DocumentType documentType) {
         super(sagaId, correlationId, SOURCE, TRACE_TYPE, null);
-        this.invoiceId = invoiceId;
-        this.invoiceNumber = invoiceNumber;
+        this.documentId = documentId;
+        this.documentNumber = documentNumber;
         this.xmlContent = xmlContent;
         this.invoiceDataJson = invoiceDataJson;
         this.documentType = documentType;
@@ -66,15 +66,15 @@ public class XmlSigningRequestedEvent extends TraceEvent {
         @JsonProperty("source") String source,
         @JsonProperty("traceType") String traceType,
         @JsonProperty("context") String context,
-        @JsonProperty("invoiceId") String invoiceId,
-        @JsonProperty("invoiceNumber") String invoiceNumber,
+        @JsonProperty("documentId") String documentId,
+        @JsonProperty("documentNumber") String documentNumber,
         @JsonProperty("xmlContent") String xmlContent,
         @JsonProperty("invoiceDataJson") String invoiceDataJson,
         @JsonProperty("documentType") DocumentType documentType
     ) {
         super(eventId, occurredAt, eventType, version, sagaId, correlationId, source, traceType, context);
-        this.invoiceId = invoiceId;
-        this.invoiceNumber = invoiceNumber;
+        this.documentId = documentId;
+        this.documentNumber = documentNumber;
         this.xmlContent = xmlContent;
         this.invoiceDataJson = invoiceDataJson;
         this.documentType = documentType;

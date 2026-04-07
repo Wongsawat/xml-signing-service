@@ -32,20 +32,20 @@ public class SignedXmlDocumentRepositoryAdapter implements SignedXmlDocumentRepo
     }
 
     @Override
-    public Optional<SignedXmlDocument> findByInvoiceId(String invoiceId) {
-        return jpaRepository.findByInvoiceId(invoiceId)
+    public Optional<SignedXmlDocument> findByDocumentId(String documentId) {
+        return jpaRepository.findByDocumentId(documentId)
             .map(mapper::toDomain);
     }
 
     @Override
-    public Optional<SignedXmlDocument> findByInvoiceNumber(String invoiceNumber) {
-        return jpaRepository.findByInvoiceNumber(invoiceNumber)
+    public Optional<SignedXmlDocument> findByDocumentNumber(String documentNumber) {
+        return jpaRepository.findByDocumentNumber(documentNumber)
             .map(mapper::toDomain);
     }
 
     @Override
-    public boolean existsByInvoiceId(String invoiceId) {
-        return jpaRepository.existsByInvoiceId(invoiceId);
+    public boolean existsByDocumentId(String documentId) {
+        return jpaRepository.existsByDocumentId(documentId);
     }
 
     @Override

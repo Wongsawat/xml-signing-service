@@ -41,7 +41,7 @@ class OutboxXmlSignedEventAdapterTest {
             "doc-123", "INV-001", "INVOICE", "saga-123", "corr-123"
         );
 
-        when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"invoiceNumber\":\"INV-001\"}");
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"documentNumber\":\"INV-001\"}");
 
         adapter.publishXmlSigned(event);
 
@@ -51,18 +51,18 @@ class OutboxXmlSignedEventAdapterTest {
             eq("doc-123"),
             eq("xml.signed"),
             eq("doc-123"),
-            eq("{\"correlationId\":\"corr-123\",\"invoiceNumber\":\"INV-001\"}")
+            eq("{\"correlationId\":\"corr-123\",\"documentNumber\":\"INV-001\"}")
         );
     }
 
     @Test
-    @DisplayName("Should include correlationId and invoiceNumber in headers")
+    @DisplayName("Should include correlationId and documentNumber in headers")
     void testPublishXmlSignedHeaderContent() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
             "doc-123", "INV-001", "TAX_INVOICE", "saga-123", "corr-123"
         );
 
-        when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"invoiceNumber\":\"INV-001\"}");
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"correlationId\":\"corr-123\",\"documentNumber\":\"INV-001\"}");
 
         adapter.publishXmlSigned(event);
 
@@ -116,7 +116,7 @@ class OutboxXmlSignedEventAdapterTest {
     }
 
     @Test
-    @DisplayName("Should use invoiceId as partition key")
+    @DisplayName("Should use documentId as partition key")
     void testPublishUsesInvoiceIdAsPartitionKey() throws Exception {
         XmlSignedEvent event = new XmlSignedEvent(
             "doc-456", "INV-002", "TAX_INVOICE", "saga-456", "corr-456"

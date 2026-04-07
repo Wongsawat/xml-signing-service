@@ -102,17 +102,17 @@ public abstract class AbstractKafkaConsumerTest {
         // 3. Mock MinIO storage operations
         when(xmlStoragePort.storeOriginalXml(anyString(), anyString(), anyString()))
             .thenAnswer(invocation -> {
-                String invoiceId = invocation.getArgument(0);
+                String documentId = invocation.getArgument(0);
                 String docType = invocation.getArgument(1);
-                return new XmlStorageKey("original/" + docType + "/" + invoiceId + ".xml");
+                return new XmlStorageKey("original/" + docType + "/" + documentId + ".xml");
             });
 
         when(xmlStoragePort.storeSignedXml(anyString(), anyString(), anyString()))
             .thenAnswer(invocation -> {
-                String invoiceId = invocation.getArgument(0);
+                String documentId = invocation.getArgument(0);
                 String docType = invocation.getArgument(1);
                 return new StorageResult(
-                    new XmlStorageKey("signed/" + docType + "/" + invoiceId + ".xml"),
+                    new XmlStorageKey("signed/" + docType + "/" + documentId + ".xml"),
                     2048L
                 );
             });
@@ -140,12 +140,12 @@ public abstract class AbstractKafkaConsumerTest {
     }
 
     protected ProcessXmlSigningCommand createProcessCommand(
-            String documentId, String invoiceNumber, String xmlContent,
+            String documentId, String documentNumber, String xmlContent,
             String correlationId, String documentType) {
         String sagaId = "saga-" + correlationId;
         return new ProcessXmlSigningCommand(
             sagaId, SagaStep.SIGN_XML, correlationId,
-            documentId, xmlContent, invoiceNumber, documentType
+            documentId, xmlContent, documentNumber, documentType
         );
     }
 
@@ -160,14 +160,14 @@ public abstract class AbstractKafkaConsumerTest {
 
     // --- Await Helpers ---
 
-    protected Map<String, Object> awaitDocumentStatus(String invoiceId, String expectedStatus) {
+    protected Map<String, Object> awaitDocumentStatus(String documentId, String expectedStatus) {
         await().atMost(2, TimeUnit.MINUTES)
                .pollInterval(2, TimeUnit.SECONDS)
                .until(() -> {
-                   Map<String, Object> doc = getDocumentByInvoiceId(invoiceId);
+                   Map<String, Object> doc = getDocumentByDocumentId(documentId);
                    return doc != null && expectedStatus.equals(doc.get("status"));
                });
-        return getDocumentByInvoiceId(invoiceId);
+        return getDocumentByDocumentId(documentId);
     }
 
     protected void awaitOutboxEventCount(String aggregateId, int expectedCount) {
@@ -176,18 +176,18 @@ public abstract class AbstractKafkaConsumerTest {
                .until(() -> getOutboxEventsByAggregateId(aggregateId).size() >= expectedCount);
     }
 
-    protected void assertNoDocumentCreatedAfterWait(String invoiceId) {
+    protected void assertNoDocumentCreatedAfterWait(String documentId) {
         await().during(15, TimeUnit.SECONDS)
                .atMost(20, TimeUnit.SECONDS)
                .pollInterval(1, TimeUnit.SECONDS)
-               .until(() -> getDocumentByInvoiceId(invoiceId) == null);
+               .until(() -> getDocumentByDocumentId(documentId) == null);
     }
 
     // --- Database Query Helpers ---
 
-    protected Map<String, Object> getDocumentByInvoiceId(String invoiceId) {
+    protected Map<String, Object> getDocumentByDocumentId(String documentId) {
         List<Map<String, Object>> results = testJdbcTemplate.queryForList(
-                "SELECT * FROM signed_xml_documents WHERE invoice_id = ?", invoiceId);
+                "SELECT * FROM signed_xml_documents WHERE document_id = ?", documentId);
         return results.isEmpty() ? null : results.get(0);
     }
 

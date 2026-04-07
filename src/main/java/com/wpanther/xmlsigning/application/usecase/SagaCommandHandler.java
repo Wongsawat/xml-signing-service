@@ -42,7 +42,7 @@ public class SagaCommandHandler implements SagaCommandPort {
     private static final String MDC_SAGA_ID = "sagaId";
     private static final String MDC_CORRELATION_ID = "correlationId";
     private static final String MDC_DOCUMENT_ID = "documentId";
-    private static final String MDC_INVOICE_NUMBER = "invoiceNumber";
+    private static final String MDC_INVOICE_NUMBER = "documentNumber";
 
     private final SignedXmlDocumentRepository documentRepository;
     private final XmlSigningService signingService;
@@ -122,7 +122,7 @@ public class SagaCommandHandler implements SagaCommandPort {
         MDC.put(MDC_SAGA_ID, command.getSagaId());
         MDC.put(MDC_CORRELATION_ID, command.getCorrelationId());
         MDC.put(MDC_DOCUMENT_ID, command.getDocumentId());
-        MDC.put(MDC_INVOICE_NUMBER, command.getInvoiceNumber());
+        MDC.put(MDC_INVOICE_NUMBER, command.getDocumentNumber());
         try {
             log.info("Handling ProcessXmlSigningCommand for saga {} document {}",
                     command.getSagaId(), command.getDocumentId());
@@ -142,7 +142,7 @@ public class SagaCommandHandler implements SagaCommandPort {
 
         // --- Phase 1: idempotency check (read-only, no connection held after return) ---
         Optional<SignedXmlDocument> existing =
-                documentRepository.findByInvoiceId(command.getDocumentId());
+                documentRepository.findByDocumentId(command.getDocumentId());
         if (existing.isPresent() && existing.get().isSuccessful()) {
             log.warn("Document {} already signed, sending SUCCESS reply", command.getDocumentId());
             SignedXmlDocument completedDoc = existing.get();
@@ -186,8 +186,8 @@ public class SagaCommandHandler implements SagaCommandPort {
         try {
             document = transactionTemplate.execute(s -> {
                 SignedXmlDocument doc = existing.orElseGet(() -> SignedXmlDocument.builder()
-                        .invoiceId(command.getDocumentId())
-                        .invoiceNumber(command.getInvoiceNumber())
+                        .documentId(command.getDocumentId())
+                        .documentNumber(command.getDocumentNumber())
                         .documentType(documentType)
                         .originalXmlPath(originalXmlPath)
                         .originalXmlUrl(originalXmlUrl)
@@ -264,7 +264,7 @@ public class SagaCommandHandler implements SagaCommandPort {
             documentRepository.save(completedDoc);
 
             xmlSignedEventPort.publishXmlSigned(new XmlSignedEvent(
-                    command.getDocumentId(), command.getInvoiceNumber(),
+                    command.getDocumentId(), command.getDocumentNumber(),
                     documentType.name(), command.getSagaId(), command.getCorrelationId()));
 
             sagaReplyPort.publishSuccess(command.getSagaId(), command.getSagaStep(),
@@ -298,7 +298,7 @@ public class SagaCommandHandler implements SagaCommandPort {
             // Phase 1: Read document to get MinIO paths (short read-only transaction)
             final Optional<SignedXmlDocument> existing;
             try {
-                existing = documentRepository.findByInvoiceId(command.getDocumentId());
+                existing = documentRepository.findByDocumentId(command.getDocumentId());
             } catch (Exception e) {
                 log.error("Failed to find document for compensation: saga {} document {}",
                         command.getSagaId(), command.getDocumentId(), e);

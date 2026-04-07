@@ -42,8 +42,8 @@ class SignedXmlDocumentRepositoryAdapterTest {
     private SignedXmlDocument createDomainDoc() {
         return SignedXmlDocument.builder()
                 .id(SignedXmlDocumentId.create())
-                .invoiceId("inv-001")
-                .invoiceNumber("T001")
+                .documentId("inv-001")
+                .documentNumber("T001")
                 .documentType(DocumentType.TAX_INVOICE)
                 .originalXmlPath(FAKE_ORIGINAL_S3_KEY)
                 .build();
@@ -52,8 +52,8 @@ class SignedXmlDocumentRepositoryAdapterTest {
     private SignedXmlDocumentEntity createEntity() {
         SignedXmlDocumentEntity entity = new SignedXmlDocumentEntity();
         entity.setId(UUID.randomUUID());
-        entity.setInvoiceId("inv-001");
-        entity.setInvoiceNumber("T001");
+        entity.setDocumentId("inv-001");
+        entity.setDocumentNumber("T001");
         entity.setDocumentType(DocumentType.TAX_INVOICE);
         entity.setOriginalXmlPath(FAKE_ORIGINAL_S3_KEY);
         entity.setStatus(SigningStatus.PENDING);
@@ -130,7 +130,7 @@ class SignedXmlDocumentRepositoryAdapterTest {
     }
 
     @Nested
-    @DisplayName("findByInvoiceId() Method")
+    @DisplayName("findByDocumentId() Method")
     class FindByInvoiceIdMethod {
 
         @Test
@@ -140,11 +140,11 @@ class SignedXmlDocumentRepositoryAdapterTest {
             SignedXmlDocumentEntity entity = createEntity();
             SignedXmlDocument domainDoc = createDomainDoc();
 
-            when(jpaRepository.findByInvoiceId("inv-001")).thenReturn(Optional.of(entity));
+            when(jpaRepository.findByDocumentId("inv-001")).thenReturn(Optional.of(entity));
             when(mapper.toDomain(entity)).thenReturn(domainDoc);
 
             // Execute
-            Optional<SignedXmlDocument> result = adapter.findByInvoiceId("inv-001");
+            Optional<SignedXmlDocument> result = adapter.findByDocumentId("inv-001");
 
             // Verify
             assertThat(result).isPresent();
@@ -155,10 +155,10 @@ class SignedXmlDocumentRepositoryAdapterTest {
         @DisplayName("Returns empty when not found")
         void testFindByInvoiceIdNotFound() {
             // Setup
-            when(jpaRepository.findByInvoiceId("inv-001")).thenReturn(Optional.empty());
+            when(jpaRepository.findByDocumentId("inv-001")).thenReturn(Optional.empty());
 
             // Execute
-            Optional<SignedXmlDocument> result = adapter.findByInvoiceId("inv-001");
+            Optional<SignedXmlDocument> result = adapter.findByDocumentId("inv-001");
 
             // Verify
             assertThat(result).isEmpty();
@@ -166,7 +166,7 @@ class SignedXmlDocumentRepositoryAdapterTest {
     }
 
     @Nested
-    @DisplayName("findByInvoiceNumber() Method")
+    @DisplayName("findByDocumentNumber() Method")
     class FindByInvoiceNumberMethod {
 
         @Test
@@ -176,11 +176,11 @@ class SignedXmlDocumentRepositoryAdapterTest {
             SignedXmlDocumentEntity entity = createEntity();
             SignedXmlDocument domainDoc = createDomainDoc();
 
-            when(jpaRepository.findByInvoiceNumber("T001")).thenReturn(Optional.of(entity));
+            when(jpaRepository.findByDocumentNumber("T001")).thenReturn(Optional.of(entity));
             when(mapper.toDomain(entity)).thenReturn(domainDoc);
 
             // Execute
-            Optional<SignedXmlDocument> result = adapter.findByInvoiceNumber("T001");
+            Optional<SignedXmlDocument> result = adapter.findByDocumentNumber("T001");
 
             // Verify
             assertThat(result).isPresent();
@@ -191,10 +191,10 @@ class SignedXmlDocumentRepositoryAdapterTest {
         @DisplayName("Returns empty when not found")
         void testFindByInvoiceNumberNotFound() {
             // Setup
-            when(jpaRepository.findByInvoiceNumber("T001")).thenReturn(Optional.empty());
+            when(jpaRepository.findByDocumentNumber("T001")).thenReturn(Optional.empty());
 
             // Execute
-            Optional<SignedXmlDocument> result = adapter.findByInvoiceNumber("T001");
+            Optional<SignedXmlDocument> result = adapter.findByDocumentNumber("T001");
 
             // Verify
             assertThat(result).isEmpty();
@@ -202,17 +202,17 @@ class SignedXmlDocumentRepositoryAdapterTest {
     }
 
     @Nested
-    @DisplayName("existsByInvoiceId() Method")
+    @DisplayName("existsByDocumentId() Method")
     class ExistsByInvoiceIdMethod {
 
         @Test
         @DisplayName("Returns true when exists")
         void testExistsByInvoiceIdTrue() {
             // Setup
-            when(jpaRepository.existsByInvoiceId("inv-001")).thenReturn(true);
+            when(jpaRepository.existsByDocumentId("inv-001")).thenReturn(true);
 
             // Execute
-            boolean result = adapter.existsByInvoiceId("inv-001");
+            boolean result = adapter.existsByDocumentId("inv-001");
 
             // Verify
             assertThat(result).isTrue();
@@ -222,10 +222,10 @@ class SignedXmlDocumentRepositoryAdapterTest {
         @DisplayName("Returns false when not exists")
         void testExistsByInvoiceIdFalse() {
             // Setup
-            when(jpaRepository.existsByInvoiceId("inv-001")).thenReturn(false);
+            when(jpaRepository.existsByDocumentId("inv-001")).thenReturn(false);
 
             // Execute
-            boolean result = adapter.existsByInvoiceId("inv-001");
+            boolean result = adapter.existsByDocumentId("inv-001");
 
             // Verify
             assertThat(result).isFalse();
