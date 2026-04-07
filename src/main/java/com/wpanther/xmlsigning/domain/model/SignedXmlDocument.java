@@ -42,6 +42,9 @@ public class SignedXmlDocument {
     private final LocalDateTime createdAt;
     private LocalDateTime completedAt;
 
+    // Optimistic locking version (mapped to/from JPA entity for UPDATE vs INSERT)
+    private Long version;
+
     private SignedXmlDocument(Builder builder) {
         this.id = builder.id != null ? builder.id : SignedXmlDocumentId.create();
         this.documentId = Objects.requireNonNull(builder.documentId, "Document ID is required");
@@ -60,6 +63,7 @@ public class SignedXmlDocument {
         this.retryCount = builder.retryCount;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.completedAt = builder.completedAt;
+        this.version = builder.version;
 
         validateInvariant();
     }
@@ -224,6 +228,10 @@ public class SignedXmlDocument {
         return completedAt;
     }
 
+    public Long getVersion() {
+        return version;
+    }
+
     /**
      * Builder for SignedXmlDocument
      */
@@ -245,6 +253,7 @@ public class SignedXmlDocument {
         private int retryCount;
         private LocalDateTime createdAt;
         private LocalDateTime completedAt;
+        private Long version;
 
         public Builder id(@Nonnull SignedXmlDocumentId id) {
             this.id = id;
@@ -328,6 +337,11 @@ public class SignedXmlDocument {
 
         public Builder completedAt(LocalDateTime completedAt) {
             this.completedAt = completedAt;
+            return this;
+        }
+
+        public Builder version(Long version) {
+            this.version = version;
             return this;
         }
 

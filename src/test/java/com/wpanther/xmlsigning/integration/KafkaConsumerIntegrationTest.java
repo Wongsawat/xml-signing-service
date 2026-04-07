@@ -59,7 +59,7 @@ class KafkaConsumerIntegrationTest extends AbstractKafkaConsumerTest {
         assertThat(doc.get("document_type")).isEqualTo("TAX_INVOICE");
         assertThat(doc.get("transaction_id")).isNotNull();
         assertThat(doc.get("signed_xml_url")).isNotNull();
-        assertThat(doc.get("signed_xml_size")).isNotNull();
+        assertThat(doc.get("signed_xml_size_bytes")).isNotNull();
 
         // Verify xml.signed outbox event (aggregate_id = documentId)
         String sagaId = "saga-" + correlationId;
