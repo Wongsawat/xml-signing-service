@@ -3,8 +3,12 @@ package com.wpanther.xmlsigning.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.wpanther.xmlsigning.application.dto.event.XmlSigningRequestedEvent;
-import com.wpanther.xmlsigning.domain.model.DocumentType;
+import com.wpanther.saga.domain.enums.SagaStep;
+import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.application.port.out.XmlStoragePort;
+import com.wpanther.xmlsigning.domain.model.StorageResult;
+import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCAuthClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCSignatureClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCAuthorizeResponse;
@@ -34,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(
@@ -61,6 +66,9 @@ public abstract class AbstractKafkaConsumerTest {
     @MockBean
     protected CSCSignatureClient signatureClient;
 
+    @MockBean
+    protected XmlStoragePort xmlStoragePort;
+
     protected ObjectMapper objectMapper;
 
     @BeforeAll
@@ -71,10 +79,8 @@ public abstract class AbstractKafkaConsumerTest {
     }
 
     @BeforeEach
-    void setupMockResponses() throws IOException {
-        // Configure mock CSC API responses using SAD token pattern
-
-        // 1. Mock authorization endpoint - returns SAD token
+    void setupMockResponses() throws Exception {
+        // 1. Mock CSC authorization endpoint - returns SAD token
         CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
             .SAD("test-sad-token-" + UUID.randomUUID())
             .transactionID("test-txn-" + UUID.randomUUID())
@@ -82,8 +88,7 @@ public abstract class AbstractKafkaConsumerTest {
             .build();
         when(authClient.authorize(any())).thenReturn(authResponse);
 
-        // 2. Mock signHash endpoint - returns raw signature and certificate
-        // The XadesSignatureEmbedder will embed this into the XML
+        // 2. Mock CSC signHash endpoint - returns raw signature and certificate
         String rawSignature = Base64.getEncoder().encodeToString("test-raw-signature-bytes".getBytes());
         String certificate = Base64.getEncoder().encodeToString("test-certificate".getBytes());
 
@@ -94,12 +99,36 @@ public abstract class AbstractKafkaConsumerTest {
             .build();
         when(signatureClient.signHash(any())).thenReturn(signResponse);
 
-        // Clean database (order matters for FK constraints)
+        // 3. Mock MinIO storage operations
+        when(xmlStoragePort.storeOriginalXml(anyString(), anyString(), anyString()))
+            .thenAnswer(invocation -> {
+                String invoiceId = invocation.getArgument(0);
+                String docType = invocation.getArgument(1);
+                return new XmlStorageKey("original/" + docType + "/" + invoiceId + ".xml");
+            });
+
+        when(xmlStoragePort.storeSignedXml(anyString(), anyString(), anyString()))
+            .thenAnswer(invocation -> {
+                String invoiceId = invocation.getArgument(0);
+                String docType = invocation.getArgument(1);
+                return new StorageResult(
+                    new XmlStorageKey("signed/" + docType + "/" + invoiceId + ".xml"),
+                    2048L
+                );
+            });
+
+        when(xmlStoragePort.buildUrl(any()))
+            .thenAnswer(invocation -> {
+                XmlStorageKey key = invocation.getArgument(0);
+                return "http://localhost:9001/xmlsigning/" + key.value();
+            });
+
+        // 4. Clean database (order matters for FK constraints)
         testJdbcTemplate.execute("DELETE FROM outbox_events");
         testJdbcTemplate.execute("DELETE FROM signed_xml_documents");
     }
 
-    // --- Helper Methods ---
+    // --- Event Sending ---
 
     protected void sendEvent(String topic, String key, Object event) {
         try {
@@ -110,13 +139,26 @@ public abstract class AbstractKafkaConsumerTest {
         }
     }
 
-    protected XmlSigningRequestedEvent createSigningRequestEvent(
-            String invoiceId, String invoiceNumber, String xmlContent,
-            String sagaId, String correlationId, DocumentType documentType) {
-        return new XmlSigningRequestedEvent(
-            invoiceId, invoiceNumber, xmlContent, "{}", sagaId, correlationId, documentType
+    protected ProcessXmlSigningCommand createProcessCommand(
+            String documentId, String invoiceNumber, String xmlContent,
+            String correlationId, String documentType) {
+        String sagaId = "saga-" + correlationId;
+        return new ProcessXmlSigningCommand(
+            sagaId, SagaStep.SIGN_XML, correlationId,
+            documentId, xmlContent, invoiceNumber, documentType
         );
     }
+
+    protected CompensateXmlSigningCommand createCompensateCommand(
+            String documentId, String correlationId) {
+        String sagaId = "saga-" + correlationId;
+        return new CompensateXmlSigningCommand(
+            sagaId, SagaStep.SIGN_XML, correlationId,
+            SagaStep.SIGN_XML.name(), documentId, "TAX_INVOICE"
+        );
+    }
+
+    // --- Await Helpers ---
 
     protected Map<String, Object> awaitDocumentStatus(String invoiceId, String expectedStatus) {
         await().atMost(2, TimeUnit.MINUTES)
@@ -127,6 +169,21 @@ public abstract class AbstractKafkaConsumerTest {
                });
         return getDocumentByInvoiceId(invoiceId);
     }
+
+    protected void awaitOutboxEventCount(String aggregateId, int expectedCount) {
+        await().atMost(2, TimeUnit.MINUTES)
+               .pollInterval(1, TimeUnit.SECONDS)
+               .until(() -> getOutboxEventsByAggregateId(aggregateId).size() >= expectedCount);
+    }
+
+    protected void assertNoDocumentCreatedAfterWait(String invoiceId) {
+        await().during(15, TimeUnit.SECONDS)
+               .atMost(20, TimeUnit.SECONDS)
+               .pollInterval(1, TimeUnit.SECONDS)
+               .until(() -> getDocumentByInvoiceId(invoiceId) == null);
+    }
+
+    // --- Database Query Helpers ---
 
     protected Map<String, Object> getDocumentByInvoiceId(String invoiceId) {
         List<Map<String, Object>> results = testJdbcTemplate.queryForList(
@@ -140,19 +197,44 @@ public abstract class AbstractKafkaConsumerTest {
                 aggregateId);
     }
 
+    protected List<Map<String, Object>> getAllOutboxEvents() {
+        return testJdbcTemplate.queryForList(
+                "SELECT * FROM outbox_events ORDER BY created_at");
+    }
+
+    protected int getDocumentCount() {
+        Integer count = testJdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM signed_xml_documents", Integer.class);
+        return count != null ? count : 0;
+    }
+
+    // --- Test XML Fixtures ---
+
+    protected String loadTestXml(String filename) throws IOException {
+        Path path = Path.of("src/test/resources/samples", filename);
+        return Files.readString(path);
+    }
+
+    /**
+     * Returns a minimal valid tax invoice XML suitable for signing tests.
+     */
+    protected String getSampleTaxInvoiceXml() throws IOException {
+        return loadTestXml("tax-invoice-sample.xml");
+    }
+
+    /**
+     * Returns a minimal valid invoice XML suitable for signing tests.
+     */
+    protected String getSampleInvoiceXml() throws IOException {
+        return loadTestXml("invoice-sample.xml");
+    }
+
     /**
      * Configure mock CSC signature client to fail signing.
      * Call this in a test method BEFORE sending the event to override the default mock.
-     *
-     * @param errorMessage the error message to throw
      */
     protected void setupSigningFailure(String errorMessage) {
         when(signatureClient.signHash(any()))
                 .thenThrow(new RuntimeException(errorMessage));
-    }
-
-    protected String loadTestXml(String filename) throws IOException {
-        Path path = Path.of("src/test/resources/xml", filename);
-        return Files.readString(path);
     }
 }
