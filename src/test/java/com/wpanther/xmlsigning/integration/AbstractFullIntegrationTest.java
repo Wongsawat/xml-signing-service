@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.integration;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -9,6 +10,11 @@ import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.integration.config.FullIntegrationTestConfiguration;
 import com.wpanther.xmlsigning.integration.config.TestKafkaProducerConfig;
 import com.wpanther.xmlsigning.integration.support.EidasRemoteSigningTestHelper;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
@@ -32,8 +38,10 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -114,6 +122,14 @@ public abstract class AbstractFullIntegrationTest {
 
     protected ObjectMapper objectMapper;
 
+    protected static final String SAGA_REPLY_TOPIC = "saga.reply.xml-signing";
+
+    @Autowired
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String kafkaBootstrapServers;
+
+    protected KafkaConsumer<String, String> sagaReplyKafkaConsumer;
+
     // ----- Lifecycle -----
 
     /**
@@ -152,10 +168,31 @@ public abstract class AbstractFullIntegrationTest {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
+    @BeforeAll
+    void setUpSagaReplyConsumer() {
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG,
+                "saga-reply-cdc-test-" + System.currentTimeMillis());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        sagaReplyKafkaConsumer = new KafkaConsumer<>(props);
+        sagaReplyKafkaConsumer.subscribe(List.of(SAGA_REPLY_TOPIC));
+    }
+
     @BeforeEach
     void cleanDatabase() {
         testJdbcTemplate.execute("DELETE FROM outbox_events");
         testJdbcTemplate.execute("DELETE FROM signed_xml_documents");
+
+        // Drain any stale messages from saga reply consumer
+        if (sagaReplyKafkaConsumer != null) {
+            sagaReplyKafkaConsumer.poll(java.time.Duration.ofSeconds(1));
+        }
     }
 
     // ----- Command factory helpers -----
@@ -237,6 +274,54 @@ public abstract class AbstractFullIntegrationTest {
                 .until(() -> getDocumentByDocumentId(documentId) == null);
     }
 
+    /**
+     * Parse a Debezium CDC message value, handling both CDC envelopes
+     * and double-encoded payloads.
+     * <p>
+     * Debezium EventRouter may wrap the payload in a CDC envelope: {"schema":..., "payload":...}.
+     * When the outbox payload column is TEXT, the payload value may also be double-encoded
+     * (a JSON-quoted string instead of a JSON object).
+     */
+    protected JsonNode parseDebeziumPayload(String rawValue) throws Exception {
+        JsonNode node = objectMapper.readTree(rawValue);
+
+        // Handle Debezium CDC envelope: {"schema": {...}, "payload": {...}}
+        if (node.has("payload") && node.has("schema")) {
+            node = node.get("payload");
+        }
+
+        // Handle double-encoded TEXT payload (JSON-quoted string)
+        if (node.isTextual()) {
+            return objectMapper.readTree(node.asText());
+        }
+        return node;
+    }
+
+    /**
+     * Poll the saga.reply.xml-signing Kafka topic for messages containing
+     * the expected content, waiting up to the given timeout.
+     */
+    protected List<ConsumerRecord<String, String>> pollSagaReplyFromKafka(
+            String expectedContent, java.time.Duration timeout) {
+        List<ConsumerRecord<String, String>> matching = new ArrayList<>();
+        long deadline = System.currentTimeMillis() + timeout.toMillis();
+
+        while (System.currentTimeMillis() < deadline) {
+            ConsumerRecords<String, String> records =
+                    sagaReplyKafkaConsumer.poll(java.time.Duration.ofSeconds(2));
+            for (ConsumerRecord<String, String> record : records) {
+                if (record.topic().equals(SAGA_REPLY_TOPIC)
+                        && record.value().contains(expectedContent)) {
+                    matching.add(record);
+                }
+            }
+            if (!matching.isEmpty()) {
+                break;
+            }
+        }
+        return matching;
+    }
+
     // ----- MinIO helpers -----
 
     /**
@@ -282,6 +367,14 @@ public abstract class AbstractFullIntegrationTest {
 
     protected String getSampleInvoiceXml() throws IOException {
         return loadTestXml("invoice-sample.xml");
+    }
+
+    protected String getTaxInvoice2p1ValidXml() throws IOException {
+        return loadTestXml("TaxInvoice_2p1_valid.xml");
+    }
+
+    protected String getInvoice2p1ValidXml() throws IOException {
+        return loadTestXml("Invoice_2p1_valid.xml");
     }
 
     // ----- ID generators -----
