@@ -6,6 +6,8 @@ public record CscSignHashCommand(
     String clientId,
     String credentialId,
     String sadToken,
+    /** PIN/password for BCFKS or PKCS#11 keystore. May be null when not required. */
+    String pin,
     String hashAlgorithm,
     List<String> documentDigests,
     String signatureType,

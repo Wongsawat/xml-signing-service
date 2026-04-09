@@ -62,6 +62,9 @@ public class XmlSigningServiceImpl implements XmlSigningService {
     @Value("${app.csc.digest-algorithm:SHA256}")
     private String digestAlgorithm;
 
+    @Value("${app.csc.pin:}")
+    private String pin;
+
     @Override
     public SigningResult signXml(String xmlContent, String documentId) {
         log.info("Starting XML signing process for document: {}", documentId);
@@ -143,6 +146,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
                 clientId,
                 credentialId,
                 authResult.sadToken(),
+                (pin != null && !pin.isBlank()) ? pin : null,
                 hashAlgorithm,
                 List.of(documentDigest),
                 "XAdES",
@@ -171,14 +175,12 @@ public class XmlSigningServiceImpl implements XmlSigningService {
     /**
      * Calculate SHA-256 digest of XML content.
      * This is computed locally - only the digest is sent to CSC.
+     * Uses standard Base64 encoding (with padding) as required by the CSC API.
      */
     private String calculateDigest(String content) throws Exception {
         MessageDigest digest = MessageDigest.getInstance(digestAlgorithm);
         byte[] hash = digest.digest(content.getBytes(StandardCharsets.UTF_8));
-
-        // Encode as base64url (no padding) for CSC API compatibility
-        String base64 = Base64.getEncoder().encodeToString(hash);
-        return base64.replace("+", "-").replace("/", "_").replaceAll("=+$", "");
+        return Base64.getEncoder().encodeToString(hash);
     }
 
     /**

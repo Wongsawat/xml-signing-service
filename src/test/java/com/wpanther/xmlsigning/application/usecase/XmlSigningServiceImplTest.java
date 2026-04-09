@@ -212,11 +212,10 @@ class XmlSigningServiceImplTest {
             // Setup
             String xmlContent = "<xml>test</xml>";
 
-            // Calculate expected digest (base64url encoded)
+            // Calculate expected digest (standard base64 encoded)
             MessageDigest digest = MessageDigest.getInstance("SHA256");
             byte[] hash = digest.digest(xmlContent.getBytes(StandardCharsets.UTF_8));
-            String base64 = Base64.getEncoder().encodeToString(hash);
-            String expectedDigest = base64.replace("+", "-").replace("/", "_").replaceAll("=+$", "");
+            String expectedDigest = Base64.getEncoder().encodeToString(hash);
 
             CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-digest-test");
             CscSignHashResult signResult = new CscSignHashResult(List.of("sig"), "cert");

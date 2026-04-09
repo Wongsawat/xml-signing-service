@@ -1,0 +1,138 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: xml-signing-service-full-integration-test
+
+  main:
+    allow-bean-definition-overriding: true
+
+  # PostgreSQL (Docker test container on port 5433)
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:xmlsigning_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 10000
+
+  # JPA with PostgreSQL dialect
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  # Flyway enabled (runs real migrations)
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Kafka (Docker test container on port 9093)
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9093}
+    consumer:
+      group-id: xml-signing-full-integration-test
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+
+# Apache Camel — routes enabled so the service consumes from Kafka
+camel:
+  springboot:
+    name: xml-signing-camel-full-integration-test
+    main-run-controller: false
+  dataformat:
+    jackson:
+      auto-discover-object-mapper: true
+
+# Disable Eureka for tests
+eureka:
+  client:
+    enabled: false
+
+# Application-specific configuration
+app:
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9093}
+    topics:
+      saga-command-xml-signing: saga.command.xml-signing
+      saga-compensation-xml-signing: saga.compensation.xml-signing
+      saga-reply-xml-signing: saga.reply.xml-signing
+      dlq: xml.signing.dlq
+    consumers-count: 1
+
+  # Real eidasremotesigning CSC API (localhost:9000).
+  # client-id and credential-id are injected at runtime via @DynamicPropertySource
+  # by AbstractFullIntegrationTest — EidasRemoteSigningTestHelper creates them on first run.
+  csc:
+    service-url: ${CSC_SERVICE_URL:http://localhost:9000}
+    client-id: ${CSC_CLIENT_ID:dynamic}
+    credential-id: ${CSC_CREDENTIAL_ID:dynamic}
+    pin: ${CSC_PIN:eidas-signing-2024}
+    hash-algorithm: SHA-256
+    signature-level: XAdES-BASELINE-B
+    digest-algorithm: SHA-256
+
+  signing:
+    max-retries: 1
+    timeout-seconds: 60
+    max-allowed-retries: 10
+    max-allowed-timeout-seconds: 300
+    min-allowed-timeout-seconds: 5
+
+  # Real MinIO (Docker test container on port 9100)
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9100}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket-name: ${MINIO_BUCKET_NAME:signed-xml-documents}
+    region: ${MINIO_REGION:us-east-1}
+    base-url: ${MINIO_ENDPOINT:http://localhost:9100}/${MINIO_BUCKET_NAME:signed-xml-documents}
+    path-style-access: true
+    max-upload-size-bytes: 524288  # 512 KB — generous for real signing tests
+    cleanup:
+      enabled: false
+
+# Resilience4j — increased timeouts for real CSC API calls
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+    instances:
+      cscAuthClient:
+        base-config: default
+      cscSignatureClient:
+        base-config: default
+  timelimiter:
+    instances:
+      cscAuthClient:
+        timeout-duration: 60s
+      cscSignatureClient:
+        timeout-duration: 60s
+
+# Actuator (minimal for tests)
+management:
+  health:
+    circuitbreakers:
+      enabled: false
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: health
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.wpanther.xmlsigning: DEBUG
+    org.apache.camel: INFO
+    org.apache.camel.component.kafka: DEBUG
+    org.springframework.kafka: INFO
+    feign: DEBUG

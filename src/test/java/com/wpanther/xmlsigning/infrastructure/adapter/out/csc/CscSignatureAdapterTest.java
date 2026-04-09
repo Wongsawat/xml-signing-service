@@ -39,6 +39,7 @@ class CscSignatureAdapterTest {
 
         CscSignHashCommand cmd = new CscSignHashCommand(
                 "client-1", "cred-1", "sad-token-xyz",
+                null,
                 "SHA-256withRSA", List.of("digest-abc"),
                 "XAdES", "XAdES-BASELINE-T", "enveloped",
                 "SHA256", System.currentTimeMillis());
@@ -60,6 +61,7 @@ class CscSignatureAdapterTest {
         long signDate = 1234567890L;
         CscSignHashCommand cmd = new CscSignHashCommand(
                 "my-client", "my-cred", "my-sad-token",
+                null,
                 "SHA-256withRSA", List.of("digest-1"),
                 "XAdES", "XAdES-BASELINE-T", "enveloped",
                 "SHA256", signDate);
@@ -87,6 +89,7 @@ class CscSignatureAdapterTest {
         long signDate = 9999999999L;
         CscSignHashCommand cmd = new CscSignHashCommand(
                 "client-x", "cred-x", "sad-x",
+                null,
                 "SHA-384withRSA", List.of("hash-x"),
                 "XAdES", "XAdES-BASELINE-LT", "enveloping",
                 "SHA384", signDate);
@@ -117,6 +120,7 @@ class CscSignatureAdapterTest {
 
         CscSignHashCommand cmd = new CscSignHashCommand(
                 "client-m", "cred-m", "sad-m",
+                null,
                 "SHA-256withRSA", List.of("digest-a", "digest-b"),
                 "XAdES", "XAdES-BASELINE-T", "enveloped",
                 "SHA256", System.currentTimeMillis());
@@ -139,6 +143,7 @@ class CscSignatureAdapterTest {
 
         CscSignHashCommand cmd = new CscSignHashCommand(
                 "client-1", "cred-1", "sad-1",
+                null,
                 "SHA-256withRSA", List.of("digest-1"),
                 "XAdES", "XAdES-BASELINE-T", "enveloped",
                 "SHA256", System.currentTimeMillis());
@@ -153,6 +158,7 @@ class CscSignatureAdapterTest {
 
         CscSignHashCommand cmd = new CscSignHashCommand(
                 "client-1", "cred-1", "sad-1",
+                null,
                 "SHA-256withRSA", List.of("digest-1"),
                 "XAdES", "XAdES-BASELINE-T", "enveloped",
                 "SHA256", System.currentTimeMillis());

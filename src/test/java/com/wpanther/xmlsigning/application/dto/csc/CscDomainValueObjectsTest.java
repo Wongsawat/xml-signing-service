@@ -26,7 +26,7 @@ class CscDomainValueObjectsTest {
     @Test
     void cscSignHashCommand_storesAllFields() {
         var cmd = new CscSignHashCommand(
-            "client-1", "cred-1", "sad-token", "SHA256withRSA",
+            "client-1", "cred-1", "sad-token", null, "SHA256withRSA",
             List.of("digest1"), "XAdES", "XAdES-BASELINE-T",
             "enveloped", "SHA256", System.currentTimeMillis());
         assertThat(cmd.clientId()).isEqualTo("client-1");

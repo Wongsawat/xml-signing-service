@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -16,6 +17,7 @@ import java.net.URI;
 public class MinioConfig {
 
     @Bean
+    @Primary
     public S3Client s3Client(
             @Value("${app.minio.endpoint}") String endpoint,
             @Value("${app.minio.access-key}") String accessKey,

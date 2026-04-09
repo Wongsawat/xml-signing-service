@@ -62,10 +62,19 @@ public class CscSignatureAdapter implements CscSignaturePort {
                 .signatureAttributes(signatureAttributes)
                 .build();
 
+        // Include PIN credentials when provided (required for BCFKS/PKCS#11 keystores)
+        CSCSignatureRequest.Credentials credentials = null;
+        if (command.pin() != null && !command.pin().isBlank()) {
+            credentials = CSCSignatureRequest.Credentials.builder()
+                    .pin(CSCSignatureRequest.Pin.builder().value(command.pin()).build())
+                    .build();
+        }
+
         CSCSignatureRequest request = CSCSignatureRequest.builder()
                 .clientId(command.clientId())
                 .credentialID(command.credentialId())          // domain: credentialId → feign: credentialID
                 .SAD(command.sadToken())                       // domain: sadToken → feign: SAD
+                .credentials(credentials)
                 .hashAlgo(command.hashAlgorithm())             // domain: hashAlgorithm → feign: hashAlgo
                 .signatureData(signatureData)
                 .build();

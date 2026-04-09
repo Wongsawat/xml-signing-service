@@ -15,7 +15,7 @@ import java.util.UUID;
 @Getter
 public class XmlSignedEvent extends TraceEvent {
 
-    private static final String EVENT_TYPE = "XmlSignedEvent";
+    private static final String EVENT_TYPE = "xml.signed";
     private static final String SOURCE = "xml-signing-service";
     private static final String TRACE_TYPE = "XML_SIGNED";
 

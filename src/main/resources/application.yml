@@ -76,8 +76,8 @@ app:
     service-url: ${CSC_SERVICE_URL:http://localhost:9000}
     client-id: ${CSC_CLIENT_ID:etax-invoice-service}
     credential-id: ${CSC_CREDENTIAL_ID:default-credential}
-    # PIN-based authentication is deprecated in favor of SAD token authentication
-    # pin: ${CSC_PIN:1234}
+    # PIN required for BCFKS/PKCS#11 keystores to load the private key
+    pin: ${CSC_PIN:}
     hash-algorithm: ${CSC_HASH_ALGORITHM:SHA256}
     signature-level: ${CSC_SIGNATURE_LEVEL:XAdES-BASELINE-T}
     digest-algorithm: ${CSC_DIGEST_ALGORITHM:SHA256}
