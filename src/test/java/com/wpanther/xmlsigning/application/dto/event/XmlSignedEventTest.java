@@ -36,7 +36,7 @@ class XmlSignedEventTest {
         assertThat(event.getCorrelationId()).isEqualTo("corr-456");
         assertThat(event.getEventId()).isNotNull();
         assertThat(event.getOccurredAt()).isNotNull();
-        assertThat(event.getEventType()).isEqualTo("xml.signed");
+        assertThat(event.getEventType()).isEqualTo("XmlSignedEvent");
         assertThat(event.getVersion()).isEqualTo(1);
     }
 

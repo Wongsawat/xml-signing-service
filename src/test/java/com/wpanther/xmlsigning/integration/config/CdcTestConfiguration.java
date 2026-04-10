@@ -1,5 +1,6 @@
 package com.wpanther.xmlsigning.integration.config;
 
+import io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakersHealthIndicatorAutoConfiguration;
 import org.apache.camel.spring.boot.CamelAutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -24,7 +25,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @Profile("cdc-test")
 @EnableAutoConfiguration(exclude = {
     CamelAutoConfiguration.class,
-    KafkaAutoConfiguration.class
+    KafkaAutoConfiguration.class,
+    CircuitBreakersHealthIndicatorAutoConfiguration.class
 })
 @Import(TestKafkaConsumerConfig.class)
 @EnableJpaRepositories(basePackages = {
@@ -49,7 +51,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*CamelConfig.*"),
         @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*RouteConfig.*"),
         @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*Controller.*"),
-        @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*FeignConfig.*")
+        @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*FeignConfig.*"),
+        @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*MinioConfig.*")
     }
 )
 public class CdcTestConfiguration {
