@@ -3,6 +3,7 @@ package com.wpanther.xmlsigning.application.usecase;
 import com.wpanther.saga.domain.enums.SagaStep;
 import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
+import com.wpanther.xmlsigning.application.dto.event.DocumentArchiveEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SigningStatus;
@@ -15,6 +16,7 @@ import com.wpanther.xmlsigning.application.usecase.XmlSigningService;
 import com.wpanther.xmlsigning.application.port.out.XmlSignedEventPort;
 import com.wpanther.xmlsigning.application.port.out.SagaReplyPort;
 import com.wpanther.xmlsigning.application.port.out.XmlStoragePort;
+import com.wpanther.xmlsigning.application.port.out.DocumentArchivePort;
 import com.wpanther.xmlsigning.application.usecase.SagaCommandHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.argThat;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -51,6 +54,9 @@ class SagaCommandHandlerTest {
 
     @Mock
     private XmlSignedEventPort xmlSignedEventPort;
+
+    @Mock
+    private DocumentArchivePort documentArchivePort;
 
     @Mock
     private XmlStoragePort xmlStoragePort;
@@ -108,6 +114,47 @@ class SagaCommandHandlerTest {
                 eq(FAKE_URL), anyLong());
         verify(sagaReplyPort, never()).publishFailure(any(), any(), any(), any());
         verify(xmlSignedEventPort).publishXmlSigned(any());
+        verify(documentArchivePort).publish(argThat(event ->
+                event != null &&
+                event.getDocumentId().equals("doc-success") &&
+                event.getArtifactType().equals("SIGNED_XML") &&
+                event.getSourceUrl().equals(FAKE_URL) &&
+                event.getDocumentType().equals("INVOICE") &&
+                event.getFileName().equals("INV-001.xml") &&
+                event.getContentType().equals("application/xml") &&
+                event.getFileSize() == 1024L
+        ));
+    }
+
+    @Test
+    void testHandleProcessCommandPublishesDocumentArchiveEvent() {
+        ProcessXmlSigningCommand command = new ProcessXmlSigningCommand(
+            "saga-archive", SagaStep.SIGN_XML, "corr-archive",
+            "doc-archive", "<xml>archive-test</xml>", "INV-002", "TAX_INVOICE"
+        );
+
+        when(documentRepository.findByDocumentId("doc-archive")).thenReturn(Optional.empty());
+        when(signingService.signXml(any(), any())).thenReturn(
+                new SigningResult("<signed>archive-xml</signed>", "CERT-456", "CSC-TXN-456"));
+        when(documentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(xmlStoragePort.storeOriginalXml(any(), any(), any())).thenReturn(new XmlStorageKey(FAKE_ORIGINAL_S3_KEY));
+        when(xmlStoragePort.storeSignedXml(any(), any(), any())).thenReturn(new StorageResult(new XmlStorageKey(FAKE_S3_KEY), 2048L));
+        when(xmlStoragePort.buildUrl(any())).thenReturn(FAKE_URL);
+
+        handler.handleProcessCommand(command);
+
+        verify(documentArchivePort).publish(argThat(event ->
+                event != null &&
+                event.getDocumentId().equals("doc-archive") &&
+                event.getDocumentNumber().equals("INV-002") &&
+                event.getArtifactType().equals("SIGNED_XML") &&
+                event.getSourceUrl() != null &&
+                event.getSourceUrl().equals(FAKE_URL) &&
+                event.getDocumentType().equals("TAX_INVOICE") &&
+                event.getSagaId().equals("saga-archive") &&
+                event.getCorrelationId().equals("corr-archive") &&
+                event.getFileSize() == 2048L
+        ));
     }
 
     @Test

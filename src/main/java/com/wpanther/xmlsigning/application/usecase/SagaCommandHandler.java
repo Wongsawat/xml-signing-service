@@ -3,6 +3,7 @@ package com.wpanther.xmlsigning.application.usecase;
 import com.wpanther.xmlsigning.application.dto.event.CompensateXmlSigningCommand;
 import com.wpanther.xmlsigning.application.dto.event.ProcessXmlSigningCommand;
 import com.wpanther.xmlsigning.application.dto.event.XmlSignedEvent;
+import com.wpanther.xmlsigning.application.dto.event.DocumentArchiveEvent;
 import com.wpanther.xmlsigning.domain.model.DocumentType;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocument;
 import com.wpanther.xmlsigning.domain.model.SignedXmlDocumentId;
@@ -13,6 +14,7 @@ import com.wpanther.xmlsigning.application.usecase.XmlSigningService;
 import com.wpanther.xmlsigning.application.port.out.XmlSignedEventPort;
 import com.wpanther.xmlsigning.application.port.out.SagaReplyPort;
 import com.wpanther.xmlsigning.application.port.out.XmlStoragePort;
+import com.wpanther.xmlsigning.application.port.out.DocumentArchivePort;
 import com.wpanther.xmlsigning.domain.model.XmlStorageKey;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,7 @@ public class SagaCommandHandler implements SagaCommandPort {
     private final DocumentTypeDetectionService documentTypeDetectionService;
     private final SagaReplyPort sagaReplyPort;
     private final XmlSignedEventPort xmlSignedEventPort;
+    private final DocumentArchivePort documentArchivePort;
     private final XmlStoragePort xmlStoragePort;
     private final TransactionTemplate transactionTemplate;
 
@@ -126,12 +129,14 @@ public class SagaCommandHandler implements SagaCommandPort {
         try {
             log.info("Handling ProcessXmlSigningCommand for saga {} document {}",
                     command.getSagaId(), command.getDocumentId());
+        log.trace("TRACE [saga={}] Phase 0: resolving document type", command.getSagaId());
 
             // --- Phase 0: document type detection (pure logic) ---
         DocumentType documentType = resolveDocumentType(command);
         if (documentType == null) {
             log.error("Could not detect document type for saga {} document {}",
                     command.getSagaId(), command.getDocumentId());
+            log.trace("TRACE [saga={}] Phase 0 FAILED: could not detect document type", command.getSagaId());
             transactionTemplate.execute(s -> {
                 sagaReplyPort.publishFailure(command.getSagaId(), command.getSagaStep(),
                         command.getCorrelationId(), "Document type detection failed");
@@ -140,10 +145,14 @@ public class SagaCommandHandler implements SagaCommandPort {
             return;
         }
 
+        log.trace("TRACE [saga={}] Phase 0 DONE: documentType={}", command.getSagaId(), documentType);
+
         // --- Phase 1: idempotency check (read-only, no connection held after return) ---
+        log.trace("TRACE [saga={}] Phase 1: idempotency check for documentId={}", command.getSagaId(), command.getDocumentId());
         Optional<SignedXmlDocument> existing =
                 documentRepository.findByDocumentId(command.getDocumentId());
         if (existing.isPresent() && existing.get().isSuccessful()) {
+            log.trace("TRACE [saga={}] Phase 1: document already signed (idempotent), will reply SUCCESS", command.getSagaId());
             log.warn("Document {} already signed, sending SUCCESS reply", command.getDocumentId());
             SignedXmlDocument completedDoc = existing.get();
             transactionTemplate.execute(s -> {
@@ -155,7 +164,10 @@ public class SagaCommandHandler implements SagaCommandPort {
             return;
         }
 
+        log.trace("TRACE [saga={}] Phase 1 DONE: no prior signing record, proceeding", command.getSagaId());
+
         // --- Phase 2: upload original XML to MinIO if this is a new document (no transaction) ---
+        log.trace("TRACE [saga={}] Phase 2: uploading original XML to MinIO (documentId={})", command.getSagaId(), command.getDocumentId());
         final String originalXmlPath;
         final String originalXmlUrl;
         if (existing.isEmpty()) {
@@ -165,6 +177,7 @@ public class SagaCommandHandler implements SagaCommandPort {
                 originalXmlPath = originalXmlKey.value();
                 originalXmlUrl = xmlStoragePort.buildUrl(originalXmlKey);
                 log.info("Uploaded original XML to MinIO: key={}", originalXmlPath);
+                log.trace("TRACE [saga={}] Phase 2 DONE: original XML uploaded to MinIO", command.getSagaId());
             } catch (Exception e) {
                 log.error("Failed to upload original XML for saga {} document {}: {}",
                         command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
@@ -180,6 +193,8 @@ public class SagaCommandHandler implements SagaCommandPort {
             originalXmlPath = existing.get().getOriginalXmlPath();
             originalXmlUrl = existing.get().getOriginalXmlUrl();
         }
+
+        log.trace("TRACE [saga={}] TX1: persisting SIGNING state to DB", command.getSagaId());
 
         // --- TX1: persist SIGNING state (short-lived DB connection) ---
         SignedXmlDocument document;
@@ -219,10 +234,13 @@ public class SagaCommandHandler implements SagaCommandPort {
 
         if (document == null) {
             // null return from TX1 means max-retries — reply already published inside TX1
+            log.trace("TRACE [saga={}] TX1 DONE: null (max retries exceeded), reply published", command.getSagaId());
             return;
         }
+        log.trace("TRACE [saga={}] TX1 DONE: SIGNING state persisted, docId={}", command.getSagaId(), document.getId());
 
         // --- Phase 3: external I/O — CSC API signing + MinIO upload (no transaction held) ---
+        log.trace("TRACE [saga={}] Phase 3: calling CSC API to sign XML (timeout={}s)...", command.getSagaId(), timeoutSeconds);
         final String signedXml;
         final String signedXmlPath;
         final String signedXmlUrl;
@@ -240,7 +258,10 @@ public class SagaCommandHandler implements SagaCommandPort {
             signedXmlPath = storageResult.key().value();
             signedXmlUrl = xmlStoragePort.buildUrl(storageResult.key());
             signedXmlSize = storageResult.sizeBytes();
+            log.trace("TRACE [saga={}] Phase 3 DONE: XML signed (txId={}), signed XML uploaded to MinIO (url={}, size={})",
+                    command.getSagaId(), transactionId, signedXmlUrl, signedXmlSize);
         } catch (Exception e) {
+            log.trace("TRACE [saga={}] Phase 3 FAILED: {}", command.getSagaId(), e.getMessage());
             log.error("Failed to sign XML for saga {} document {}: {}",
                     command.getSagaId(), command.getDocumentId(), e.getMessage(), e);
             final SignedXmlDocument failedDoc = document;
@@ -256,6 +277,7 @@ public class SagaCommandHandler implements SagaCommandPort {
         }
 
         // --- TX2: persist COMPLETED + publish both outbox events atomically ---
+        log.trace("TRACE [saga={}] TX2: persisting COMPLETED + publishing outbox events", command.getSagaId());
         final SignedXmlDocument completedDoc = document;
         transactionTemplate.execute(s -> {
             completedDoc.markCompleted(
@@ -267,11 +289,26 @@ public class SagaCommandHandler implements SagaCommandPort {
                     command.getDocumentId(), command.getDocumentNumber(),
                     documentType.name(), command.getSagaId(), command.getCorrelationId()));
 
+            documentArchivePort.publish(new DocumentArchiveEvent(
+                    command.getDocumentId(),
+                    command.getDocumentNumber(),
+                    documentType.name(),
+                    "SIGNED_XML",
+                    signedXmlUrl,
+                    command.getDocumentNumber() + ".xml",
+                    "application/xml",
+                    signedXmlSize,
+                    command.getSagaId(),
+                    command.getCorrelationId()));
+
             sagaReplyPort.publishSuccess(command.getSagaId(), command.getSagaStep(),
                     command.getCorrelationId(), signedXmlUrl, signedXmlSize);
+            log.trace("TRACE [saga={}] TX2: outbox events (XmlSignedEvent + DocumentArchiveEvent + SagaReplySuccess) written", command.getSagaId());
             return null;
         });
 
+        log.trace("TRACE [saga={}] ALL PHASES COMPLETE: saga {} document {} signed successfully",
+                command.getSagaId(), command.getSagaId(), command.getDocumentId());
         log.info("Successfully processed XML signing for saga {} document {}",
                 command.getSagaId(), command.getDocumentId());
         } finally {

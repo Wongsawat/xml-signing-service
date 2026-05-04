@@ -70,6 +70,8 @@ app:
       saga-compensation-xml-signing: saga.compensation.xml-signing
       saga-reply-xml-signing: saga.reply.xml-signing
       dlq: xml.signing.dlq
+      # Document archival topics
+      document-archive: document.archive
 
   # CSC API Configuration
   csc:
@@ -78,9 +80,9 @@ app:
     credential-id: ${CSC_CREDENTIAL_ID:default-credential}
     # PIN required for BCFKS/PKCS#11 keystores to load the private key
     pin: ${CSC_PIN:}
-    hash-algorithm: ${CSC_HASH_ALGORITHM:SHA256}
+    hash-algorithm: ${CSC_HASH_ALGORITHM:SHA-256}
     signature-level: ${CSC_SIGNATURE_LEVEL:XAdES-BASELINE-T}
-    digest-algorithm: ${CSC_DIGEST_ALGORITHM:SHA256}
+    digest-algorithm: ${CSC_DIGEST_ALGORITHM:SHA-256}
 
   # Signing configuration
   signing:
