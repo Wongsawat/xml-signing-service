@@ -291,6 +291,20 @@ dbf.setXIncludeAware(false);
 }
 ```
 
+**Produces**: `document.archive` (fire-and-forget archival — consumed by document-storage-service)
+```json
+{
+  "documentId": "uuid",
+  "documentNumber": "INV-001",
+  "documentType": "TAX_INVOICE",
+  "artifactType": "SIGNED_XML",
+  "sourceUrl": "http://minio:9000/signed/...",
+  "fileName": "INV-001.xml",
+  "contentType": "application/xml",
+  "fileSize": 12345
+}
+```
+
 ### Document Type Detection
 
 The service supports 6 Thai e-Tax document types:
