@@ -6,7 +6,7 @@ A Spring Boot 3.2.5 microservice for signing Thai e-Tax invoice XML documents us
 
 This service integrates with the [eidasremotesigning](../../../eidasremotesigning) CSC API v2.0 service to provide digital signatures for XML invoices in the Thai e-Tax invoice processing pipeline.
 
-**Port**: 8086
+**Port**: 8088
 **Database**: PostgreSQL (`xmlsigning_db`)
 **Java**: 21
 **Spring Boot**: 3.2.5
@@ -30,7 +30,7 @@ This service integrates with the [eidasremotesigning](../../../eidasremotesignin
 
 1. DOCUMENT INTAKE → 2. PROCESS_TAX_INVOICE → 3. SIGN_XML → 4. SIGNEDXML_STORAGE
                                                    ↓
-[Orchestrator:8093] → saga.command.xml-signing → [XML Signing:8086]
+[Orchestrator:8100] → saga.command.xml-signing → [XML Signing:8088]
                                                 ↓
                               saga.reply.xml-signing → [Orchestrator]
 
@@ -48,7 +48,7 @@ The service follows the **Saga Orchestration Pattern**:
 
 | Service | Default Port | Environment Variable | Notes |
 |---------|--------------|---------------------|-------|
-| xml-signing-service | 8086 | `SERVER_PORT` | This service |
+| xml-signing-service | 8088 | `SERVER_PORT` | This service |
 | PostgreSQL | 5432 | `DB_HOST`, `DB_PORT` | xmlsigning_db |
 | Kafka | 9092 | `KAFKA_BROKERS` | Message broker |
 | eidasremotesigning (CSC) | 9000 | `CSC_SERVICE_URL` | Digital signature service |
@@ -418,10 +418,10 @@ See [eidasremotesigning/README.md](../../../eidasremotesigning/README.md) for se
 ## Monitoring
 
 Actuator endpoints available at:
-- Health: `http://localhost:8086/actuator/health`
-- Metrics: `http://localhost:8086/actuator/metrics`
-- Prometheus: `http://localhost:8086/actuator/prometheus`
-- Camel Routes: `http://localhost:8086/actuator/camelroutes`
+- Health: `http://localhost:8088/actuator/health`
+- Metrics: `http://localhost:8088/actuator/metrics`
+- Prometheus: `http://localhost:8088/actuator/prometheus`
+- Camel Routes: `http://localhost:8088/actuator/camelroutes`
 
 Key metrics:
 - `resilience4j.circuitbreaker.state` - Circuit breaker state (CLOSED, OPEN, HALF_OPEN)
@@ -438,7 +438,7 @@ Key metrics:
 
 **Kafka consumer not receiving messages**
 - Verify Kafka is running
-- Check Camel routes: `curl http://localhost:8086/actuator/camelroutes`
+- Check Camel routes: `curl http://localhost:8088/actuator/camelroutes`
 - Review Camel logs with `org.apache.camel.component.kafka=DEBUG`
 
 **Database connection errors**
