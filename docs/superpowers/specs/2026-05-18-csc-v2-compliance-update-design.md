@@ -297,6 +297,12 @@ app:
 
 **`CscBearerTokenConfig`**: The `${app.csc.client-id}` value is for the OAuth2 `client_credentials` grant body — not the CSC request body. Rename the property to `app.csc.oauth2.client-id` to make the separation explicit and avoid confusion with the removed request-body `clientId`.
 
+### `pom.xml` — testcontainers version bump
+
+Align with `pdf-signing-service`: upgrade testcontainers from `1.19.7` → `2.0.5` for all three artifacts (`testcontainers`, `testcontainers-postgresql`, `testcontainers-kafka`). No other pom changes needed.
+
+### `application.yml` — Feign client config
+
 Add `csc-credentials-info-client` to `spring.cloud.openfeign.client.config`:
 ```yaml
 spring:
@@ -394,6 +400,7 @@ Update all four DTO class assertions:
 | `application/usecase/XmlSigningServiceImpl.java` | Modify |
 | `infrastructure/config/feign/CscBearerTokenConfig.java` | Modify (rename property key) |
 | `src/main/resources/application.yml` | Modify |
+| `pom.xml` | Modify (testcontainers `1.19.7` → `2.0.5`) |
 | `test/.../dto/CSCDtoTest.java` | Modify |
 | `test/.../CscDomainValueObjectsTest.java` | Modify |
 | `test/.../CscAuthorizationAdapterTest.java` | Modify |
