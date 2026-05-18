@@ -22,7 +22,11 @@ public class CscCredentialInfoCache {
 
     public String getCertificate() {
         if (certificate == null) {
-            refresh();
+            synchronized (this) {
+                if (certificate == null) {
+                    refresh();
+                }
+            }
         }
         return certificate;
     }

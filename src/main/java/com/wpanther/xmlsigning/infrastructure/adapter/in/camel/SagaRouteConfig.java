@@ -89,7 +89,7 @@ public class SagaRouteConfig extends RouteBuilder {
                         .routeId("saga-command-consumer")
                         .log(">>> RECEIVED raw Kafka message: partition=${header[kafka.PARTITION]}, offset=${header[kafka.OFFSET]}, key=${header[kafka.KEY]}")
                         .process(exchange -> {
-                            log.info(">>> ABOUT TO UNMARSHAL message at offset={}", exchange.getMessage().getHeader("kafka.OFFSET"));
+                            log.debug(">>> ABOUT TO UNMARSHAL message at offset={}", exchange.getMessage().getHeader("kafka.OFFSET"));
                         })
                         // Manual Jackson unmarshal — bypasses Camel's opaque exception handling
                         .process(exchange -> {
@@ -97,7 +97,7 @@ public class SagaRouteConfig extends RouteBuilder {
                                 String body = exchange.getIn().getBody(String.class);
                                 ProcessXmlSigningCommand cmd = objectMapper.readValue(body, ProcessXmlSigningCommand.class);
                                 exchange.getIn().setBody(cmd);
-                                log.info(">>> [UNMARSHAL] sagaId={}, documentId={}, documentNumber={}",
+                                log.debug(">>> [UNMARSHAL] sagaId={}, documentId={}, documentNumber={}",
                                         cmd.getSagaId(), cmd.getDocumentId(), cmd.getDocumentNumber());
                             } catch (Exception e) {
                                 log.error(">>> [UNMARSHAL] FAILED: {} — {}", e.getClass().getName(), e.getMessage(), e);
@@ -107,10 +107,10 @@ public class SagaRouteConfig extends RouteBuilder {
                         .process(commandValidator)  // Validate command before processing
                         .process(exchange -> {
                                 ProcessXmlSigningCommand cmd = exchange.getIn().getBody(ProcessXmlSigningCommand.class);
-                                log.info(">>> [STEP3] VALIDATOR PASSED, calling handleProcessCommand for saga: {}, document: {}",
+                                log.debug(">>> [STEP3] VALIDATOR PASSED, calling handleProcessCommand for saga: {}, document: {}",
                                                 cmd.getSagaId(), cmd.getDocumentNumber());
                                 sagaCommandPort.handleProcessCommand(cmd);
-                                log.info(">>> [STEP4] handleProcessCommand RETURNED for saga: {}", cmd.getSagaId());
+                                log.debug(">>> [STEP4] handleProcessCommand RETURNED for saga: {}", cmd.getSagaId());
                         })
                         .log(">>> Successfully processed saga command")
                         // Catch any exception thrown anywhere in the route and log it before DLQ
