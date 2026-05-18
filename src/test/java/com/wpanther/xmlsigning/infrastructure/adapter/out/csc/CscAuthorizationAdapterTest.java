@@ -28,27 +28,60 @@ class CscAuthorizationAdapterTest {
     private CscAuthorizationAdapter adapter;
 
     @Test
-    void authorize_mapsCommandToFeignRequestAndReturnsResult() {
-        CSCAuthorizeResponse feignResponse = CSCAuthorizeResponse.builder()
-            .SAD("sad-token-abc")
-            .transactionID("txn-123")
-            .build();
+    void authorize_mapsCommandToFeignRequestAndReturnsSadToken() {
+        CSCAuthorizeResponse feignResponse = new CSCAuthorizeResponse();
+        feignResponse.setSAD("sad-token-abc");
         when(feignClient.authorize(any())).thenReturn(feignResponse);
 
         CscAuthorizeCommand cmd = new CscAuthorizeCommand(
-            "client-1", "cred-1", "1", "SHA256",
-            List.of("digest1"), "Thai e-Tax signing");
+            "cred-1", "2.16.840.1.101.3.4.2.1",
+            List.of("digest1"), null, "Thai e-Tax signing");
         CscAuthorizeResult result = adapter.authorize(cmd);
 
         assertThat(result.sadToken()).isEqualTo("sad-token-abc");
-        assertThat(result.transactionId()).isEqualTo("txn-123");
 
         ArgumentCaptor<CSCAuthorizeRequest> captor = ArgumentCaptor.forClass(CSCAuthorizeRequest.class);
         verify(feignClient).authorize(captor.capture());
         CSCAuthorizeRequest captured = captor.getValue();
-        assertThat(captured.getClientId()).isEqualTo("client-1");
         assertThat(captured.getCredentialID()).isEqualTo("cred-1");
-        assertThat(captured.getHashAlgo()).isEqualTo("SHA256");
+        assertThat(captured.getHashAlgorithmOID()).isEqualTo("2.16.840.1.101.3.4.2.1");
+        assertThat(captured.getHashes()).containsExactly("digest1");
+        assertThat(captured.getNumSignatures()).isEqualTo(1);
+        assertThat(captured.getAuthData()).isNull();
+    }
+
+    @Test
+    void authorize_includesAuthDataWhenPinNonBlank() {
+        CSCAuthorizeResponse feignResponse = new CSCAuthorizeResponse();
+        feignResponse.setSAD("sad-with-pin");
+        when(feignClient.authorize(any())).thenReturn(feignResponse);
+
+        CscAuthorizeCommand cmd = new CscAuthorizeCommand(
+            "cred-1", "2.16.840.1.101.3.4.2.1",
+            List.of("digest1"), "1234", "signing");
+        adapter.authorize(cmd);
+
+        ArgumentCaptor<CSCAuthorizeRequest> captor = ArgumentCaptor.forClass(CSCAuthorizeRequest.class);
+        verify(feignClient).authorize(captor.capture());
+        assertThat(captor.getValue().getAuthData()).isNotNull().hasSize(1);
+        assertThat(captor.getValue().getAuthData().get(0).getId()).isEqualTo("PIN");
+        assertThat(captor.getValue().getAuthData().get(0).getValue()).isEqualTo("1234");
+    }
+
+    @Test
+    void authorize_omitsAuthDataWhenPinBlank() {
+        CSCAuthorizeResponse feignResponse = new CSCAuthorizeResponse();
+        feignResponse.setSAD("sad-no-pin");
+        when(feignClient.authorize(any())).thenReturn(feignResponse);
+
+        CscAuthorizeCommand cmd = new CscAuthorizeCommand(
+            "cred-1", "2.16.840.1.101.3.4.2.1",
+            List.of("digest1"), "", "signing");
+        adapter.authorize(cmd);
+
+        ArgumentCaptor<CSCAuthorizeRequest> captor = ArgumentCaptor.forClass(CSCAuthorizeRequest.class);
+        verify(feignClient).authorize(captor.capture());
+        assertThat(captor.getValue().getAuthData()).isNull();
     }
 
     @Test
@@ -56,8 +89,8 @@ class CscAuthorizationAdapterTest {
         when(feignClient.authorize(any())).thenThrow(new RuntimeException("CSC unavailable"));
 
         CscAuthorizeCommand cmd = new CscAuthorizeCommand(
-            "client-1", "cred-1", "1", "SHA256",
-            List.of("digest1"), "description");
+            "cred-1", "2.16.840.1.101.3.4.2.1",
+            List.of("digest1"), null, "description");
 
         assertThatThrownBy(() -> adapter.authorize(cmd))
             .isInstanceOf(RuntimeException.class)
@@ -66,23 +99,19 @@ class CscAuthorizationAdapterTest {
 
     @Test
     void authorize_mapsMultipleDigests() {
-        CSCAuthorizeResponse feignResponse = CSCAuthorizeResponse.builder()
-            .SAD("sad-multi")
-            .transactionID("txn-multi")
-            .build();
+        CSCAuthorizeResponse feignResponse = new CSCAuthorizeResponse();
+        feignResponse.setSAD("sad-multi");
         when(feignClient.authorize(any())).thenReturn(feignResponse);
 
         CscAuthorizeCommand cmd = new CscAuthorizeCommand(
-            "client-2", "cred-2", "2", "SHA384",
-            List.of("digest-a", "digest-b"), "Multi-doc signing");
+            "cred-2", "2.16.840.1.101.3.4.2.1",
+            List.of("digest-a", "digest-b"), null, "Multi-doc signing");
         adapter.authorize(cmd);
 
         ArgumentCaptor<CSCAuthorizeRequest> captor = ArgumentCaptor.forClass(CSCAuthorizeRequest.class);
         verify(feignClient).authorize(captor.capture());
-        CSCAuthorizeRequest captured = captor.getValue();
-        assertThat(captured.getHash()).containsExactly("digest-a", "digest-b");
-        assertThat(captured.getNumSignatures()).isEqualTo("2");
-        assertThat(captured.getDescription()).isEqualTo("Multi-doc signing");
-        assertThat(captured.getHashAlgo()).isEqualTo("SHA384");
+        assertThat(captor.getValue().getHashes()).containsExactly("digest-a", "digest-b");
+        assertThat(captor.getValue().getNumSignatures()).isEqualTo(1);
+        assertThat(captor.getValue().getDescription()).isEqualTo("Multi-doc signing");
     }
 }

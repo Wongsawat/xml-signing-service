@@ -12,21 +12,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * Infrastructure adapter that implements {@link CscAuthorizationPort} using a
- * Feign HTTP client ({@link CSCAuthClient}) to communicate with the CSC API.
- *
- * <p>This class is the Anti-Corruption Layer between the domain port and the
- * infrastructure DTO types. It maps:
- * <ul>
- *   <li>{@link CscAuthorizeCommand} → {@link CSCAuthorizeRequest} (note field name differences:
- *       {@code hashAlgorithm} → {@code hashAlgo}, {@code documentDigests} → {@code hash})</li>
- *   <li>{@link CSCAuthorizeResponse} → {@link CscAuthorizeResult}</li>
- * </ul>
- *
- * @see CscAuthorizationPort
- * @see CSCAuthClient
- */
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -36,43 +23,41 @@ public class CscAuthorizationAdapter implements CscAuthorizationPort {
 
     @Override
     public CscAuthorizeResult authorize(CscAuthorizeCommand command) throws CscAuthorizationException {
-        log.debug("Delegating authorization to CSC API for clientId={} credentialId={}",
-                command.clientId(), command.credentialId());
+        log.debug("Delegating authorization to CSC API for credentialId={}", command.credentialId());
+
+        List<CSCAuthorizeRequest.AuthDataEntry> authData = null;
+        if (command.pin() != null && !command.pin().isBlank()) {
+            authData = List.of(CSCAuthorizeRequest.AuthDataEntry.builder()
+                    .id("PIN").value(command.pin()).build());
+        }
 
         CSCAuthorizeRequest request = CSCAuthorizeRequest.builder()
-                .clientId(command.clientId())
-                .credentialID(command.credentialId())           // domain: credentialId → feign: credentialID
-                .numSignatures(command.numSignatures())
-                .hashAlgo(command.hashAlgorithm())             // domain: hashAlgorithm → feign: hashAlgo
-                .hash(command.documentDigests().toArray(new String[0])) // List<String> → String[]
+                .credentialID(command.credentialId())
+                .numSignatures(1)
+                .hashAlgorithmOID(command.hashAlgorithmOid())
+                .hashes(command.hashes().toArray(new String[0]))
+                .authData(authData)
                 .description(command.description())
                 .build();
 
         try {
             CSCAuthorizeResponse response = feignClient.authorize(request);
-            validateResponse(response, command.clientId(), command.credentialId());
-            return new CscAuthorizeResult(response.getSAD(), response.getTransactionID());
+            validateResponse(response, command.credentialId());
+            return new CscAuthorizeResult(response.getSAD());
         } catch (FeignException e) {
-            log.error("CSC authorization failed for clientId={} credentialId={}: {}",
-                    command.clientId(), command.credentialId(), e.getMessage(), e);
+            log.error("CSC authorization failed for credentialId={}: {}",
+                    command.credentialId(), e.getMessage(), e);
             throw new CscAuthorizationException(
                     "CSC authorization failed: " + e.getMessage(),
-                    e,
-                    command.clientId(),
-                    command.credentialId());
+                    e, null, command.credentialId());
         }
     }
 
-    private void validateResponse(CSCAuthorizeResponse response, String clientId, String credentialId) {
+    private void validateResponse(CSCAuthorizeResponse response, String credentialId) {
         if (response.getSAD() == null || response.getSAD().isBlank()) {
             throw new CscAuthorizationException(
                     "CSC authorization response missing SAD token",
-                    clientId, credentialId);
-        }
-        if (response.getTransactionID() == null || response.getTransactionID().isBlank()) {
-            throw new CscAuthorizationException(
-                    "CSC authorization response missing transaction ID",
-                    clientId, credentialId);
+                    null, credentialId);
         }
     }
 }
