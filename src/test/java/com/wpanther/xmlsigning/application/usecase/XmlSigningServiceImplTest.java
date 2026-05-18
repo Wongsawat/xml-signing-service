@@ -8,9 +8,8 @@ import com.wpanther.xmlsigning.application.dto.csc.CscSignHashCommand;
 import com.wpanther.xmlsigning.application.dto.csc.CscSignHashResult;
 import com.wpanther.xmlsigning.application.port.out.CscAuthorizationPort;
 import com.wpanther.xmlsigning.application.port.out.CscSignaturePort;
-import com.wpanther.xmlsigning.application.usecase.SigningResult;
 import com.wpanther.xmlsigning.application.port.out.XadesEmbeddingPort;
-import com.wpanther.xmlsigning.application.usecase.XmlSigningServiceImpl;
+import com.wpanther.xmlsigning.infrastructure.adapter.out.csc.CscCredentialInfoCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -31,41 +30,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for {@link XmlSigningServiceImpl}.
- * Tests the signHash pattern with SAD token authentication.
- *
- * <p>Both {@code authorizationPort} and {@code signaturePort} are mocked as domain port
- * interfaces. Adapter-level mapping (domain types → Feign DTOs) is tested separately in
- * {@code CscAuthorizationAdapterTest} and {@code CscSignatureAdapterTest}.
- */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("XmlSigningServiceImpl")
 class XmlSigningServiceImplTest {
 
-    @Mock
-    private CscSignaturePort signaturePort;
-
-    @Mock
-    private CscAuthorizationPort authorizationPort;
-
-    @Mock
-    private XadesEmbeddingPort xadesEmbeddingPort;
+    @Mock private CscSignaturePort signaturePort;
+    @Mock private CscAuthorizationPort authorizationPort;
+    @Mock private XadesEmbeddingPort xadesEmbeddingPort;
+    @Mock private CscCredentialInfoCache credentialInfoCache;
 
     @InjectMocks
     private XmlSigningServiceImpl signingService;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(signingService, "clientId", "test-client");
         ReflectionTestUtils.setField(signingService, "credentialId", "test-credential");
-        ReflectionTestUtils.setField(signingService, "hashAlgorithm", "SHA256");
-        ReflectionTestUtils.setField(signingService, "signatureLevel", "XAdES-BASELINE-T");
-        ReflectionTestUtils.setField(signingService, "digestAlgorithm", "SHA256");
-        ReflectionTestUtils.setField(signingService, "xadesEmbeddingPort", xadesEmbeddingPort);
+        ReflectionTestUtils.setField(signingService, "hashAlgorithmOid", "2.16.840.1.101.3.4.2.1");
+        ReflectionTestUtils.setField(signingService, "digestAlgorithm", "SHA-256");
+        ReflectionTestUtils.setField(signingService, "pin", "");
+        lenient().when(credentialInfoCache.getCertificate()).thenReturn("cached-cert-base64");
     }
 
     @Nested
@@ -74,205 +59,177 @@ class XmlSigningServiceImplTest {
 
         @Test
         @DisplayName("Signs XML successfully with valid response")
-        void signXml_happyPath_returnsSigningResult() {
-            // Setup auth result (domain type)
-            CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-123");
-
-            // Setup signHash result (domain type)
-            String rawSignature = "base64-encoded-signature";
-            String certificate = "base64-encoded-certificate";
-            CscSignHashResult signResult = new CscSignHashResult(List.of(rawSignature), certificate);
+        void signXml_happyPath_returnsSigningResult() throws Exception {
+            CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token");
+            CscSignHashResult signResult = new CscSignHashResult(
+                List.of("base64-encoded-signature"), "resp-001");
 
             when(authorizationPort.authorize(any(CscAuthorizeCommand.class))).thenReturn(authResult);
             when(signaturePort.signHash(any(CscSignHashCommand.class))).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
-                .thenReturn("<signed><ds:Signature>test</ds:Signature></signed>".getBytes(StandardCharsets.UTF_8));
+            when(xadesEmbeddingPort.embedSignature(any(), any(), anyString(), anyString(), anyString()))
+                .thenReturn("<signed><ds:Signature>test</ds:Signature></signed>"
+                    .getBytes(StandardCharsets.UTF_8));
 
-            // Execute
-            String originalXml = "<xml>test</xml>";
-            SigningResult result = signingService.signXml(originalXml, "doc-1");
+            SigningResult result = signingService.signXml("<xml>test</xml>", "doc-1");
 
-            // Verify result is not null and contains signature
             assertThat(result).isNotNull();
             assertThat(result.signedXml()).contains("ds:Signature");
-            assertThat(result.certificate()).isEqualTo("base64-encoded-certificate");
-            assertThat(result.transactionId()).isEqualTo("txn-123");
+            assertThat(result.certificate()).isEqualTo("cached-cert-base64");
+            assertThat(result.responseId()).isEqualTo("resp-001");
+            verify(credentialInfoCache).getCertificate();
+            verify(authorizationPort, never()).authorize(
+                argThat(c -> c.credentialId() == null));
+        }
+
+        @Test
+        @DisplayName("Cert comes from cache, not from signHash response")
+        void signXml_certificateComesFromCache() throws Exception {
+            when(authorizationPort.authorize(any())).thenReturn(new CscAuthorizeResult("sad"));
+            when(signaturePort.signHash(any())).thenReturn(
+                new CscSignHashResult(List.of("sig"), "resp-cert-test"));
+            when(xadesEmbeddingPort.embedSignature(any(), any(), anyString(), anyString(), anyString()))
+                .thenReturn("<signed/>".getBytes(StandardCharsets.UTF_8));
+
+            signingService.signXml("<xml/>", "doc-cert");
+
+            verify(credentialInfoCache).getCertificate();
+            ArgumentCaptor<String> certCaptor = ArgumentCaptor.forClass(String.class);
+            verify(xadesEmbeddingPort).embedSignature(any(), any(), anyString(),
+                certCaptor.capture(), anyString());
+            assertThat(certCaptor.getValue()).isEqualTo("cached-cert-base64");
+        }
+
+        @Test
+        @DisplayName("authorize request must have credentialId, hashAlgorithmOid, hashes — no clientId")
+        void signXml_sendsCorrectAuthorizeCommand() throws Exception {
+            when(authorizationPort.authorize(any())).thenReturn(new CscAuthorizeResult("sad"));
+            when(signaturePort.signHash(any())).thenReturn(
+                new CscSignHashResult(List.of("sig"), "resp-auth-test"));
+            when(xadesEmbeddingPort.embedSignature(any(), any(), anyString(), anyString(), anyString()))
+                .thenReturn("<signed/>".getBytes(StandardCharsets.UTF_8));
+
+            signingService.signXml("<xml>test</xml>", "doc-1");
+
+            ArgumentCaptor<CscAuthorizeCommand> captor =
+                ArgumentCaptor.forClass(CscAuthorizeCommand.class);
+            verify(authorizationPort).authorize(captor.capture());
+            CscAuthorizeCommand cmd = captor.getValue();
+
+            assertThat(cmd.credentialId()).isEqualTo("test-credential");
+            assertThat(cmd.hashAlgorithmOid()).isEqualTo("2.16.840.1.101.3.4.2.1");
+            assertThat(cmd.hashes()).isNotEmpty();
+            assertThat(cmd.pin()).isNullOrEmpty();
+            assertThat(cmd.description()).isEqualTo("Thai e-Tax Invoice XML Signing");
+        }
+
+        @Test
+        @DisplayName("authorize request includes pin when pin is configured")
+        void signXml_includesPinInAuthorizeCommand() throws Exception {
+            ReflectionTestUtils.setField(signingService, "pin", "secret-pin");
+            when(authorizationPort.authorize(any())).thenReturn(new CscAuthorizeResult("sad"));
+            when(signaturePort.signHash(any())).thenReturn(
+                new CscSignHashResult(List.of("sig"), "resp-pin-test"));
+            when(xadesEmbeddingPort.embedSignature(any(), any(), anyString(), anyString(), anyString()))
+                .thenReturn("<signed/>".getBytes(StandardCharsets.UTF_8));
+
+            signingService.signXml("<xml/>", "doc-pin");
+
+            ArgumentCaptor<CscAuthorizeCommand> captor =
+                ArgumentCaptor.forClass(CscAuthorizeCommand.class);
+            verify(authorizationPort).authorize(captor.capture());
+            assertThat(captor.getValue().pin()).isEqualTo("secret-pin");
+        }
+
+        @Test
+        @DisplayName("signHash command must have credentialId, sadToken, hashAlgorithmOid, hashes")
+        void signXml_sendsCorrectSignHashCommand() throws Exception {
+            when(authorizationPort.authorize(any())).thenReturn(new CscAuthorizeResult("test-sad-xyz"));
+            when(signaturePort.signHash(any())).thenReturn(
+                new CscSignHashResult(List.of("sig"), "resp-sign-test"));
+            when(xadesEmbeddingPort.embedSignature(any(), any(), anyString(), anyString(), anyString()))
+                .thenReturn("<signed/>".getBytes(StandardCharsets.UTF_8));
+
+            signingService.signXml("<xml>test</xml>", "doc-1");
+
+            ArgumentCaptor<CscSignHashCommand> captor =
+                ArgumentCaptor.forClass(CscSignHashCommand.class);
+            verify(signaturePort).signHash(captor.capture());
+            CscSignHashCommand cmd = captor.getValue();
+
+            assertThat(cmd.credentialId()).isEqualTo("test-credential");
+            assertThat(cmd.sadToken()).isEqualTo("test-sad-xyz");
+            assertThat(cmd.hashAlgorithmOid()).isEqualTo("2.16.840.1.101.3.4.2.1");
+            assertThat(cmd.hashes()).isNotEmpty();
+        }
+
+        @Test
+        @DisplayName("responseId in SigningResult comes from signHash response")
+        void signXml_responseIdFromSignHash() throws Exception {
+            when(authorizationPort.authorize(any())).thenReturn(new CscAuthorizeResult("sad"));
+            when(signaturePort.signHash(any())).thenReturn(
+                new CscSignHashResult(List.of("sig"), "CSC-RESPONSE-ABC"));
+            when(xadesEmbeddingPort.embedSignature(any(), any(), anyString(), anyString(), anyString()))
+                .thenReturn("<signed/>".getBytes(StandardCharsets.UTF_8));
+
+            SigningResult result = signingService.signXml("<xml/>", "doc-1");
+
+            assertThat(result.responseId()).isEqualTo("CSC-RESPONSE-ABC");
+        }
+
+        @Test
+        @DisplayName("Calculates correct document digest")
+        void signXml_calculatesCorrectDigest() throws Exception {
+            String xmlContent = "<xml>test</xml>";
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(xmlContent.getBytes(StandardCharsets.UTF_8));
+            String expectedDigest = Base64.getEncoder().encodeToString(hash);
+
+            when(authorizationPort.authorize(any())).thenReturn(new CscAuthorizeResult("sad"));
+            when(signaturePort.signHash(any())).thenReturn(
+                new CscSignHashResult(List.of("sig"), "resp-digest-test"));
+            when(xadesEmbeddingPort.embedSignature(any(), any(), anyString(), anyString(), anyString()))
+                .thenReturn("<signed/>".getBytes(StandardCharsets.UTF_8));
+
+            signingService.signXml(xmlContent, "doc-1");
+
+            ArgumentCaptor<CscAuthorizeCommand> authCaptor =
+                ArgumentCaptor.forClass(CscAuthorizeCommand.class);
+            verify(authorizationPort).authorize(authCaptor.capture());
+            assertThat(authCaptor.getValue().hashes().get(0)).isEqualTo(expectedDigest);
         }
 
         @Test
         @DisplayName("Throws CscAuthorizationException when authorization port throws")
         void signXml_authorizationFails_throwsCscAuthorizationException() {
-            // Setup authorization port to throw CscAuthorizationException directly
             CscAuthorizationException authException = new CscAuthorizationException(
-                    "Authorization denied by CSC", null, "test-client", "test-credential");
+                    "Authorization denied", null, null, "test-credential");
             when(authorizationPort.authorize(any())).thenThrow(authException);
 
-            // Execute & Verify the exception propagates as-is
             assertThatThrownBy(() -> signingService.signXml("<xml>test</xml>", "doc-auth-fail"))
                     .isInstanceOf(CscAuthorizationException.class)
-                    .hasMessageContaining("Authorization denied by CSC");
+                    .hasMessageContaining("Authorization denied");
         }
 
         @Test
         @DisplayName("Throws CscSignatureException when signature port throws")
         void signXml_signingFails_throwsCscSignatureException() {
-            // Setup auth to succeed
-            CscAuthorizeResult authResult = new CscAuthorizeResult("sad-token", "txn-sign-fail");
-            when(authorizationPort.authorize(any())).thenReturn(authResult);
-
-            // Setup signature port to throw CscSignatureException directly
-            CscSignatureException signException = new CscSignatureException(
-                    "HSM unavailable", null, "txn-sign-fail");
+            when(authorizationPort.authorize(any())).thenReturn(new CscAuthorizeResult("sad"));
+            CscSignatureException signException = new CscSignatureException("HSM unavailable", (String) null);
             when(signaturePort.signHash(any())).thenThrow(signException);
 
-            // Execute & Verify the exception propagates as-is
             assertThatThrownBy(() -> signingService.signXml("<xml>test</xml>", "doc-sign-fail"))
                     .isInstanceOf(CscSignatureException.class)
                     .hasMessageContaining("HSM unavailable");
         }
 
         @Test
-        @DisplayName("Sends correct CscSignHashCommand with SAD token (not PIN)")
-        void testSignHashRequestFields() {
-            // Setup
-            String xmlContent = "<xml>test</xml>";
-
-            CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token-xyz", "txn-456");
-            CscSignHashResult signResult = new CscSignHashResult(List.of("signature-value"), "certificate-value");
-
-            when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
-                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
-
-            // Execute
-            signingService.signXml(xmlContent, "doc-1");
-
-            // Verify authorize was called
-            verify(authorizationPort).authorize(any());
-
-            // Capture and verify CscSignHashCommand fields
-            ArgumentCaptor<CscSignHashCommand> captor = ArgumentCaptor.forClass(CscSignHashCommand.class);
-            verify(signaturePort).signHash(captor.capture());
-
-            CscSignHashCommand command = captor.getValue();
-            assertThat(command.clientId()).isEqualTo("test-client");
-            assertThat(command.credentialId()).isEqualTo("test-credential");
-            assertThat(command.hashAlgorithm()).isEqualTo("SHA256");
-
-            // Verify SAD token is set
-            assertThat(command.sadToken()).isEqualTo("test-sad-token-xyz");
-
-            // Verify document digests contain hash
-            assertThat(command.documentDigests()).isNotEmpty();
-            assertThat(command.documentDigests().get(0)).isNotEmpty();
-
-            // Verify signature attributes
-            assertThat(command.signatureType()).isEqualTo("XAdES");
-            assertThat(command.signatureLevel()).isEqualTo("XAdES-BASELINE-T");
-            assertThat(command.signatureForm()).isEqualTo("enveloped");
-            assertThat(command.digestAlgorithm()).isEqualTo("SHA256");
-        }
-
-        @Test
-        @DisplayName("Sends correct authorize command to port")
-        void testAuthorizeCommand() {
-            // Setup
-            String xmlContent = "<xml>test</xml>";
-
-            CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-789");
-            CscSignHashResult signResult = new CscSignHashResult(List.of("sig"), "cert");
-
-            when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
-                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
-
-            // Execute
-            signingService.signXml(xmlContent, "doc-1");
-
-            // Capture and verify authorize command
-            ArgumentCaptor<CscAuthorizeCommand> authCaptor =
-                ArgumentCaptor.forClass(CscAuthorizeCommand.class);
-            verify(authorizationPort).authorize(authCaptor.capture());
-
-            var authCommand = authCaptor.getValue();
-            assertThat(authCommand.clientId()).isEqualTo("test-client");
-            assertThat(authCommand.credentialId()).isEqualTo("test-credential");
-            assertThat(authCommand.numSignatures()).isEqualTo("1");
-            assertThat(authCommand.hashAlgorithm()).isEqualTo("SHA256");
-            assertThat(authCommand.description()).isEqualTo("Thai e-Tax Invoice XML Signing");
-            assertThat(authCommand.documentDigests()).isNotNull();
-            assertThat(authCommand.documentDigests()).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("Calculates correct document digest")
-        void testDigestCalculation() throws Exception {
-            // Setup
-            String xmlContent = "<xml>test</xml>";
-
-            // Calculate expected digest (standard base64 encoded)
-            MessageDigest digest = MessageDigest.getInstance("SHA256");
-            byte[] hash = digest.digest(xmlContent.getBytes(StandardCharsets.UTF_8));
-            String expectedDigest = Base64.getEncoder().encodeToString(hash);
-
-            CscAuthorizeResult authResult = new CscAuthorizeResult("test-sad-token", "txn-digest-test");
-            CscSignHashResult signResult = new CscSignHashResult(List.of("sig"), "cert");
-
-            when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
-                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
-
-            // Execute
-            signingService.signXml(xmlContent, "doc-1");
-
-            // Verify digest in authorize command
-            ArgumentCaptor<CscAuthorizeCommand> authCaptor =
-                ArgumentCaptor.forClass(CscAuthorizeCommand.class);
-            verify(authorizationPort).authorize(authCaptor.capture());
-            assertThat(authCaptor.getValue().documentDigests().get(0)).isEqualTo(expectedDigest);
-
-            // Verify digest in CscSignHashCommand
-            ArgumentCaptor<CscSignHashCommand> signCaptor = ArgumentCaptor.forClass(CscSignHashCommand.class);
-            verify(signaturePort).signHash(signCaptor.capture());
-            assertThat(signCaptor.getValue().documentDigests().get(0)).isEqualTo(expectedDigest);
-        }
-
-        @Test
-        @DisplayName("Throws CscAuthorizationException when signing fails")
-        void testSigningFailure() {
-            // Setup
+        @DisplayName("Wraps generic authorization exception in CscAuthorizationException")
+        void signXml_genericAuthException_wrappedAsCscAuthorizationException() {
             when(authorizationPort.authorize(any())).thenThrow(new RuntimeException("Authorize failed"));
 
-            // Execute & Verify
             assertThatThrownBy(() -> signingService.signXml("<xml/>", "doc-1"))
-                    .isInstanceOf(com.wpanther.xmlsigning.domain.exception.CscAuthorizationException.class)
+                    .isInstanceOf(CscAuthorizationException.class)
                     .hasMessageContaining("CSC authorization failed");
-        }
-
-        @Test
-        @DisplayName("Uses SAD token from authorize result in CscSignHashCommand")
-        void testSadTokenUsage() {
-            // Setup
-            String expectedSadToken = "received-sad-token-12345";
-
-            CscAuthorizeResult authResult = new CscAuthorizeResult(expectedSadToken, "txn-001");
-            CscSignHashResult signResult = new CscSignHashResult(List.of("sig"), "cert");
-
-            when(authorizationPort.authorize(any())).thenReturn(authResult);
-            when(signaturePort.signHash(any())).thenReturn(signResult);
-            when(xadesEmbeddingPort.embedSignature(any(byte[].class), any(byte[].class), anyString(), anyString(), anyString()))
-                .thenReturn("<signed>xml</signed>".getBytes(StandardCharsets.UTF_8));
-
-            // Execute
-            signingService.signXml("<xml/>", "doc-1");
-
-            // Verify SAD token is used in CscSignHashCommand
-            ArgumentCaptor<CscSignHashCommand> captor = ArgumentCaptor.forClass(CscSignHashCommand.class);
-            verify(signaturePort).signHash(captor.capture());
-            assertThat(captor.getValue().sadToken()).isEqualTo(expectedSadToken);
         }
     }
 }

@@ -83,7 +83,6 @@ public abstract class AbstractKafkaConsumerTest {
         // 1. Mock CSC authorization endpoint - returns SAD token
         CSCAuthorizeResponse authResponse = CSCAuthorizeResponse.builder()
             .SAD("test-sad-token-" + UUID.randomUUID())
-            .transactionID("test-txn-" + UUID.randomUUID())
             .expiresIn(300L)
             .build();
         when(authClient.authorize(any())).thenReturn(authResponse);
@@ -95,7 +94,7 @@ public abstract class AbstractKafkaConsumerTest {
         CSCSignatureResponse signResponse = CSCSignatureResponse.builder()
             .signatureAlgorithm("SHA256withRSA")
             .signatures(new String[]{rawSignature})
-            .certificate(certificate)
+            .responseID("test-response-" + UUID.randomUUID())
             .build();
         when(signatureClient.signHash(any())).thenReturn(signResponse);
 

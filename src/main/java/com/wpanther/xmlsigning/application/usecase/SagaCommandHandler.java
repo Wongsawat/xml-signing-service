@@ -251,7 +251,7 @@ public class SagaCommandHandler implements SagaCommandPort {
             var signingResult = signingService.signXml(command.getXmlContent(), document.getId().toString());
             signedXml = signingResult.signedXml();
             certificate = signingResult.certificate();
-            transactionId = signingResult.transactionId();
+            transactionId = signingResult.responseId();
 
             var storageResult = xmlStoragePort.storeSignedXml(
                     command.getDocumentId(), documentType.name(), signedXml);
