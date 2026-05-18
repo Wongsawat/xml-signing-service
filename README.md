@@ -15,7 +15,7 @@ This service integrates with the [eidasremotesigning](../../../eidasremotesignin
 ## Key Features
 
 - **XAdES-BASELINE-T Signing**: Full compliance with ETSI EN 319 132-1
-- **SAD Token Authentication**: Secure, short-lived token-based auth (replaces deprecated PIN-based auth)
+- **SAD Token Authentication**: Secure, short-lived token-based auth with PIN in `authData` (CSC v2.0 wire format)
 - **XXS Protection**: Comprehensive XML External Entity attack prevention (OWASP-compliant)
 - **Saga Orchestration**: Transactional Outbox Pattern with Debezium CDC for exactly-once delivery
 - **Circuit Breaker**: Resilience4j protection against CSC service failures
@@ -104,11 +104,12 @@ mvn flyway:info
 | `DB_USERNAME` | postgres | Database username |
 | `DB_PASSWORD` | postgres | Database password |
 | `CSC_SERVICE_URL` | http://localhost:9000 | eIDAS signing service URL |
-| `CSC_CLIENT_ID` | etax-invoice-service | CSC client identifier |
+| `CSC_CLIENT_ID` | etax-invoice-service | CSC OAuth2 client identifier |
+| `CSC_CLIENT_SECRET` | _(empty)_ | CSC OAuth2 client secret |
 | `CSC_CREDENTIAL_ID` | default-credential | CSC credential identifier |
-| `CSC_HASH_ALGORITHM` | SHA256withRSA | Hash algorithm for signing |
-| `CSC_DIGEST_ALGORITHM` | SHA256 | Digest algorithm for local hash computation |
-| `CSC_SIGNATURE_LEVEL` | XAdES-BASELINE-T | XAdES signature level |
+| `CSC_PIN` | _(empty)_ | PIN for the signing credential |
+| `CSC_HASH_ALGORITHM_OID` | 2.16.840.1.101.3.4.2.1 | Hash algorithm OID (SHA-256) for signHash |
+| `CSC_DIGEST_ALGORITHM` | SHA-256 | Digest algorithm for local hash computation |
 | `MINIO_ENDPOINT` | http://localhost:9001 | MinIO/S3 endpoint |
 | `MINIO_ACCESS_KEY` | minioadmin | MinIO access key |
 | `MINIO_SECRET_KEY` | minioadmin | MinIO secret key |
@@ -223,22 +224,35 @@ infrastructure/
 - 6 Thai e-Tax document types with namespace URIs
 - `TAX_INVOICE`, `RECEIPT`, `INVOICE`, `DEBIT_CREDIT_NOTE`, `CANCELLATION_NOTE`, `ABBREVIATED_TAX_INVOICE`
 
-### CSC API Integration (signHash Pattern)
+### CSC API Integration (CSC v2.0)
 
 **Authentication Flow:**
-1. **Authorize** - `POST /csc/v2/credentials/authorize` → returns SAD token (~15 min validity)
+1. **Authorize** - `POST /csc/v2/credentials/authorize` with `authData[{id:"PIN",value:"..."}]` → returns SAD token (~15 min validity)
 2. **Sign Hash** - `POST /csc/v2/signatures/signHash` with SAD token → returns raw signature
 3. **Embed Signature** - XAdES-BASELINE-T signature embedded into XML document
 
+**CSC v2.0 wire format differences from v1:**
+- `clientId` removed from authorize/signHash requests
+- `hashAlgorithm` → `hashAlgorithmOID` (OID string, e.g. `2.16.840.1.101.3.4.2.1`)
+- `hash[]` → `hashes[]` (array)
+- `numSignatures: String` → `numSignatures: Integer`
+- PIN: moved from `signHash.credentials.pin` → `authorize.authData[{id:"PIN",value:"..."}]`
+- `transactionID` removed from authorize response
+- `signatureData` wrapper removed from signHash response
+- `certificate` + `timestampData` removed from signHash response
+- `operationID` → `responseID`
+
+**Certificate caching:** `CscCredentialInfoCache` lazily fetches and caches the signing certificate from `credentials/info` endpoint. Uses double-checked locking for thread-safe lazy initialization.
+
 **Hexagonal Ports:**
-- `CscAuthorizationPort` - Domain interface for authorize operations
-- `CscSignaturePort` - Domain interface for signHash operations
+- `CscAuthorizationPort` - Domain interface for authorize operations → `CscAuthorizeCommand`, `CscAuthorizeResult`
+- `CscSignaturePort` - Domain interface for signHash operations → `CscSignHashCommand`, `CscSignHashResult`
 - `XadesEmbeddingPort` - Domain interface for XAdES signature embedding
 - Implemented by `CSCAuthClient`, `CSCSignatureClient` (Feign clients), and `XadesSignatureEmbedder`
 
 **Error Handling:**
-- `CscAuthorizationException` - Authorization failures (includes clientId, credentialId for debugging)
-- `CscSignatureException` - Signing failures (includes transactionId for debugging)
+- `CscAuthorizationException` - Authorization failures (includes credentialId for debugging)
+- `CscSignatureException` - Signing failures (includes responseId for debugging)
 - Typed exceptions preserve circuit breaker behavior
 
 ### XXS Protection
@@ -334,8 +348,8 @@ The service supports 6 Thai e-Tax document types:
 | **Camel DLQ** | 3 redeliveries with exponential backoff, then DLQ topic |
 
 **CSC Error Handling:**
-- Authorization errors: `CscAuthorizationException` (includes clientId, credentialId)
-- Signature errors: `CscSignatureException` (includes transactionId)
+- Authorization errors: `CscAuthorizationException` (includes credentialId)
+- Signature errors: `CscSignatureException` (includes responseId)
 - HTTP 429 (rate limit): Retry with backoff
 - HTTP 5xx (service unavailable): Retry with backoff
 - HTTP 401/403 (auth/forbidden): No retry (credential issues)
@@ -539,8 +553,10 @@ infrastructure/            # Framework and external technology
 - **Domain changes**: Update `SignedXmlDocument` aggregate first (uses manual Builder, not Lombok)
 - **Saga commands**: Extend `IntegrationEvent`, use `@JsonCreator` with two constructors
 - **Saga replies**: Extend `SagaReply`, use factory methods (`success()`, `failure()`, `compensated()`)
-- **CSC API changes**: Update DTOs in `application/dto/csc/` and `XmlSigningServiceImpl`
-  - Uses SAD token authentication: `CscAuthorizationPort.authorize()` → `CscSignaturePort.signHash(SAD)`
+- **CSC API changes (v2.0)**: DTOs in `application/dto/csc/` — domain records `CscAuthorizeCommand`, `CscAuthorizeResult`, `CscSignHashCommand`, `CscSignHashResult`, `SigningResult`
+  - Uses SAD token authentication: `CSCAuthClient.authorize()` → `CSCSignatureClient.signHash(SAD)`
+  - PIN goes in `authorize.authData[{id:"PIN",value:"..."}]`, not in signHash
+  - `hashAlgorithm` field is now `hashAlgorithmOID` (OID string)
 - **Signature embedding**: `XadesEmbeddingPort` interface + `XadesSignatureEmbedder` implementation
 - **New document types**: Add to `DocumentType` enum with namespace URI
 - **Compensation**: Implement delete logic in `SagaCommandHandler.handleCompensation()`, ensure idempotency
