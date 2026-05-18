@@ -3,7 +3,6 @@ package com.wpanther.xmlsigning.infrastructure.adapter.out.csc;
 import com.wpanther.xmlsigning.infrastructure.client.csc.CSCCredentialsInfoClient;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCCredentialsInfoRequest;
 import com.wpanther.xmlsigning.infrastructure.client.csc.dto.CSCCredentialsInfoResponse;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,12 +20,10 @@ public class CscCredentialInfoCache {
 
     private volatile String certificate;
 
-    @PostConstruct
-    public void init() {
-        refresh();
-    }
-
     public String getCertificate() {
+        if (certificate == null) {
+            refresh();
+        }
         return certificate;
     }
 
