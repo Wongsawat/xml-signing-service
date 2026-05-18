@@ -202,7 +202,7 @@ class XmlSigningServiceImplTest {
         @DisplayName("Throws CscAuthorizationException when authorization port throws")
         void signXml_authorizationFails_throwsCscAuthorizationException() {
             CscAuthorizationException authException = new CscAuthorizationException(
-                    "Authorization denied", null, null, "test-credential");
+                    "Authorization denied", "test-credential");
             when(authorizationPort.authorize(any())).thenThrow(authException);
 
             assertThatThrownBy(() -> signingService.signXml("<xml>test</xml>", "doc-auth-fail"))

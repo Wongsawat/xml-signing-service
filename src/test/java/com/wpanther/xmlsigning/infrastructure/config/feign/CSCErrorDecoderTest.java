@@ -25,14 +25,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("CSCErrorDecoder")
 class CSCErrorDecoderTest {
 
-    private static final String TEST_CLIENT_ID = "test-client";
     private static final String TEST_CREDENTIAL_ID = "test-credential";
 
     private CSCErrorDecoder errorDecoder;
 
     @BeforeEach
     void setUp() {
-        errorDecoder = new CSCErrorDecoder(TEST_CLIENT_ID, TEST_CREDENTIAL_ID);
+        errorDecoder = new CSCErrorDecoder(TEST_CREDENTIAL_ID);
     }
 
     private Response buildResponse(int status) {
@@ -56,7 +55,7 @@ class CSCErrorDecoderTest {
     class AuthorizationEndpoint {
 
         @Test
-        @DisplayName("400 returns CscAuthorizationException with client info")
+        @DisplayName("400 returns CscAuthorizationException with credential info")
         void testAuthorize400() {
             Response response = buildResponse(400);
 
@@ -67,7 +66,6 @@ class CSCErrorDecoderTest {
                     .isInstanceOf(XmlSigningException.class);
 
             CscAuthorizationException ex = (CscAuthorizationException) result;
-            assertThat(ex.getClientId()).isEqualTo(TEST_CLIENT_ID);
             assertThat(ex.getCredentialId()).isEqualTo(TEST_CREDENTIAL_ID);
             assertThat(ex.getMessage()).contains("Invalid authorization request");
         }
@@ -330,28 +328,26 @@ class CSCErrorDecoderTest {
     class Constructor {
 
         @Test
-        @DisplayName("Stores client ID and credential ID for exception context")
+        @DisplayName("Stores credential ID for exception context")
         void testStoresConfiguration() {
-            CSCErrorDecoder decoder = new CSCErrorDecoder("my-client", "my-credential");
+            CSCErrorDecoder decoder = new CSCErrorDecoder("my-credential");
 
             Response response = buildResponse(401);
             CscAuthorizationException result = (CscAuthorizationException)
                     decoder.decode("CscAuthClient#authorize()", response);
 
-            assertThat(result.getClientId()).isEqualTo("my-client");
             assertThat(result.getCredentialId()).isEqualTo("my-credential");
         }
 
         @Test
-        @DisplayName("Handles empty client ID and credential ID")
+        @DisplayName("Handles empty credential ID")
         void testEmptyConfiguration() {
-            CSCErrorDecoder decoder = new CSCErrorDecoder("", "");
+            CSCErrorDecoder decoder = new CSCErrorDecoder("");
 
             Response response = buildResponse(401);
             CscAuthorizationException result = (CscAuthorizationException)
                     decoder.decode("CscAuthClient#authorize()", response);
 
-            assertThat(result.getClientId()).isNotNull();
             assertThat(result.getCredentialId()).isNotNull();
         }
     }

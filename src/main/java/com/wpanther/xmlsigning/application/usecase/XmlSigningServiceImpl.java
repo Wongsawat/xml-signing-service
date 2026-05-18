@@ -66,7 +66,7 @@ public class XmlSigningServiceImpl implements XmlSigningService {
                 log.error("CSC authorization failed for credential {} document {}",
                         credentialId, documentId, e);
                 throw new CscAuthorizationException(
-                        "CSC authorization failed: " + e.getMessage(), e, null, credentialId);
+                        "CSC authorization failed: " + e.getMessage(), e, credentialId);
             }
 
             CscSignHashResult signResult;

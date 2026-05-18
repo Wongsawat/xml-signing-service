@@ -38,9 +38,8 @@ class DomainExceptionTest {
         @Test
         @DisplayName("constructs with message only")
         void messageOnly() {
-            var ex = new CscAuthorizationException("auth failed", "client-1", "cred-1");
+            var ex = new CscAuthorizationException("auth failed", "cred-1");
             assertThat(ex.getMessage()).isEqualTo("auth failed");
-            assertThat(ex.getClientId()).isEqualTo("client-1");
             assertThat(ex.getCredentialId()).isEqualTo("cred-1");
         }
 
@@ -48,10 +47,9 @@ class DomainExceptionTest {
         @DisplayName("constructs with message and cause")
         void messageAndCause() {
             var cause = new RuntimeException("network error");
-            var ex = new CscAuthorizationException("auth failed", cause, "client-1", "cred-1");
+            var ex = new CscAuthorizationException("auth failed", cause, "cred-1");
             assertThat(ex.getMessage()).isEqualTo("auth failed");
             assertThat(ex.getCause()).isSameAs(cause);
-            assertThat(ex.getClientId()).isEqualTo("client-1");
             assertThat(ex.getCredentialId()).isEqualTo("cred-1");
         }
     }

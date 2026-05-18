@@ -16,7 +16,7 @@ import java.util.Collections;
  * Translates HTTP error responses from the CSC service into typed domain exceptions
  * that can be properly handled by the application's retry logic and circuit breaker.
  * <p>
- * This decoder is a Spring {@link Component} that receives client ID and credential ID
+ * This decoder is a Spring {@link Component} that receives credential ID
  * via {@link Value} injection, enabling proper domain exception construction with
  * debugging context.
  * <p>
@@ -29,7 +29,6 @@ public class CSCErrorDecoder implements ErrorDecoder {
 
     private final ErrorDecoder defaultDecoder = new Default();
 
-    private final String clientId;
     private final String credentialId;
 
     /**
@@ -38,13 +37,10 @@ public class CSCErrorDecoder implements ErrorDecoder {
      * Spring automatically injects the configured values, enabling
      * proper domain exception construction with debugging context.
      *
-     * @param clientId the configured CSC client ID
      * @param credentialId the configured CSC credential ID
      */
     public CSCErrorDecoder(
-            @Value("${app.csc.oauth2.client-id}") String clientId,
             @Value("${app.csc.credential-id}") String credentialId) {
-        this.clientId = clientId;
         this.credentialId = credentialId;
         log.debug("CSCErrorDecoder initialized with credentialId={}", credentialId);
     }
@@ -83,27 +79,27 @@ public class CSCErrorDecoder implements ErrorDecoder {
         return switch (status) {
             case 400 -> new CscAuthorizationException(
                     "Invalid authorization request to CSC API. Check hash algorithm and digest format.",
-                    clientId, credentialId);
+                    credentialId);
             case 401 -> new CscAuthorizationException(
                     "CSC authorization failed: Invalid client ID or credential ID.",
-                    clientId, credentialId);
+                    credentialId);
             case 403 -> new CscAuthorizationException(
                     "CSC authorization failed: Credential not authorized for requested operation.",
-                    clientId, credentialId);
+                    credentialId);
             case 404 -> new CscAuthorizationException(
                     "CSC authorization endpoint not found. Verify CSC service URL configuration.",
-                    clientId, credentialId);
+                    credentialId);
             case 429 -> new CscAuthorizationException(
                     "CSC rate limit exceeded. Please retry after backoff delay.",
-                    clientId, credentialId);
+                    credentialId);
             case 500, 502, 503, 504 -> new CscAuthorizationException(
                     String.format("CSC service unavailable (HTTP %d). Retry with exponential backoff.", status),
-                    clientId, credentialId);
+                    credentialId);
             default -> {
                 // For unknown status codes, throw a generic authorization exception
                 yield new CscAuthorizationException(
                         String.format("CSC authorization failed with unexpected status %d", status),
-                        clientId, credentialId);
+                        credentialId);
             }
         };
     }

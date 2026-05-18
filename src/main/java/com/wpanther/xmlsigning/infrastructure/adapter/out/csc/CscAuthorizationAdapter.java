@@ -49,7 +49,7 @@ public class CscAuthorizationAdapter implements CscAuthorizationPort {
                     command.credentialId(), e.getMessage(), e);
             throw new CscAuthorizationException(
                     "CSC authorization failed: " + e.getMessage(),
-                    e, null, command.credentialId());
+                    e, command.credentialId());
         }
     }
 
@@ -57,7 +57,7 @@ public class CscAuthorizationAdapter implements CscAuthorizationPort {
         if (response.getSAD() == null || response.getSAD().isBlank()) {
             throw new CscAuthorizationException(
                     "CSC authorization response missing SAD token",
-                    null, credentialId);
+                    credentialId);
         }
     }
 }
