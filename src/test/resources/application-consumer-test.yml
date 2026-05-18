@@ -64,11 +64,11 @@ app:
 
   csc:
     service-url: http://localhost:19000
-    client-id: test-client
+    oauth2:
+      client-id: test-client
     credential-id: test-credential
-    hash-algorithm: SHA256
-    signature-level: XAdES-BASELINE-T
-    digest-algorithm: SHA256
+    hash-algorithm-oid: 2.16.840.1.101.3.4.2.1
+    digest-algorithm: SHA-256
 
   signing:
     max-retries: 3
