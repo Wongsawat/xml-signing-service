@@ -7,12 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * CSC API authorization request.
- * <p>
- * Used to obtain a SAD (Signature Activation Data) token for signing operations.
- * The SAD token is then used in the signHash request instead of PIN-based authentication.
- */
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -20,45 +16,34 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CSCAuthorizeRequest {
 
-    /**
-     * Client identifier for CSC authentication.
-     */
-    @JsonProperty("clientId")
-    private String clientId;
-
-    /**
-     * Credential identifier
-     */
     @JsonProperty("credentialID")
     private String credentialID;
 
-    /**
-     * Number of signatures to authorize
-     */
     @JsonProperty("numSignatures")
-    private String numSignatures;
+    private Integer numSignatures;
 
-    /**
-     * Hash algorithm for the digest (e.g., "SHA256")
-     */
-    @JsonProperty("hashAlgo")
-    private String hashAlgo;
+    @JsonProperty("hashAlgorithmOID")
+    private String hashAlgorithmOID;
 
-    /**
-     * Hash array for the documents to be signed (Base64-encoded)
-     */
-    @JsonProperty("hash")
-    private String[] hash;
+    @JsonProperty("hashes")
+    private String[] hashes;
 
-    /**
-     * Optional validity period for SAD token in seconds
-     */
-    @JsonProperty("validityPeriod")
-    private Long validityPeriod;
+    @JsonProperty("authData")
+    private List<AuthDataEntry> authData;
 
-    /**
-     * Description of the authorization request
-     */
     @JsonProperty("description")
     private String description;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class AuthDataEntry {
+        @JsonProperty("id")
+        private String id;
+
+        @JsonProperty("value")
+        private String value;
+    }
 }
