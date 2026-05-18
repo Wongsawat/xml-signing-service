@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -33,38 +32,31 @@ class CscSignatureAdapterTest {
     void signHash_mapsCommandToFeignRequestAndReturnsResult() {
         CSCSignatureResponse feignResponse = CSCSignatureResponse.builder()
                 .signatures(new String[]{"base64-signature-value"})
-                .certificate("base64-cert")
+                .responseID("resp-001")
                 .build();
         when(feignClient.signHash(any())).thenReturn(feignResponse);
 
         CscSignHashCommand cmd = new CscSignHashCommand(
-                "client-1", "cred-1", "sad-token-xyz",
-                null,
-                "SHA-256withRSA", List.of("digest-abc"),
-                "XAdES", "XAdES-BASELINE-T", "enveloped",
-                "SHA256", System.currentTimeMillis());
+                "cred-1", "sad-token-xyz",
+                "2.16.840.1.101.3.4.2.1", List.of("digest-abc"));
 
         CscSignHashResult result = adapter.signHash(cmd);
 
         assertThat(result.signatures()).containsExactly("base64-signature-value");
-        assertThat(result.certificate()).isEqualTo("base64-cert");
+        assertThat(result.responseId()).isEqualTo("resp-001");
     }
 
     @Test
     void signHash_mapsTopLevelFieldsCorrectly() {
         CSCSignatureResponse feignResponse = CSCSignatureResponse.builder()
                 .signatures(new String[]{"sig-1"})
-                .certificate("cert-1")
+                .responseID("resp-002")
                 .build();
         when(feignClient.signHash(any())).thenReturn(feignResponse);
 
-        long signDate = 1234567890L;
         CscSignHashCommand cmd = new CscSignHashCommand(
-                "my-client", "my-cred", "my-sad-token",
-                null,
-                "SHA-256withRSA", List.of("digest-1"),
-                "XAdES", "XAdES-BASELINE-T", "enveloped",
-                "SHA256", signDate);
+                "my-cred", "my-sad-token",
+                "2.16.840.1.101.3.4.2.1", List.of("digest-1"));
 
         adapter.signHash(cmd);
 
@@ -72,58 +64,40 @@ class CscSignatureAdapterTest {
         verify(feignClient).signHash(captor.capture());
         CSCSignatureRequest captured = captor.getValue();
 
-        assertThat(captured.getClientId()).isEqualTo("my-client");
         assertThat(captured.getCredentialID()).isEqualTo("my-cred");
         assertThat(captured.getSAD()).isEqualTo("my-sad-token");
-        assertThat(captured.getHashAlgo()).isEqualTo("SHA-256withRSA");
+        assertThat(captured.getHashAlgorithmOID()).isEqualTo("2.16.840.1.101.3.4.2.1");
+        assertThat(captured.getHashes()).containsExactly("digest-1");
     }
 
     @Test
-    void signHash_mapsSignatureAttributesCorrectly() {
+    void signHash_hasNoSignatureDataWrapperAndFlatHashesAtRoot() {
         CSCSignatureResponse feignResponse = CSCSignatureResponse.builder()
                 .signatures(new String[]{"sig-value"})
-                .certificate("cert-value")
                 .build();
         when(feignClient.signHash(any())).thenReturn(feignResponse);
 
-        long signDate = 9999999999L;
         CscSignHashCommand cmd = new CscSignHashCommand(
-                "client-x", "cred-x", "sad-x",
-                null,
-                "SHA-384withRSA", List.of("hash-x"),
-                "XAdES", "XAdES-BASELINE-LT", "enveloping",
-                "SHA384", signDate);
+                "cred-x", "sad-x",
+                "2.16.840.1.101.3.4.2.1", List.of("hash-x"));
 
         adapter.signHash(cmd);
 
         ArgumentCaptor<CSCSignatureRequest> captor = ArgumentCaptor.forClass(CSCSignatureRequest.class);
         verify(feignClient).signHash(captor.capture());
-        CSCSignatureRequest captured = captor.getValue();
-
-        assertThat(captured.getSignatureData()).isNotNull();
-        assertThat(captured.getSignatureData().getHashToSign()).containsExactly("hash-x");
-        assertThat(captured.getSignatureData().getSignatureAttributes()).isNotNull();
-        assertThat(captured.getSignatureData().getSignatureAttributes().getSignatureType()).isEqualTo("XAdES");
-        assertThat(captured.getSignatureData().getSignatureAttributes().getSignatureLevel()).isEqualTo("XAdES-BASELINE-LT");
-        assertThat(captured.getSignatureData().getSignatureAttributes().getSignatureForm()).isEqualTo("enveloping");
-        assertThat(captured.getSignatureData().getSignatureAttributes().getDigestAlgorithm()).isEqualTo("SHA384");
-        assertThat(captured.getSignatureData().getSignatureAttributes().getSignDate()).isEqualTo(signDate);
+        assertThat(captor.getValue().getHashes()).containsExactly("hash-x");
     }
 
     @Test
     void signHash_convertsMultipleDocumentDigestsToArray() {
         CSCSignatureResponse feignResponse = CSCSignatureResponse.builder()
                 .signatures(new String[]{"sig-a", "sig-b"})
-                .certificate("cert-multi")
                 .build();
         when(feignClient.signHash(any())).thenReturn(feignResponse);
 
         CscSignHashCommand cmd = new CscSignHashCommand(
-                "client-m", "cred-m", "sad-m",
-                null,
-                "SHA-256withRSA", List.of("digest-a", "digest-b"),
-                "XAdES", "XAdES-BASELINE-T", "enveloped",
-                "SHA256", System.currentTimeMillis());
+                "cred-m", "sad-m",
+                "2.16.840.1.101.3.4.2.1", List.of("digest-a", "digest-b"));
 
         CscSignHashResult result = adapter.signHash(cmd);
 
@@ -131,8 +105,7 @@ class CscSignatureAdapterTest {
 
         ArgumentCaptor<CSCSignatureRequest> captor = ArgumentCaptor.forClass(CSCSignatureRequest.class);
         verify(feignClient).signHash(captor.capture());
-        assertThat(captor.getValue().getSignatureData().getHashToSign())
-                .containsExactly("digest-a", "digest-b");
+        assertThat(captor.getValue().getHashes()).containsExactly("digest-a", "digest-b");
     }
 
     @Test
@@ -142,11 +115,8 @@ class CscSignatureAdapterTest {
         when(feignClient.signHash(any())).thenThrow(original);
 
         CscSignHashCommand cmd = new CscSignHashCommand(
-                "client-1", "cred-1", "sad-1",
-                null,
-                "SHA-256withRSA", List.of("digest-1"),
-                "XAdES", "XAdES-BASELINE-T", "enveloped",
-                "SHA256", System.currentTimeMillis());
+                "cred-1", "sad-1",
+                "2.16.840.1.101.3.4.2.1", List.of("digest-1"));
 
         Throwable thrown = catchThrowable(() -> adapter.signHash(cmd));
         assertThat(thrown).isSameAs(original);
@@ -157,11 +127,8 @@ class CscSignatureAdapterTest {
         when(feignClient.signHash(any())).thenThrow(new RuntimeException("network error"));
 
         CscSignHashCommand cmd = new CscSignHashCommand(
-                "client-1", "cred-1", "sad-1",
-                null,
-                "SHA-256withRSA", List.of("digest-1"),
-                "XAdES", "XAdES-BASELINE-T", "enveloped",
-                "SHA256", System.currentTimeMillis());
+                "cred-1", "sad-1",
+                "2.16.840.1.101.3.4.2.1", List.of("digest-1"));
 
         assertThatThrownBy(() -> adapter.signHash(cmd))
                 .isInstanceOf(CscSignatureException.class)
