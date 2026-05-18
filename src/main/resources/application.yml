@@ -59,6 +59,9 @@ camel:
             readTimeout: 30000     # 30 seconds
             # Logger level: BASIC, HEADERS, FULL (can be overridden by FeignConfig bean)
             loggerLevel: FULL
+          csc-credentials-info-client:
+            connectTimeout: 10000
+            readTimeout: 30000
 
 # Application-specific configuration
 app:
@@ -76,12 +79,13 @@ app:
   # CSC API Configuration
   csc:
     service-url: ${CSC_SERVICE_URL:http://localhost:9000}
-    client-id: ${CSC_CLIENT_ID:etax-invoice-service}
+    oauth2:
+      client-id: ${CSC_CLIENT_ID:etax-invoice-service}
+      client-secret: ${CSC_CLIENT_SECRET:}
     credential-id: ${CSC_CREDENTIAL_ID:default-credential}
     # PIN required for BCFKS/PKCS#11 keystores to load the private key
     pin: ${CSC_PIN:}
-    hash-algorithm: ${CSC_HASH_ALGORITHM:SHA-256}
-    signature-level: ${CSC_SIGNATURE_LEVEL:XAdES-BASELINE-T}
+    hash-algorithm-oid: ${CSC_HASH_ALGORITHM_OID:2.16.840.1.101.3.4.2.1}
     digest-algorithm: ${CSC_DIGEST_ALGORITHM:SHA-256}
 
   # Signing configuration

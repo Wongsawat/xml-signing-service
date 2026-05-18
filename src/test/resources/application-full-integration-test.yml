@@ -10,7 +10,7 @@ spring:
 
   # PostgreSQL (Docker test container on port 5433)
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:xmlsigning_db}
+    url: jdbc:postgresql://localhost:5433/xmlsigning_db
     driver-class-name: org.postgresql.Driver
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
@@ -65,15 +65,16 @@ app:
     consumers-count: 1
 
   # Real eidasremotesigning CSC API (localhost:9000).
-  # client-id and credential-id are injected at runtime via @DynamicPropertySource
-  # by AbstractFullIntegrationTest — EidasRemoteSigningTestHelper creates them on first run.
+  # client-id, client-secret, and credential-id are injected at runtime via env vars
+  # by run-cross-service-test.sh.
   csc:
     service-url: ${CSC_SERVICE_URL:http://localhost:9000}
-    client-id: ${CSC_CLIENT_ID:dynamic}
+    oauth2:
+      client-id: ${CSC_CLIENT_ID:dynamic}
+      client-secret: ${CSC_CLIENT_SECRET:dynamic}
     credential-id: ${CSC_CREDENTIAL_ID:dynamic}
     pin: ${CSC_PIN:eidas-signing-2024}
-    hash-algorithm: SHA-256
-    signature-level: XAdES-BASELINE-B
+    hash-algorithm-oid: 2.16.840.1.101.3.4.2.1
     digest-algorithm: SHA-256
 
   signing:
@@ -109,11 +110,15 @@ resilience4j:
         base-config: default
       cscSignatureClient:
         base-config: default
+      cscCredentialsInfoClient:
+        base-config: default
   timelimiter:
     instances:
       cscAuthClient:
         timeout-duration: 60s
       cscSignatureClient:
+        timeout-duration: 60s
+      cscCredentialsInfoClient:
         timeout-duration: 60s
 
 # Actuator (minimal for tests)
@@ -131,7 +136,8 @@ management:
 logging:
   level:
     root: WARN
-    com.wpanther.xmlsigning: DEBUG
+    com.wpanther.xmlsigning: TRACE
+    com.wpanther.xmlsigning.application.usecase.SagaCommandHandler: TRACE
     org.apache.camel: INFO
     org.apache.camel.component.kafka: DEBUG
     org.springframework.kafka: INFO
