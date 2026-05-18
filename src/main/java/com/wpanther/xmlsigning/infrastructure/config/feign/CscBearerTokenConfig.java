@@ -25,7 +25,7 @@ import java.util.Base64;
  * to every CSC API request. Only active for the {@code full-integration-test} profile.
  *
  * <p>The token is obtained via {@code POST /oauth2/token} with client_credentials grant
- * using the configured {@code app.csc.client-id} and {@code app.csc.client-secret}.
+ * using the configured {@code app.csc.oauth2.client-id} and {@code app.csc.oauth2.client-secret}.
  * Tokens are cached and refreshed when they approach expiry.
  */
 @Configuration
