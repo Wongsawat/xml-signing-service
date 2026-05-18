@@ -42,11 +42,11 @@ public class CSCErrorDecoder implements ErrorDecoder {
      * @param credentialId the configured CSC credential ID
      */
     public CSCErrorDecoder(
-            @Value("${app.csc.client-id}") String clientId,
+            @Value("${app.csc.oauth2.client-id}") String clientId,
             @Value("${app.csc.credential-id}") String credentialId) {
         this.clientId = clientId;
         this.credentialId = credentialId;
-        log.debug("CSCErrorDecoder initialized with clientId={}, credentialId={}", clientId, credentialId);
+        log.debug("CSCErrorDecoder initialized with credentialId={}", credentialId);
     }
 
     @Override
