@@ -55,6 +55,7 @@ app:
     credential-id: test-credential
     hash-algorithm-oid: 2.16.840.1.101.3.4.2.1
     digest-algorithm: SHA-256
+    pin: test-pin-1234
 
   signing:
     max-retries: 3
